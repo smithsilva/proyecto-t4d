@@ -1,620 +1,347 @@
 import { useState, useEffect } from "react";
-import { Eye, Pencil, Trash2, Plus } from "lucide-react";
-import Swal from "sweetalert2";
-
-import {
-  obtenerProductosApi,
-  agregarProductoApi,
-  editarProductoApi,
-  eliminarProductoApi,
-} from "../../api/inventarioApi";
-
+import { Eye, Pencil, Trash2 } from "lucide-react";
 import img1 from "../../assets/img1.jpg";
 
-function Inventario() {
+import { supabase } from "../../supabase/supabaseClient";
 
+function Inventario() {
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("todos");
-
   const [mostrarModal, setMostrarModal] = useState(false);
 
   const [modoEdicion, setModoEdicion] = useState(false);
-
   const [productoEditar, setProductoEditar] = useState(null);
 
   const [productos, setProductos] = useState([]);
 
+  // CATEGORÍAS
+  const [categorias, setCategorias] = useState([]);
+
+  // 👁 MODAL VER
   const [verProducto, setVerProducto] = useState(null);
 
+  // USUARIO LOGUEADO
+  const usuarioLogueado = JSON.parse(
+    localStorage.getItem("usuario")
+  );
+
+  const API = "https://69db2601560857310a075c00.mockapi.io/productos";
+
   const [nuevoProducto, setNuevoProducto] = useState({
+    id: "",
     nombre: "",
-    descripcion: "",
+    fechaEntrada: "",
     stock: "",
     imagen: "",
+    id_categoria: "",
   });
 
   // =========================================
   // OBTENER PRODUCTOS
   // =========================================
-
   useEffect(() => {
-
-    obtenerProductos();
-
+    recargar();
+    obtenerCategorias();
   }, []);
 
-  const obtenerProductos = async () => {
+  // =========================================
+  // OBTENER CATEGORÍAS
+  // =========================================
+  const obtenerCategorias = async () => {
+    const { data, error } = await supabase
+      .from("categorias")
+      .select("*");
 
-    try {
-
-      const data = await obtenerProductosApi();
-
-      const adaptados = data.map((item) => {
-
-        const stock =
-          parseInt(item.stock_actual) || 0;
-
-        return {
-          id: item.id_producto,
-
-          nombre: item.nombre_producto,
-
-          descripcion:
-            item.descripcion || "Sin descripción",
-
-          fechaEntrada: item.created_at
-            ? item.created_at.split("T")[0]
-            : "Sin fecha",
-
-          fechaSalida: "Sin salida",
-
-          stock: stock,
-
-          estado:
-            stock > 15
-              ? "alto"
-              : stock > 5
-              ? "medio"
-              : "bajo",
-
-          imagen: item.imagen || img1,
-        };
-
-      });
-
-      setProductos(adaptados);
-
-    } catch (error) {
-
+    if (error) {
       console.log(error);
-
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "No se pudieron cargar los productos",
-      });
-
+      return;
     }
 
+    setCategorias(data);
   };
 
   // =========================================
-  // NORMALIZAR
+  // RECARGAR PRODUCTOS
   // =========================================
+  const recargar = () => {
+    fetch(API)
+      .then((res) => res.json())
+      .then((data) => {
+        const adaptados = data.map((item) => {
+          const stock = parseInt(item.stock) || 0;
 
+          return {
+            ...item,
+            fechaSalida: "Sin salida",
+            estado:
+              stock > 15 ? "alto" : stock > 5 ? "medio" : "bajo",
+            imagen: item.imagen || img1,
+          };
+        });
+
+        setProductos(adaptados);
+      });
+  };
+
+  // =========================================
+  // BUSCADOR
+  // =========================================
   const normalizar = (texto = "") =>
     texto
       .toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "");
 
-  // =========================================
-  // FILTROS
-  // =========================================
-
   const filtrados = productos.filter((p) => {
-
     const texto = normalizar(busqueda);
 
     return (
-      (
-        normalizar(p.nombre).includes(texto) ||
+      (normalizar(p.nombre).includes(texto) ||
         normalizar(String(p.id)).includes(texto) ||
-        normalizar(p.descripcion).includes(texto)
-      ) &&
-      (
-        filtroEstado === "todos" ||
-        p.estado === filtroEstado
-      )
+        normalizar(p.usuario || "").includes(texto)) &&
+      (filtroEstado === "todos" || p.estado === filtroEstado)
     );
-
   });
 
   // =========================================
   // ESTADOS
   // =========================================
-
   const getEstado = (estado) => {
+    if (estado === "alto")
+      return <span className="badge bg-success">Stock Alto</span>;
 
-    const estilos = {
+    if (estado === "medio")
+      return <span className="badge bg-warning text-dark">Stock Medio</span>;
 
-      alto: {
-        background: "#B89B6A",
-        color: "#000",
-      },
-
-      medio: {
-        background: "#374151",
-        color: "#fff",
-      },
-
-      bajo: {
-        background: "#1f2937",
-        color: "#fff",
-      },
-
-    };
-
-    return (
-
-      <span
-        style={{
-          padding: "4px 10px",
-          borderRadius: "20px",
-          fontSize: "11px",
-          textTransform: "capitalize",
-          ...estilos[estado],
-        }}
-      >
-        {estado}
-      </span>
-
-    );
-
-  };
-
-  // =========================================
-  // RECARGAR
-  // =========================================
-
-  const recargar = async () => {
-
-    obtenerProductos();
-
-  };
-
-  // =========================================
-  // LIMPIAR FORMULARIO
-  // =========================================
-
-  const limpiarFormulario = () => {
-
-    setNuevoProducto({
-      nombre: "",
-      descripcion: "",
-      stock: "",
-      imagen: "",
-    });
-
-    setModoEdicion(false);
-
-    setProductoEditar(null);
-
+    return <span className="badge bg-danger">Stock Bajo</span>;
   };
 
   // =========================================
   // AGREGAR / EDITAR
   // =========================================
-
   const agregarProducto = async (e) => {
-
     e.preventDefault();
 
-    if (
-      !nuevoProducto.nombre ||
-      !nuevoProducto.descripcion ||
-      !nuevoProducto.stock
-    ) {
+    const producto = {
+      nombre: nuevoProducto.nombre,
 
-      return Swal.fire({
-        icon: "warning",
-        title: "Campos vacíos",
-        text: "Completa todos los campos",
+      // USUARIO AUTOMÁTICO
+      usuario:
+        usuarioLogueado?.nombre ||
+        usuarioLogueado?.username ||
+        "Usuario",
+
+      // ROL AUTOMÁTICO
+      rol: usuarioLogueado?.rol || "mecanico",
+
+      fechaEntrada: nuevoProducto.fechaEntrada,
+      stock: nuevoProducto.stock,
+      imagen: nuevoProducto.imagen || "",
+      id_categoria: parseInt(nuevoProducto.id_categoria),
+    };
+
+    if (modoEdicion) {
+      await fetch(`${API}/${productoEditar.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(producto),
       });
-
+    } else {
+      await fetch(API, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(producto),
+      });
     }
 
-    try {
+    recargar();
 
-      // =====================================
-      // EDITAR
-      // =====================================
+    setMostrarModal(false);
+    setModoEdicion(false);
+    setProductoEditar(null);
 
-      if (modoEdicion) {
-
-        await editarProductoApi(
-          productoEditar.id,
-          {
-            nombre_producto:
-              nuevoProducto.nombre,
-
-            descripcion:
-              nuevoProducto.descripcion,
-
-            stock_actual:
-              parseInt(nuevoProducto.stock),
-
-            imagen:
-              nuevoProducto.imagen,
-          }
-        );
-
-        Swal.fire({
-          icon: "success",
-          title: "Producto actualizado",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-
-      }
-
-      // =====================================
-      // AGREGAR
-      // =====================================
-
-      else {
-
-        await agregarProductoApi({
-          nombre_producto:
-            nuevoProducto.nombre,
-
-          descripcion:
-            nuevoProducto.descripcion,
-
-          stock_actual:
-            parseInt(nuevoProducto.stock),
-
-          imagen:
-            nuevoProducto.imagen,
-
-          activo: true,
-        });
-
-        Swal.fire({
-          icon: "success",
-          title: "Producto agregado",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-
-      }
-
-      recargar();
-
-      setMostrarModal(false);
-
-      limpiarFormulario();
-
-    } catch (error) {
-
-      console.log(error);
-
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "Ocurrió un problema",
-      });
-
-    }
-
+    setNuevoProducto({
+      id: "",
+      nombre: "",
+      fechaEntrada: "",
+      stock: "",
+      imagen: "",
+      id_categoria: "",
+    });
   };
 
   // =========================================
   // ELIMINAR
   // =========================================
-
   const eliminarProducto = async (id) => {
+    if (!window.confirm("¿Eliminar producto?")) return;
 
-    const confirmacion =
-      await Swal.fire({
-        icon: "warning",
-        title: "¿Eliminar producto?",
-        text: "Esta acción no se puede deshacer",
-        showCancelButton: true,
-        confirmButtonText: "Sí, eliminar",
-      });
+    await fetch(`${API}/${id}`, {
+      method: "DELETE",
+    });
 
-    if (!confirmacion.isConfirmed) return;
-
-    try {
-
-      await eliminarProductoApi(id);
-
-      Swal.fire({
-        icon: "success",
-        title: "Producto eliminado",
-        timer: 1500,
-        showConfirmButton: false,
-      });
-
-      recargar();
-
-    } catch (error) {
-
-      console.log(error);
-
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "No se pudo eliminar",
-      });
-
-    }
-
+    recargar();
   };
 
   // =========================================
   // EDITAR
   // =========================================
-
   const editarProducto = (producto) => {
-
-    setNuevoProducto({
-      nombre: producto.nombre,
-      descripcion: producto.descripcion,
-      stock: producto.stock,
-      imagen: producto.imagen,
-    });
-
+    setNuevoProducto(producto);
     setProductoEditar(producto);
-
     setModoEdicion(true);
-
     setMostrarModal(true);
-
   };
 
   return (
-
-    <div
-      className="p-5"
-      style={{
-        marginTop: "1px",
-        background: "#fff",
-        minHeight: "100vh",
-      }}
-    >
-
-      {/* HEADER */}
+    <div className="p-5" style={{ marginTop: "1px" }}>
 
       <div className="d-flex justify-content-between align-items-center mb-3">
-
         <div>
+          <h4 className="fw-bold">Gestión de Inventario</h4>
 
-          <h4 className="fw-bold mb-1">
-            Gestión de Inventario
-          </h4>
-
-          <div
-            style={{
-              width: "60px",
-              height: "3px",
-              backgroundColor: "#B89B6A",
-              borderRadius: "10px",
-              marginBottom: "5px",
-            }}
-          />
-
-          <p
-            style={{
-              color: "#6b7280",
-              fontSize: "13px",
-              margin: 0,
-            }}
-          >
+          <p className="text-muted">
             Administra productos de vehículos blindados
           </p>
-
         </div>
 
         <button
           onClick={() => {
-
-            limpiarFormulario();
-
+            setModoEdicion(false);
             setMostrarModal(true);
-
           }}
-          className="btn rounded-pill btn-sm"
-          style={{
-            backgroundColor: "#B89B6A",
-            color: "#000",
-            border: "none",
-          }}
+          className="btn rounded-pill"
+          style={{ backgroundColor: "#b89b6a" }}
         >
-          <Plus size={16} className="me-1" />
-          Agregar
+          + Agregar Producto
         </button>
-
       </div>
 
       {/* FILTROS */}
-
-      <div
-        className="card p-3 rounded-4 shadow-sm mb-4"
-        style={{
-          background: "#fff",
-          border: "1px solid #e5e7eb",
-        }}
-      >
-
-        <h6
-          className="fw-bold mb-2"
-          style={{ color: "#B89B6A" }}
-        >
-          Filtros y Búsqueda
-        </h6>
+      <div className="card p-3 rounded-4 shadow-sm mb-4">
+        <h6 className="fw-bold mb-2">Filtros y Búsqueda</h6>
 
         <div className="d-flex gap-3">
-
           <input
             type="text"
             className="form-control rounded-pill"
             placeholder="Buscar producto..."
             value={busqueda}
-            onChange={(e) =>
-              setBusqueda(e.target.value)
-            }
+            onChange={(e) => setBusqueda(e.target.value)}
           />
 
           <select
             className="form-select rounded-pill"
             value={filtroEstado}
-            onChange={(e) =>
-              setFiltroEstado(e.target.value)
-            }
+            onChange={(e) => setFiltroEstado(e.target.value)}
             style={{ maxWidth: "200px" }}
           >
-            <option value="todos">
-              Todo el stock
-            </option>
-
-            <option value="alto">
-              Stock Alto
-            </option>
-
-            <option value="medio">
-              Stock Medio
-            </option>
-
-            <option value="bajo">
-              Stock Bajo
-            </option>
-
+            <option value="todos">Todo el stock</option>
+            <option value="alto">Stock Alto</option>
+            <option value="medio">Stock Medio</option>
+            <option value="bajo">Stock Bajo</option>
           </select>
-
         </div>
-
       </div>
 
       {/* TABLA */}
-
       <div className="card p-3 rounded-4 shadow-sm">
-
-        <table className="table align-middle">
-
+       <table
+  className="table align-middle"
+  style={{
+    tableLayout: "fixed",
+    width: "100%",
+  }}
+>
           <thead>
-
             <tr>
-              <th>ID</th>
+              <th>N° Parte</th>
               <th>Producto</th>
-              <th>Descripción</th>
+              <th>Categoría</th>
+              <th>Usuario</th>
+              <th>Rol</th>
               <th>Entrada</th>
+              <th>Salida</th>
               <th>Stock</th>
               <th>Estado</th>
               <th>Acciones</th>
             </tr>
-
           </thead>
 
           <tbody>
-
             {filtrados.map((p) => (
-
               <tr key={p.id}>
-
-                <td>
-
-                  <div className="d-flex align-items-center gap-2">
-
-                    <img
-                      src={p.imagen}
-                      alt=""
-                      style={{
-                        width: "35px",
-                        height: "35px",
-                        borderRadius: "8px",
-                        objectFit: "cover",
-                      }}
-                    />
-
-                    <span>{p.id}</span>
-
-                  </div>
-
+                <td className="d-flex align-items-center gap-2">
+                  <img
+                    src={p.imagen}
+                    alt=""
+                    style={{
+                      width: "35px",
+                      height: "35px",
+                      borderRadius: "8px",
+                      objectFit: "cover",
+                    }}
+                  />
+                  {p.id}
                 </td>
 
                 <td>{p.nombre}</td>
 
-                <td>{p.descripcion}</td>
-
-                <td>{p.fechaEntrada}</td>
-
-                <td className="fw-bold">
-                  {p.stock}
+                <td>
+                  {
+                    categorias.find(
+                      (c) => c.id_categoria == p.id_categoria
+                    )?.nombre_categoria || "Sin categoría"
+                  }
                 </td>
+
+                <td>{p.usuario}</td>
 
                 <td>
-                  {getEstado(p.estado)}
+                  <span className="badge bg-dark">
+                    {p.rol}
+                  </span>
                 </td>
 
-                <td className="d-flex gap-2">
+                <td>{p.fechaEntrada}</td>
+                <td>{p.fechaSalida}</td>
+                <td className="fw-bold">{p.stock}</td>
+                <td>{getEstado(p.estado)}</td>
+
+                <td className="d-flex gap-3">
 
                   <Eye
                     size={18}
-                    style={{
-                      cursor: "pointer",
-                      color: "#374151",
-                    }}
-                    onClick={() =>
-                      setVerProducto(p)
-                    }
+                    style={{ cursor: "pointer" }}
+                    onClick={() => setVerProducto(p)}
                   />
 
                   <Pencil
                     size={18}
-                    style={{
-                      cursor: "pointer",
-                      color: "#374151",
-                    }}
-                    onClick={() =>
-                      editarProducto(p)
-                    }
+                    style={{ cursor: "pointer" }}
+                    onClick={() => editarProducto(p)}
                   />
 
                   <Trash2
                     size={18}
-                    style={{
-                      cursor: "pointer",
-                      color: "#ef4444",
-                    }}
-                    onClick={() =>
-                      eliminarProducto(p.id)
-                    }
+                    style={{ cursor: "pointer", color: "red" }}
+                    onClick={() => eliminarProducto(p.id)}
                   />
 
                 </td>
-
               </tr>
-
             ))}
-
           </tbody>
-
         </table>
-
       </div>
 
-      {/* MODAL VER */}
-
+      {/* 👁 MODAL VER */}
       {verProducto && (
-
-        <div
-          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-          style={{
-            background: "rgba(0,0,0,0.5)",
-          }}
-        >
+        <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex justify-content-center align-items-center">
 
           <div
             className="bg-white p-4 rounded-4 shadow"
@@ -631,55 +358,46 @@ function Inventario() {
               style={{
                 width: "100%",
                 borderRadius: "10px",
-                marginBottom: "10px",
               }}
             />
 
-            <p>
-              <strong>Nombre:</strong>{" "}
-              {verProducto.nombre}
-            </p>
+            <p><strong>Nombre:</strong> {verProducto.nombre}</p>
 
             <p>
-              <strong>Descripción:</strong>{" "}
-              {verProducto.descripcion}
+              <strong>Categoría:</strong>{" "}
+              {
+                categorias.find(
+                  (c) =>
+                    c.id_categoria == verProducto.id_categoria
+                )?.nombre_categoria
+              }
             </p>
 
-            <p>
-              <strong>Entrada:</strong>{" "}
-              {verProducto.fechaEntrada}
-            </p>
+            <p><strong>Usuario:</strong> {verProducto.usuario}</p>
 
             <p>
-              <strong>Stock:</strong>{" "}
-              {verProducto.stock}
+              <strong>Rol:</strong> {verProducto.rol}
             </p>
+
+            <p><strong>Entrada:</strong> {verProducto.fechaEntrada}</p>
+            <p><strong>Salida:</strong> {verProducto.fechaSalida}</p>
+            <p><strong>Stock:</strong> {verProducto.stock}</p>
+            <p><strong>Estado:</strong> {getEstado(verProducto.estado)}</p>
 
             <button
-              onClick={() =>
-                setVerProducto(null)
-              }
+              onClick={() => setVerProducto(null)}
               className="btn btn-secondary w-100 mt-2"
             >
               Cerrar
             </button>
 
           </div>
-
         </div>
-
       )}
 
-      {/* MODAL AGREGAR / EDITAR */}
-
+      {/* MODAL AGREGAR/EDITAR */}
       {mostrarModal && (
-
-        <div
-          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-          style={{
-            background: "rgba(0,0,0,0.5)",
-          }}
-        >
+        <div className="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-flex justify-content-center align-items-center">
 
           <div
             className="bg-white p-4 rounded-4 shadow"
@@ -687,18 +405,16 @@ function Inventario() {
           >
 
             <h5 className="fw-bold mb-3">
-
               {modoEdicion
                 ? "Editar Producto"
                 : "Agregar Producto"}
-
             </h5>
 
             <form onSubmit={agregarProducto}>
 
               <input
                 className="form-control mb-2"
-                placeholder="Nombre del producto"
+                placeholder="Nombre"
                 value={nuevoProducto.nombre}
                 onChange={(e) =>
                   setNuevoProducto({
@@ -709,13 +425,13 @@ function Inventario() {
               />
 
               <input
+                type="date"
                 className="form-control mb-2"
-                placeholder="Descripción"
-                value={nuevoProducto.descripcion}
+                value={nuevoProducto.fechaEntrada}
                 onChange={(e) =>
                   setNuevoProducto({
                     ...nuevoProducto,
-                    descripcion: e.target.value,
+                    fechaEntrada: e.target.value,
                   })
                 }
               />
@@ -733,25 +449,36 @@ function Inventario() {
                 }
               />
 
-              <input
-                className="form-control mb-3"
-                placeholder="URL de imagen (opcional)"
-                value={nuevoProducto.imagen}
+              {/* CATEGORÍAS */}
+              <select
+                className="form-select mb-2"
+                value={nuevoProducto.id_categoria}
                 onChange={(e) =>
                   setNuevoProducto({
                     ...nuevoProducto,
-                    imagen: e.target.value,
+                    id_categoria: e.target.value,
                   })
                 }
-              />
+              >
+                <option value="">
+                  Seleccione categoría
+                </option>
+
+                {categorias.map((cat) => (
+                  <option
+                    key={cat.id_categoria}
+                    value={cat.id_categoria}
+                  >
+                    {cat.nombre_categoria}
+                  </option>
+                ))}
+              </select>
 
               <div className="d-flex justify-content-end gap-2">
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setMostrarModal(false)
-                  }
+                  onClick={() => setMostrarModal(false)}
                   className="btn btn-secondary"
                 >
                   Cancelar
@@ -760,31 +487,20 @@ function Inventario() {
                 <button
                   type="submit"
                   className="btn"
-                  style={{
-                    backgroundColor: "#B89B6A",
-                    color: "#000",
-                    border: "none",
-                  }}
+                  style={{ backgroundColor: "#b89b6a" }}
                 >
-                  {modoEdicion
-                    ? "Actualizar"
-                    : "Guardar"}
+                  Guardar
                 </button>
 
               </div>
-
             </form>
 
           </div>
-
         </div>
-
       )}
 
     </div>
-
   );
-
 }
 
 export default Inventario;

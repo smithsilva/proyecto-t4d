@@ -53,6 +53,8 @@ function Login({ setVista, setUsuario }) {
 
       if (error) {
 
+        console.log(error);
+
         return Swal.fire({
           icon: "error",
           title: "Error",
@@ -62,7 +64,7 @@ function Login({ setVista, setUsuario }) {
       }
 
       // =========================================
-      // BUSCAR USUARIO
+      // BUSCAR USUARIO EN TABLA
       // =========================================
 
       const {
@@ -115,7 +117,7 @@ function Login({ setVista, setUsuario }) {
       }
 
       // =========================================
-      // OBTENER ROL DESDE id_rol
+      // OBTENER ROL
       // =========================================
 
       let rolReal = "";
@@ -127,7 +129,7 @@ function Login({ setVista, setUsuario }) {
           break;
 
         case 2:
-          rolReal = "Contador";
+          rolReal = "Contadora";
           break;
 
         case 3:
@@ -139,7 +141,8 @@ function Login({ setVista, setUsuario }) {
           break;
 
         default:
-          rolReal = "Usuario";
+          rolReal = usuarioBD.rol || "Usuario";
+
       }
 
       const rolNormalizado =
