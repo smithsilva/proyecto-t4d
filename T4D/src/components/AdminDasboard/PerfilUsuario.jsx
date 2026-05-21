@@ -3,9 +3,9 @@ import { User, Mail, Shield } from "lucide-react";
 
 function PerfilUsuario({ usuario, setUsuario }) {
 
- const [nombreEditado, setNombreEditado] = useState(
-  usuario?.nombre || ""
-);
+  const [nombreEditado, setNombreEditado] = useState(
+    usuario?.nombre || ""
+  );
 
   const subirImagen = (e) => {
     const file = e.target.files[0];
@@ -13,8 +13,8 @@ function PerfilUsuario({ usuario, setUsuario }) {
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      const nuevaFoto = reader.result;
-      const actualizado = { ...usuario, foto: nuevaFoto };
+      const usuarioActual = JSON.parse(localStorage.getItem("usuario"));
+      const actualizado = { ...usuarioActual, foto: reader.result };
       setUsuario(actualizado);
       localStorage.setItem("usuario", JSON.stringify(actualizado));
     };
@@ -22,7 +22,8 @@ function PerfilUsuario({ usuario, setUsuario }) {
   };
 
   const guardarCambios = () => {
-    const actualizado = { ...usuario, nombre: nombreEditado };
+    const usuarioActual = JSON.parse(localStorage.getItem("usuario"));
+    const actualizado = { ...usuarioActual, nombre: nombreEditado };
     setUsuario(actualizado);
     localStorage.setItem("usuario", JSON.stringify(actualizado));
   };
@@ -46,7 +47,6 @@ function PerfilUsuario({ usuario, setUsuario }) {
         <button className="btn btn-light border rounded-pill btn-sm">Cerrar</button>
       </div>
 
-      {/* 🔥 align-items-stretch iguala la altura de ambas columnas */}
       <div className="row g-3 align-items-stretch">
 
         {/* PERFIL */}

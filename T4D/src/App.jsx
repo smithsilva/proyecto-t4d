@@ -32,15 +32,19 @@ function App() {
 
   useEffect(() => {
 
-    const usuarioGuardado = localStorage.getItem("usuario");
+    const usuarioGuardado =
+      localStorage.getItem("usuario");
 
     if (usuarioGuardado) {
 
-      const usuarioParseado = JSON.parse(usuarioGuardado);
+      const usuarioParseado =
+        JSON.parse(usuarioGuardado);
 
       setUsuario(usuarioParseado);
 
-      const rol = normalizarRol(usuarioParseado.rol);
+      const rol = normalizarRol(
+        usuarioParseado.rol
+      );
 
       switch (rol) {
 
@@ -62,8 +66,6 @@ function App() {
           break;
 
         default:
-          // SI NO TIENE ROL
-          // ENTRA AL HOME
           setVista("home");
       }
 
@@ -82,6 +84,7 @@ function App() {
   // =========================================
 
   if (cargando) {
+
     return (
       <div
         className="d-flex justify-content-center align-items-center vh-100"
@@ -133,10 +136,6 @@ function App() {
         />
       );
 
-    // =========================================
-    // HOME
-    // =========================================
-
     case "home":
       return (
         <Home
@@ -144,10 +143,6 @@ function App() {
           setUsuario={setUsuario}
         />
       );
-
-    // =========================================
-    // DEFAULT
-    // =========================================
 
     default:
       return (

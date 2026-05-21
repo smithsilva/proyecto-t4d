@@ -38,110 +38,386 @@ function Reportes() {
     { name: "Devoluciones", value: 27 },
   ];
 
-  const COLORS = ["#B89B6A", "#1f2937", "#d1d5db"];
+  // COLORES
+
+  const COLORS = [
+    "#B89B6A",
+    "#1f2937",
+    "#d1d5db",
+  ];
 
   return (
     <div
-      className="p-5"
-      style={{ background: "#fff", minHeight: "100vh" }}
+      className="p-3"
+      style={{
+        width: "100%",
+        minHeight: "100vh",
+        boxSizing: "border-box",
+      }}
     >
-      {/* HEADER */}
-      <div className="d-flex justify-content-between align-items-center mb-3">
+
+      {/* TITULO */}
+
+      <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+
         <div>
-          <h4 className="fw-bold mb-1">Reportes y Análisis</h4>
-          <div style={{ width: "60px", height: "3px", backgroundColor: "#B89B6A", borderRadius: "10px", marginBottom: "5px" }} />
-          <p style={{ color: "#6b7280", fontSize: "13px", margin: 0 }}>Estadísticas y métricas del negocio</p>
+          <h4 className="fw-bold">
+            Reportes y Análisis
+          </h4>
+
+          <small className="text-muted">
+            Estadísticas y métricas del negocio
+          </small>
         </div>
-        <div className="d-flex gap-2">
-          <button className="btn btn-sm rounded-pill" style={{ border: "1px solid #B89B6A", color: "#B89B6A" }}>Exportar PDF</button>
-          <button className="btn btn-sm rounded-pill" style={{ border: "1px solid #B89B6A", color: "#B89B6A" }}>Exportar Excel</button>
+
+        <div className="d-flex gap-2 flex-wrap">
+          <button
+            className="btn btn-sm"
+            style={{
+              border:
+                "1px solid #B89B6A",
+              color: "#B89B6A",
+            }}
+          >
+            Exportar PDF
+          </button>
+
+          <button
+            className="btn btn-sm"
+            style={{
+              border:
+                "1px solid #B89B6A",
+              color: "#B89B6A",
+            }}
+          >
+            Exportar Excel
+          </button>
         </div>
       </div>
 
       {/* FILTROS */}
-      <div className="card p-3 rounded-4 shadow-sm mb-4" style={{ border: "1px solid #e5e7eb" }}>
-        <h6 className="fw-bold mb-2" style={{ color: "#B89B6A" }}>Configuración de Reporte</h6>
-        <div className="d-flex gap-3 mt-2">
-          <select className="form-select w-auto">
-            <option>Último mes</option>
-            <option>Últimos 3 meses</option>
+
+      <div
+        className="bg-white p-3 rounded-4 shadow-sm mb-3"
+        style={{
+          border:
+            "1px solid #eee",
+          width: "100%",
+        }}
+      >
+        <h6>
+          Configuración de Reporte
+        </h6>
+
+        <div className="d-flex gap-3 mt-2 flex-wrap">
+
+          <select className="form-select">
+            <option>
+              Último mes
+            </option>
+
+            <option>
+              Últimos 3 meses
+            </option>
           </select>
-          <select className="form-select w-auto">
-            <option>Reporte de Productos</option>
-            <option>Reporte de Ventas</option>
+
+          <select className="form-select">
+            <option>
+              Reporte de Productos
+            </option>
+
+            <option>
+              Reporte de Ventas
+            </option>
           </select>
+
         </div>
       </div>
 
-      {/* CARDS */}
-      <div className="row g-3 mb-4">
+      {/* TARJETAS */}
+
+      <div className="row g-3 mb-3">
+
         {[
-          { title: "Productos Ingresados", value: "1,277" },
-          { title: "Salidas de Productos", value: "867" },
-          { title: "Devoluciones", value: "27" },
-          { title: "Reportes de Ventas", value: "156" },
+          {
+            title:
+              "Productos Ingresados",
+            value: "1,277",
+          },
+
+          {
+            title:
+              "Salidas de Productos",
+            value: "867",
+          },
+
+          {
+            title:
+              "Devoluciones",
+            value: "27",
+          },
+
+          {
+            title:
+              "Reportes de Ventas",
+            value: "156",
+          },
+
         ].map((item, i) => (
-          <div className="col-md-3" key={i}>
-            <div className="card p-3 rounded-4 shadow-sm" style={{ border: "1px solid #e5e7eb" }}>
-              <small style={{ color: "#6b7280" }}>{item.title}</small>
-              <div style={{ fontSize: "26px", fontWeight: 700, color: "#1f2937", marginTop: 4 }}>{item.value}</div>
+
+          <div
+            className="col-12 col-sm-6 col-lg-3"
+            key={i}
+          >
+            <div
+              className="p-3 rounded-4 shadow-sm h-100"
+              style={{
+                background:
+                  "#fff",
+                border:
+                  "1px solid #B89B6A",
+              }}
+            >
+              <small
+                style={{
+                  color:
+                    "#6b7280",
+                }}
+              >
+                {item.title}
+              </small>
+
+              <h5
+                className="fw-bold mb-0"
+                style={{
+                  color:
+                    "#1f2937",
+                }}
+              >
+                {item.value}
+              </h5>
             </div>
           </div>
+
         ))}
+
       </div>
 
       {/* GRÁFICAS */}
+
       <div className="row g-3">
+
         {/* LINE */}
-        <div className="col-md-6">
-          <div className="card p-3 rounded-4 shadow-sm" style={{ border: "1px solid #e5e7eb" }}>
-            <h6 className="fw-bold mb-2">Tendencia de Entradas y Salidas</h6>
-            <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={dataLine}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="mes" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="entradas" stroke="#B89B6A" />
-                <Line type="monotone" dataKey="salidas" stroke="#1f2937" />
-              </LineChart>
-            </ResponsiveContainer>
+
+        <div className="col-12 col-xl-6">
+
+          <div
+            className="bg-white p-3 rounded-4 shadow-sm h-100"
+            style={{
+              border:
+                "1px solid #eee",
+              width: "100%",
+            }}
+          >
+            <h6>
+              Tendencia de Entradas y Salidas
+            </h6>
+
+            <div
+              style={{
+                width: "100%",
+                overflowX:
+                  "auto",
+              }}
+            >
+
+              <div
+                style={{
+                  minWidth: "500px",
+                  height: "260px",
+                }}
+              >
+
+                <ResponsiveContainer
+                  width="100%"
+                  height="100%"
+                >
+                  <LineChart
+                    data={dataLine}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+
+                    <XAxis dataKey="mes" />
+
+                    <YAxis />
+
+                    <Tooltip />
+
+                    <Legend />
+
+                    <Line
+                      type="monotone"
+                      dataKey="entradas"
+                      stroke="#B89B6A"
+                      strokeWidth={3}
+                    />
+
+                    <Line
+                      type="monotone"
+                      dataKey="salidas"
+                      stroke="#1f2937"
+                      strokeWidth={3}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+
+              </div>
+            </div>
           </div>
         </div>
 
         {/* BAR */}
-        <div className="col-md-6">
-          <div className="card p-3 rounded-4 shadow-sm" style={{ border: "1px solid #e5e7eb" }}>
-            <h6 className="fw-bold mb-2">Devoluciones de Garantía</h6>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={dataBar}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="mes" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="devoluciones" fill="#B89B6A" />
-              </BarChart>
-            </ResponsiveContainer>
+
+        <div className="col-12 col-xl-6">
+
+          <div
+            className="bg-white p-3 rounded-4 shadow-sm h-100"
+            style={{
+              border:
+                "1px solid #eee",
+              width: "100%",
+            }}
+          >
+            <h6>
+              Devoluciones de Garantía
+            </h6>
+
+            <div
+              style={{
+                width: "100%",
+                overflowX:
+                  "auto",
+              }}
+            >
+
+              <div
+                style={{
+                  minWidth: "500px",
+                  height: "260px",
+                }}
+              >
+
+                <ResponsiveContainer
+                  width="100%"
+                  height="100%"
+                >
+                  <BarChart
+                    data={dataBar}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+
+                    <XAxis dataKey="mes" />
+
+                    <YAxis />
+
+                    <Tooltip />
+
+                    <Legend />
+
+                    <Bar
+                      dataKey="devoluciones"
+                      fill="#B89B6A"
+                      radius={[
+                        6,
+                        6,
+                        0,
+                        0,
+                      ]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+
+              </div>
+            </div>
           </div>
         </div>
 
         {/* PIE */}
-        <div className="col-md-6">
-          <div className="card p-3 rounded-4 shadow-sm" style={{ border: "1px solid #e5e7eb" }}>
-            <h6 className="fw-bold mb-2">Distribución General</h6>
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie data={dataPie} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                  {dataPie.map((entry, index) => (
-                    <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+
+        <div className="col-12 col-xl-6">
+
+          <div
+            className="bg-white p-3 rounded-4 shadow-sm h-100"
+            style={{
+              border:
+                "1px solid #eee",
+              width: "100%",
+            }}
+          >
+            <h6>
+              Distribución General
+            </h6>
+
+            <div
+              style={{
+                width: "100%",
+                overflowX:
+                  "auto",
+              }}
+            >
+
+              <div
+                style={{
+                  minWidth: "500px",
+                  height: "260px",
+                }}
+              >
+
+                <ResponsiveContainer
+                  width="100%"
+                  height="100%"
+                >
+                  <PieChart>
+
+                    <Pie
+                      data={dataPie}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      label
+                    >
+                      {dataPie.map(
+                        (
+                          entry,
+                          index
+                        ) => (
+                          <Cell
+                            key={index}
+                            fill={
+                              COLORS[
+                                index %
+                                  COLORS.length
+                              ]
+                            }
+                          />
+                        )
+                      )}
+                    </Pie>
+
+                    <Tooltip />
+
+                    <Legend />
+
+                  </PieChart>
+                </ResponsiveContainer>
+
+              </div>
+            </div>
           </div>
         </div>
+
       </div>
     </div>
   );
