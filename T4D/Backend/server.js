@@ -87,7 +87,7 @@ const transporter = nodemailer.createTransport({
 // VERIFICAR CONEXIÓN EMAIL
 // =====================================
 
-transporter.verify((error, success) => {
+transporter.verify((error) => {
 
   if (error) {
 
@@ -183,7 +183,7 @@ app.post("/enviar-correo", async (req, res) => {
 });
 
 // =====================================
-// OBTENER PRODUCTOS DESDE SUPABASE
+// OBTENER PRODUCTOS
 // =====================================
 
 app.get("/productos", async (req, res) => {
@@ -199,8 +199,6 @@ app.get("/productos", async (req, res) => {
 
     if (error) {
 
-      console.log(error);
-
       return res.status(500).json({
         error: error.message,
       });
@@ -210,8 +208,6 @@ app.get("/productos", async (req, res) => {
     res.json(data);
 
   } catch (error) {
-
-    console.log(error);
 
     res.status(500).json({
       error: "Error del servidor",
@@ -250,11 +246,7 @@ app.post("/productos", async (req, res) => {
       ])
       .select();
 
-    // ERROR SUPABASE
-
     if (error) {
-
-      console.log(error);
 
       return res.status(400).json({
         error: error.message,
@@ -269,8 +261,6 @@ app.post("/productos", async (req, res) => {
 
   } catch (error) {
 
-    console.log(error);
-
     res.status(500).json({
       error: "Error del servidor",
     });
@@ -278,6 +268,7 @@ app.post("/productos", async (req, res) => {
   }
 
 });
+
 // =====================================
 // EDITAR PRODUCTO
 // =====================================
@@ -303,7 +294,8 @@ app.put("/productos/:id", async (req, res) => {
         stock_actual,
         imagen,
       })
-      .eq("id_producto", id);
+      .eq("id_producto", id)
+      .select();
 
     if (error) {
 
@@ -319,8 +311,6 @@ app.put("/productos/:id", async (req, res) => {
     });
 
   } catch (error) {
-
-    console.log(error);
 
     res.status(500).json({
       error: "Error del servidor",
@@ -359,8 +349,6 @@ app.delete("/productos/:id", async (req, res) => {
 
   } catch (error) {
 
-    console.log(error);
-
     res.status(500).json({
       error: "Error del servidor",
     });
@@ -368,143 +356,6 @@ app.delete("/productos/:id", async (req, res) => {
   }
 
 });
-
-// =====================================
-// GET USUARIO POR PARAMS
-// =====================================
-
-app.get("/usuarios/:id", (req, res) => {
-
-  const id = parseInt(req.params.id);
-
-  const usuario = usuarios.find((u) => u.id === id);
-
-  if (!usuario) {
-
-    return res.status(404).json({
-      error: "Usuario no encontrado",
-    });
-
-  }
-
-  res.json(usuario);
-
-});
-
-// =====================================
-// GET USUARIO POR QUERY
-// =====================================
-
-app.get("/buscar-usuario", (req, res) => {
-
-  const id = parseInt(req.query.id);
-
-  const usuario = usuarios.find((u) => u.id === id);
-
-  if (!usuario) {
-
-    return res.status(404).json({
-      error: "Usuario no encontrado",
-    });
-
-  }
-
-  res.json(usuario);
-
-});
-
-// =====================================
-// ELIMINAR MANTENIMIENTO
-// =====================================
-
-app.delete("/mantenimiento/:id", (req, res) => {
-
-  const id = parseInt(req.params.id);
-
-  const index = mantenimientos.findIndex(
-    (m) => m.id === id
-  );
-
-  if (index === -1) {
-
-    return res.status(404).json({
-      error: "Mantenimiento no encontrado",
-    });
-
-  }
-
-  mantenimientos.splice(index, 1);
-
-  res.json({
-    message: "Mantenimiento eliminado",
-  });
-
-});
-
-// =====================================
-// CLIENTE POR ID
-// =====================================
-
-app.get("/clientes/:id", (req, res) => {
-
-  const id = parseInt(req.params.id);
-
-  const cliente = clientes.find(
-    (c) => c.id === id
-  );
-
-  if (!cliente) {
-
-    return res.status(404).json({
-      error: "Cliente no encontrado",
-    });
-
-  }
-
-  res.json(cliente);
-
-});
-
-// =====================================
-// ACTUALIZAR EMPLEADO
-// =====================================
-
-app.put("/empleados/:id", (req, res) => {
-
-  const id = parseInt(req.params.id);
-
-  const empleado = empleados.find(
-    (e) => e.id === id
-  );
-
-  if (!empleado) {
-
-    return res.status(404).json({
-      error: "Empleado no encontrado",
-    });
-
-  }
-
-  const { nombre, cargo } = req.body;
-
-  if (nombre) {
-    empleado.nombre = nombre;
-  }
-
-  if (cargo) {
-    empleado.cargo = cargo;
-  }
-
-  res.json({
-    message: "Empleado actualizado",
-    empleado,
-  });
-
-});
-
-
-
-
 
 // =====================================
 // PATCH PRODUCTO
@@ -541,8 +392,6 @@ app.patch("/productos/:id", async (req, res) => {
 
   } catch (error) {
 
-    console.log(error);
-
     res.status(500).json({
       error: "Error del servidor",
     });
@@ -551,31 +400,57 @@ app.patch("/productos/:id", async (req, res) => {
 
 });
 
-
 // =====================================
-// POST CON QUERY PARAMS
+// OBTENER MOVIMIENTOS
 // =====================================
 
-app.post("/agregar-producto-query", (req, res) => {
+app.get("/movimientos", async (req, res) => {
 
-  const { nombre, stock } = req.query;
+  try {
 
-  if (!nombre || !stock) {
+    const { data, error } = await supabase
+      .from("movimientos_inventario")
+      .select(`
+        id_movimiento,
+        fecha_movimiento,
+        tipo_movimiento,
+        cantidad,
 
-    return res.status(400).json({
-      error: "Faltan parámetros",
+        productos:productos!movimientos_inventario_id_producto_fkey (
+          id_producto,
+          nombre_producto
+        ),
+
+        usuarios:usuarios!movimientos_inventario_id_usuario_fkey (
+          id_usuario,
+          username
+        )
+      `)
+      .order("fecha_movimiento", {
+        ascending: false,
+      });
+
+    if (error) {
+
+      console.log(error);
+
+      return res.status(500).json({
+        error: error.message,
+      });
+
+    }
+
+    return res.status(200).json(data);
+
+  } catch (error) {
+
+    console.log(error);
+
+    return res.status(500).json({
+      error: error.message,
     });
 
   }
-
-  res.json({
-    success: true,
-    message: "Producto recibido por query",
-    producto: {
-      nombre,
-      stock,
-    },
-  });
 
 });
 
@@ -583,12 +458,11 @@ app.post("/agregar-producto-query", (req, res) => {
 // INICIAR SERVIDOR
 // =====================================
 
+require("dotenv").config();
+const app = require("./app");
+
 const PORT = 5000;
 
 app.listen(PORT, () => {
-
-  console.log(
-    `Servidor backend corriendo en puerto ${PORT}`
-  );
-
+  console.log(`Servidor corriendo en ${PORT}`);
 });

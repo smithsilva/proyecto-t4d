@@ -45,14 +45,14 @@ function TopbarAdmin({ setVista, notificaciones = [], usuario }) {
             style={{
               background: "#1a1a1a",
               border: "1px solid #8c6b3f",
-              padding: "8px",
+              padding: "12px",
               borderRadius: "50%",
               cursor: "pointer",
               position: "relative",
               color: "#fff",
             }}
           >
-            <Bell size={20} />
+            <Bell size={22} />
 
             {noLeidas > 0 && (
               <span
@@ -115,7 +115,7 @@ function TopbarAdmin({ setVista, notificaciones = [], usuario }) {
                   background: "#8c6b3f",
                   color: "#fff",
                   border: "none",
-                  padding: "8px",
+                  padding: "10px",
                   borderRadius: "10px",
                   marginTop: "10px",
                   cursor: "pointer",
@@ -129,23 +129,26 @@ function TopbarAdmin({ setVista, notificaciones = [], usuario }) {
 
         {/* 👤 PERFIL */}
         <div className="position-relative">
-
-          <div
-            onClick={() => setMostrarMenu(!mostrarMenu)}
-            style={{
-              width: "35px",
-              height: "35px",
-              borderRadius: "50%",
-              overflow: "hidden",
-              cursor: "pointer",
-              background: "#8c6b3f",
-              color: "#fff",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: "bold",
-            }}
-          >
+<div
+  onClick={() => setMostrarMenu(!mostrarMenu)}
+  style={{
+    width: "45px",
+    height: "45px",
+    minWidth: "45px",
+    borderRadius: "50%",
+    overflow: "hidden",
+    cursor: "pointer",
+    background: "#8c6b3f",
+    color: "#fff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: "bold",
+    fontSize: "2px",
+    border: "3px solid #B89B6A",
+    boxShadow: "0 0 10px rgba(184,155,106,0.5)",
+  }}
+>
             {usuario?.foto ? (
               <img
                 src={usuario.foto}
