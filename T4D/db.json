@@ -1,0 +1,59 @@
+{
+  "usuarios": [
+    {
+      "id": "1",
+      "nombre": "Admin",
+      "correo": "admin@gmail.com",
+      "password": "1234",
+      "codigo": "123456",
+      "rol": "admin",
+      "estado": "activo"
+    },
+    {
+      "id": "2",
+      "nombre": "Contadora",
+      "correo": "contadora@gmail.com",
+      "password": "1234",
+      "codigo": "654321",
+      "rol": "contadora",
+      "estado": "activo"
+    },
+    {
+      "id": "3",
+      "nombre": "Gerente",
+      "correo": "gerente@gmail.com",
+      "password": "1234",
+      "codigo": "111111",
+      "rol": "gerente",
+      "estado": "activo"
+    },
+    {
+      "id": "4",
+      "nombre": "Mecanico",
+      "correo": "mecanico@gmail.com",
+      "password": "1234",
+      "codigo": "222222",
+      "rol": "mecanico",
+      "estado": "activo"
+    },
+    {
+      "nombre": "camilo cadena",
+      "correo": "camilo@gmail.com",
+      "password": "12345678",
+      "rol": "mecanico",
+      "codigo": "859598",
+      "estado": "activo",
+      "id": "S8Gb2dbufcg"
+    },
+    {
+      "nombre": "juan",
+      "correo": "juan98vh@gmail.com",
+      "password": "1234567",
+      "rol": "gerente",
+      "codigo": "379724",
+      "estado": "activo",
+      "id": "g-RH3D6dggI"
+    }
+  ],
+  "$schema": "./node_modules/json-server/schema.json"
+}
