@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { supabase } from "../../Supabase/SupabaseClient";
+import { useState, useEffect } from "react";
 import {
   UserRound,
   UserCheck,
@@ -12,43 +13,80 @@ import {
   X,
 } from "lucide-react";
 
-const initialClients = [
-  { id: 1, tipoDoc: "Cédula", numDoc: "1234567898", nombre: "Carlos Mendoza Reyes", telefono: "+57 300 123 4567", correo: "carlos.mendoza@email.com", fecha: "15/3/2026", estado: "Activo" },
-  { id: 2, tipoDoc: "NIT", numDoc: "900123456-7", nombre: "Seguridad Total SAS", telefono: "+57 601 234 5678", correo: "contacto@seguridadtotal.com", fecha: "20/2/2026", estado: "Activo" },
-  { id: 3, tipoDoc: "Cédula", numDoc: "9876543210", nombre: "Ana Patricia Rojas", telefono: "+57 310 987 6543", correo: "ana.rojas@email.com", fecha: "5/4/2026", estado: "Activo" },
-  { id: 4, tipoDoc: "Pasaporte", numDoc: "AB123456", nombre: "Michael Anderson", telefono: "+1 555 123 4567", correo: "michael.anderson@email.com", fecha: "10/1/2026", estado: "Inactivo" },
-];
+const TIPOS_DOC = ["CC", "CE", "NIT", "Pasaporte"];
 
-const TIPOS_DOC = ["Cédula", "NIT", "Pasaporte", "Cédula Extranjería"];
+const TIPO_DOC_LABELS = {
+  CC: "Cédula (CC)",
+  CE: "Cédula Extranjería (CE)",
+  NIT: "NIT",
+  Pasaporte: "Pasaporte",
+};
 
+// Convierte fecha DATE de Supabase (YYYY-MM-DD) a formato visual (DD/MM/YYYY)
+const formatFecha = (fechaStr) => {
+  if (!fechaStr) return "";
+  const [anio, mes, dia] = fechaStr.split("-");
+  if (anio && mes && dia) return `${dia}/${mes}/${anio}`;
+  return fechaStr;
+};
+
+// Convierte DD/MM/YYYY o YYYY-MM-DD a objeto Date para comparar mes
 const parseFecha = (fechaStr) => {
   if (!fechaStr) return null;
-  const partes = fechaStr.split("/");
-  if (partes.length === 3) return new Date(partes[2], partes[1] - 1, partes[0]);
+  if (fechaStr.includes("-")) return new Date(fechaStr);
+  const [dia, mes, anio] = fechaStr.split("/");
+  if (dia && mes && anio) return new Date(anio, mes - 1, dia);
   return null;
 };
 
 export default function GestionClientes() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("Todos los estados");
-  const [clients, setClients] = useState(initialClients);
-
+  const [clients, setClients] = useState([]);
   const [verCliente, setVerCliente] = useState(null);
   const [editCliente, setEditCliente] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [mostrarNuevo, setMostrarNuevo] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const [nuevoForm, setNuevoForm] = useState({
-    tipoDoc: "Cédula", numDoc: "", nombre: "", telefono: "", correo: "", fecha: "", estado: "Activo",
+    tipo_documento: "CC",
+    numero_documento: "",
+    nombre_completo: "",
+    telefono: "",
+    email: "",
+    estado: "Activo",
   });
+
+  useEffect(() => {
+    obtenerClientes();
+  }, []);
+
+  const obtenerClientes = async () => {
+    const { data, error } = await supabase
+      .from("clientes")
+      .select("*")
+      .order("id_cliente", { ascending: true });
+    if (error) {
+      console.log("Error trayendo clientes:", error);
+    } else {
+      setClients(data);
+    }
+  };
 
   const totalClientes = clients.length;
   const totalActivos = clients.filter((c) => c.estado === "Activo").length;
   const ahora = new Date();
   const estesMes = clients.filter((c) => {
-    const f = parseFecha(c.fecha);
-    return f && f.getMonth() === ahora.getMonth() && f.getFullYear() === ahora.getFullYear();
+    const f = parseFecha(c.fecha_registro);
+    return (
+      f &&
+      f.getMonth() === ahora.getMonth() &&
+      f.getFullYear() === ahora.getFullYear()
+    );
   }).length;
-  const totalDirecciones = clients.filter((c) => c.correo && c.correo.trim() !== "").length;
+  const totalDirecciones = clients.filter(
+    (c) => c.email && c.email.trim() !== ""
+  ).length;
 
   const statCards = [
     { label: "Total Clientes", value: totalClientes, sub: "registrados", border: "#B89B6A", color: "#B89B6A", iconBg: "#f5e9cc", Icon: UserRound },
@@ -58,46 +96,133 @@ export default function GestionClientes() {
   ];
 
   const filtered = clients.filter((c) => {
+    const nombre = c.nombre_completo || "";
+    const doc = c.numero_documento || "";
+    const correo = c.email || "";
+    const tel = c.telefono || "";
     const matchSearch =
-      c.nombre.toLowerCase().includes(search.toLowerCase()) ||
-      c.numDoc.includes(search) ||
-      c.correo.toLowerCase().includes(search.toLowerCase()) ||
-      c.telefono.includes(search);
-    const matchFilter = filter === "Todos los estados" || c.estado === filter;
+      nombre.toLowerCase().includes(search.toLowerCase()) ||
+      doc.includes(search) ||
+      correo.toLowerCase().includes(search.toLowerCase()) ||
+      tel.includes(search);
+    const matchFilter =
+      filter === "Todos los estados" || c.estado === filter;
     return matchSearch && matchFilter;
   });
 
-  const deleteClient = (id) => setClients((prev) => prev.filter((c) => c.id !== id));
+  const deleteClient = async (id) => {
+    const { error } = await supabase
+      .from("clientes")
+      .delete()
+      .eq("id_cliente", id);
+    if (error) {
+      console.log("Error eliminando:", error);
+      return;
+    }
+    await obtenerClientes();
+  };
 
-  const toggleEstado = (id) => {
-    setClients((prev) =>
-      prev.map((c) => c.id === id ? { ...c, estado: c.estado === "Activo" ? "Inactivo" : "Activo" } : c)
-    );
+  const toggleEstado = async (id) => {
+    const cliente = clients.find((c) => c.id_cliente === id);
+    const nuevoEstado = cliente.estado === "Activo" ? "Inactivo" : "Activo";
+    const { error } = await supabase
+      .from("clientes")
+      .update({ estado: nuevoEstado })
+      .eq("id_cliente", id);
+    if (error) {
+      console.log("Error cambiando estado:", error);
+      return;
+    }
+    await obtenerClientes();
   };
 
   const abrirEditar = (cliente) => {
     setEditCliente(cliente);
     setEditForm({ ...cliente });
+    setErrorMsg("");
   };
 
-  const guardarEditar = () => {
-    setClients((prev) => prev.map((c) => (c.id === editCliente.id ? { ...editForm } : c)));
+  const guardarEditar = async () => {
+    // Solo enviamos los campos editables, nunca id_cliente
+    const { id_cliente, ...camposEditables } = editForm;
+    const { error } = await supabase
+      .from("clientes")
+      .update(camposEditables)
+      .eq("id_cliente", editCliente.id_cliente);
+    if (error) {
+      console.log("Error editando:", error);
+      if (error.code === "23505") {
+        setErrorMsg("El documento o correo ya está registrado en otro cliente.");
+      } else {
+        setErrorMsg("Error al guardar. Revisa los datos.");
+      }
+      return;
+    }
+    await obtenerClientes();
     setEditCliente(null);
+    setErrorMsg("");
   };
 
-  const guardarNuevo = () => {
-    if (!nuevoForm.nombre || !nuevoForm.numDoc) return;
-    setClients((prev) => [...prev, { ...nuevoForm, id: Date.now() }]);
+  const guardarNuevo = async () => {
+    if (!nuevoForm.nombre_completo || !nuevoForm.numero_documento) return;
+    setErrorMsg("");
+
+    const { fecha_registro, ...datosAEnviar } = nuevoForm;
+     console.log(datosAEnviar);
+    const { data, error } = await supabase
+  .from("clientes")
+  .insert([datosAEnviar]);
+
+console.log("DATA:", data);
+console.log("ERROR COMPLETO:", error);
+
+if (error) {
+  alert(error.message);
+  return;
+}
+    if (error) {
+      console.log("Error guardando:", error);
+      if (error.code === "23505") {
+        setErrorMsg("El número de documento o correo ya está registrado.");
+      } else {
+        setErrorMsg("Error al guardar. Revisa los datos.");
+      }
+      return;
+    }
+    await obtenerClientes();
     setMostrarNuevo(false);
-    setNuevoForm({ tipoDoc: "Cédula", numDoc: "", nombre: "", telefono: "", correo: "", fecha: "", estado: "Activo" });
+    setNuevoForm({
+      tipo_documento: "CC",
+      numero_documento: "",
+      nombre_completo: "",
+      telefono: "",
+      email: "",
+      estado: "Activo",
+    });
   };
 
-  const fieldLabel = { fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4, display: "block" };
-  const fieldValue = { fontSize: 14, color: "#111827", padding: "8px 0", borderBottom: "1px solid #f0f0f0" };
+  const fieldLabel = {
+    fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4, display: "block",
+  };
+  const fieldValue = {
+    fontSize: 14, color: "#111827", padding: "8px 0", borderBottom: "1px solid #f0f0f0",
+  };
   const formInput = {
     width: "100%", padding: "9px 12px", borderRadius: 8, border: "1.5px solid #e5e7eb",
     fontSize: 13, color: "#111827", outline: "none", background: "#fafafa", marginBottom: 12,
   };
+  const btnCancelar = {
+    background: "#f3f4f6", color: "#374151", border: "1.5px solid #e5e7eb",
+    borderRadius: 50, padding: "8px 0", fontSize: 13, fontWeight: 600,
+    cursor: "pointer", flex: 1,
+  };
+  const btnGuardar = (disabled) => ({
+    background: disabled ? "#d1b98a" : "#B89B6A",
+    color: "#000", border: "none", borderRadius: 50, padding: "8px 0",
+    fontSize: 13, fontWeight: 600,
+    cursor: disabled ? "not-allowed" : "pointer",
+    opacity: disabled ? 0.6 : 1, flex: 1,
+  });
 
   return (
     <div className="p-5" style={{ marginTop: "1px", background: "#fff", minHeight: "100vh" }}>
@@ -107,12 +232,15 @@ export default function GestionClientes() {
         <div>
           <h4 className="fw-bold mb-1">Gestión de Clientes</h4>
           <div style={{ width: "60px", height: "3px", backgroundColor: "#B89B6A", borderRadius: "10px", marginBottom: "5px" }} />
-          <p style={{ color: "#6b7280", fontSize: "13px", margin: 0 }}>Administración de base de datos de clientes</p>
+          <p style={{ color: "#6b7280", fontSize: "13px", margin: 0 }}>
+            Administración de base de datos de clientes
+          </p>
         </div>
         <button
+          type="button"
           className="btn rounded-pill btn-sm"
           style={{ backgroundColor: "#B89B6A", color: "#000", border: "none", display: "inline-flex", alignItems: "center", gap: 6 }}
-          onClick={() => setMostrarNuevo(true)}
+          onClick={() => { setMostrarNuevo(true); setErrorMsg(""); }}
         >
           <UserPlus size={15} /> Nuevo Cliente
         </button>
@@ -121,7 +249,8 @@ export default function GestionClientes() {
       {/* STATS */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 24 }}>
         {statCards.map((card, i) => (
-          <div key={i} className="card shadow-sm rounded-4" style={{ padding: "18px 20px", border: `1.5px solid ${card.border}`, display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+          <div key={i} className="card shadow-sm rounded-4"
+            style={{ padding: "18px 20px", border: `1.5px solid ${card.border}`, display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 6 }}>{card.label}</div>
               <div style={{ fontSize: 28, fontWeight: 700, color: card.color, lineHeight: 1.1 }}>{card.value}</div>
@@ -179,17 +308,17 @@ export default function GestionClientes() {
           </thead>
           <tbody>
             {filtered.map((c) => (
-              <tr key={c.id}>
-                <td style={{ fontSize: 13 }}>{c.tipoDoc}</td>
-                <td style={{ fontSize: 13 }}>{c.numDoc}</td>
-                <td style={{ fontSize: 13, fontWeight: 600 }}>{c.nombre}</td>
+              <tr key={c.id_cliente}>
+                <td style={{ fontSize: 13 }}>{c.tipo_documento}</td>
+                <td style={{ fontSize: 13 }}>{c.numero_documento}</td>
+                <td style={{ fontSize: 13, fontWeight: 600 }}>{c.nombre_completo}</td>
                 <td style={{ fontSize: 13, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={c.telefono}>{c.telefono}</td>
-                <td style={{ fontSize: 13, color: "#374151", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={c.correo}>{c.correo}</td>
-                <td style={{ fontSize: 13 }}>{c.fecha}</td>
+                <td style={{ fontSize: 13, color: "#374151", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={c.email}>{c.email}</td>
+                <td style={{ fontSize: 13 }}>{formatFecha(c.fecha_registro)}</td>
                 <td>
                   <span
                     title="Clic para cambiar estado"
-                    onClick={() => toggleEstado(c.id)}
+                    onClick={() => toggleEstado(c.id_cliente)}
                     style={{
                       background: c.estado === "Activo" ? "#B89B6A" : "#374151",
                       color: c.estado === "Activo" ? "#000" : "#fff",
@@ -199,14 +328,14 @@ export default function GestionClientes() {
                     }}
                   >
                     <span style={{ width: 6, height: 6, borderRadius: "50%", background: "currentColor", display: "inline-block" }} />
-                    {c.estado}
+                    {c.estado ?? "Activo"}
                   </span>
                 </td>
                 <td>
                   <div className="d-flex gap-2">
                     <Eye size={18} style={{ cursor: "pointer", color: "#374151" }} title="Ver" onClick={() => setVerCliente(c)} />
                     <Pencil size={18} style={{ cursor: "pointer", color: "#B89B6A" }} title="Editar" onClick={() => abrirEditar(c)} />
-                    <Trash2 size={18} style={{ cursor: "pointer", color: "#ef4444" }} title="Eliminar" onClick={() => deleteClient(c.id)} />
+                    <Trash2 size={18} style={{ cursor: "pointer", color: "#ef4444" }} title="Eliminar" onClick={() => deleteClient(c.id_cliente)} />
                   </div>
                 </td>
               </tr>
@@ -217,12 +346,25 @@ export default function GestionClientes() {
 
       {/* MODAL VER */}
       {verCliente && (
-        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" style={{ background: "rgba(0,0,0,0.5)", zIndex: 1000 }} onClick={() => setVerCliente(null)}>
-          <div className="bg-white p-4 rounded-4 shadow" style={{ width: 420, maxHeight: "90vh", overflowY: "auto", position: "relative" }} onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setVerCliente(null)} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: "#9ca3af" }}><X size={18} /></button>
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+          style={{ background: "rgba(0,0,0,0.5)", zIndex: 1000 }} onClick={() => setVerCliente(null)}>
+          <div className="bg-white p-4 rounded-4 shadow"
+            style={{ width: 420, maxHeight: "90vh", overflowY: "auto", position: "relative" }}
+            onClick={(e) => e.stopPropagation()}>
+            <button type="button" onClick={() => setVerCliente(null)}
+              style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: "#9ca3af" }}>
+              <X size={18} />
+            </button>
             <h5 className="fw-bold mb-1">Detalle del Cliente</h5>
             <div style={{ width: 40, height: 3, background: "#B89B6A", borderRadius: 10, marginBottom: 20 }} />
-            {[["Tipo de Documento", verCliente.tipoDoc], ["Número de Documento", verCliente.numDoc], ["Nombre Completo", verCliente.nombre], ["Teléfono", verCliente.telefono], ["Correo Electrónico", verCliente.correo], ["Fecha de Registro", verCliente.fecha]].map(([label, val]) => (
+            {[
+              ["Tipo de Documento", TIPO_DOC_LABELS[verCliente.tipo_documento] || verCliente.tipo_documento],
+              ["Número de Documento", verCliente.numero_documento],
+              ["Nombre Completo", verCliente.nombre_completo],
+              ["Teléfono", verCliente.telefono],
+              ["Correo Electrónico", verCliente.email],
+              ["Fecha de Registro", formatFecha(verCliente.fecha_registro)],
+            ].map(([label, val]) => (
               <div key={label} style={{ marginBottom: 12 }}>
                 <span style={fieldLabel}>{label}</span>
                 <div style={fieldValue}>{val}</div>
@@ -231,40 +373,70 @@ export default function GestionClientes() {
             <div style={{ marginBottom: 20 }}>
               <span style={fieldLabel}>Estado</span>
               <div style={{ paddingTop: 6 }}>
-                <span style={{ background: verCliente.estado === "Activo" ? "#B89B6A" : "#374151", color: verCliente.estado === "Activo" ? "#000" : "#fff", borderRadius: 50, padding: "3px 12px", fontSize: 11, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 5 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "currentColor", display: "inline-block" }} />{verCliente.estado}
+                <span style={{
+                  background: verCliente.estado === "Activo" ? "#B89B6A" : "#374151",
+                  color: verCliente.estado === "Activo" ? "#000" : "#fff",
+                  borderRadius: 50, padding: "3px 12px", fontSize: 11, fontWeight: 600,
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "currentColor", display: "inline-block" }} />
+                  {verCliente.estado ?? "Activo"}
                 </span>
               </div>
             </div>
-            <button onClick={() => setVerCliente(null)} className="btn rounded-pill btn-sm w-100" style={{ backgroundColor: "#B89B6A", color: "#000", border: "none" }}>Cerrar</button>
+            <button type="button" onClick={() => setVerCliente(null)}
+              className="btn rounded-pill btn-sm w-100"
+              style={{ backgroundColor: "#B89B6A", color: "#000", border: "none" }}>
+              Cerrar
+            </button>
           </div>
         </div>
       )}
 
       {/* MODAL EDITAR */}
       {editCliente && (
-        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" style={{ background: "rgba(0,0,0,0.5)", zIndex: 1000 }} onClick={() => setEditCliente(null)}>
-          <div className="bg-white p-4 rounded-4 shadow" style={{ width: 420, maxHeight: "90vh", overflowY: "auto", position: "relative" }} onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setEditCliente(null)} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: "#9ca3af" }}><X size={18} /></button>
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+          style={{ background: "rgba(0,0,0,0.5)", zIndex: 1000 }} onClick={() => setEditCliente(null)}>
+          <div className="bg-white p-4 rounded-4 shadow"
+            style={{ width: 420, maxHeight: "90vh", overflowY: "auto", position: "relative" }}
+            onClick={(e) => e.stopPropagation()}>
+            <button type="button" onClick={() => setEditCliente(null)}
+              style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: "#9ca3af" }}>
+              <X size={18} />
+            </button>
             <h5 className="fw-bold mb-1">Editar Cliente</h5>
             <div style={{ width: 40, height: 3, background: "#B89B6A", borderRadius: 10, marginBottom: 20 }} />
             <label style={fieldLabel}>Tipo de Documento</label>
-            <select style={formInput} value={editForm.tipoDoc} onChange={(e) => setEditForm({ ...editForm, tipoDoc: e.target.value })}>{TIPOS_DOC.map((t) => <option key={t}>{t}</option>)}</select>
+            <select style={formInput} value={editForm.tipo_documento}
+              onChange={(e) => setEditForm({ ...editForm, tipo_documento: e.target.value })}>
+              {TIPOS_DOC.map((t) => <option key={t} value={t}>{TIPO_DOC_LABELS[t]}</option>)}
+            </select>
             <label style={fieldLabel}>Número de Documento</label>
-            <input style={formInput} value={editForm.numDoc} onChange={(e) => setEditForm({ ...editForm, numDoc: e.target.value })} />
+            <input style={formInput} value={editForm.numero_documento}
+              onChange={(e) => setEditForm({ ...editForm, numero_documento: e.target.value })} />
             <label style={fieldLabel}>Nombre Completo</label>
-            <input style={formInput} value={editForm.nombre} onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })} />
+            <input style={formInput} value={editForm.nombre_completo}
+              onChange={(e) => setEditForm({ ...editForm, nombre_completo: e.target.value })} />
             <label style={fieldLabel}>Teléfono</label>
-            <input style={formInput} value={editForm.telefono} onChange={(e) => setEditForm({ ...editForm, telefono: e.target.value })} />
+            <input style={formInput} value={editForm.telefono}
+              onChange={(e) => setEditForm({ ...editForm, telefono: e.target.value })} />
             <label style={fieldLabel}>Correo Electrónico</label>
-            <input style={formInput} value={editForm.correo} onChange={(e) => setEditForm({ ...editForm, correo: e.target.value })} />
-            <label style={fieldLabel}>Fecha de Registro</label>
-            <input style={formInput} value={editForm.fecha} onChange={(e) => setEditForm({ ...editForm, fecha: e.target.value })} />
+            <input style={formInput} value={editForm.email}
+              onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
             <label style={fieldLabel}>Estado</label>
-            <select style={formInput} value={editForm.estado} onChange={(e) => setEditForm({ ...editForm, estado: e.target.value })}><option>Activo</option><option>Inactivo</option></select>
-            <div className="d-flex gap-2">
-              <button onClick={() => setEditCliente(null)} className="btn btn-secondary flex-fill">Cancelar</button>
-              <button onClick={guardarEditar} className="btn rounded-pill btn-sm flex-fill" style={{ backgroundColor: "#B89B6A", color: "#000", border: "none" }}>Guardar</button>
+            <select style={formInput} value={editForm.estado}
+              onChange={(e) => setEditForm({ ...editForm, estado: e.target.value })}>
+              <option>Activo</option>
+              <option>Inactivo</option>
+            </select>
+            {errorMsg && (
+              <div style={{ color: "#ef4444", fontSize: 12, marginBottom: 10, padding: "6px 10px", background: "#fef2f2", borderRadius: 8 }}>
+                {errorMsg}
+              </div>
+            )}
+            <div className="d-flex gap-2 mt-2">
+              <button type="button" onClick={() => { setEditCliente(null); setErrorMsg(""); }} style={btnCancelar}>Cancelar</button>
+              <button type="button" onClick={guardarEditar} style={btnGuardar(false)}>Guardar</button>
             </div>
           </div>
         </div>
@@ -272,28 +444,55 @@ export default function GestionClientes() {
 
       {/* MODAL NUEVO */}
       {mostrarNuevo && (
-        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" style={{ background: "rgba(0,0,0,0.5)", zIndex: 1000 }} onClick={() => setMostrarNuevo(false)}>
-          <div className="bg-white p-4 rounded-4 shadow" style={{ width: 420, maxHeight: "90vh", overflowY: "auto", position: "relative" }} onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setMostrarNuevo(false)} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: "#9ca3af" }}><X size={18} /></button>
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+          style={{ background: "rgba(0,0,0,0.5)", zIndex: 1000 }} onClick={() => setMostrarNuevo(false)}>
+          <div className="bg-white p-4 rounded-4 shadow"
+            style={{ width: 420, maxHeight: "90vh", overflowY: "auto", position: "relative" }}
+            onClick={(e) => e.stopPropagation()}>
+            <button type="button" onClick={() => setMostrarNuevo(false)}
+              style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: "#9ca3af" }}>
+              <X size={18} />
+            </button>
             <h5 className="fw-bold mb-1">Nuevo Cliente</h5>
             <div style={{ width: 40, height: 3, background: "#B89B6A", borderRadius: 10, marginBottom: 20 }} />
             <label style={fieldLabel}>Tipo de Documento</label>
-            <select style={formInput} value={nuevoForm.tipoDoc} onChange={(e) => setNuevoForm({ ...nuevoForm, tipoDoc: e.target.value })}>{TIPOS_DOC.map((t) => <option key={t}>{t}</option>)}</select>
+            <select style={formInput} value={nuevoForm.tipo_documento}
+              onChange={(e) => setNuevoForm({ ...nuevoForm, tipo_documento: e.target.value })}>
+              {TIPOS_DOC.map((t) => <option key={t} value={t}>{TIPO_DOC_LABELS[t]}</option>)}
+            </select>
             <label style={fieldLabel}>Número de Documento</label>
-            <input style={formInput} placeholder="Ej: 1234567890" value={nuevoForm.numDoc} onChange={(e) => setNuevoForm({ ...nuevoForm, numDoc: e.target.value })} />
+            <input style={formInput} placeholder="Ej: 1234567890" value={nuevoForm.numero_documento}
+              onChange={(e) => setNuevoForm({ ...nuevoForm, numero_documento: e.target.value })} />
             <label style={fieldLabel}>Nombre Completo</label>
-            <input style={formInput} placeholder="Nombre y apellidos" value={nuevoForm.nombre} onChange={(e) => setNuevoForm({ ...nuevoForm, nombre: e.target.value })} />
+            <input style={formInput} placeholder="Nombre y apellidos" value={nuevoForm.nombre_completo} 
+            onChange={(e) => { console.log(e.target.value); setNuevoForm({...nuevoForm,nombre_completo: e.target.value});}}/>
             <label style={fieldLabel}>Teléfono</label>
-            <input style={formInput} placeholder="+57 300 000 0000" value={nuevoForm.telefono} onChange={(e) => setNuevoForm({ ...nuevoForm, telefono: e.target.value })} />
+            <input style={formInput} placeholder="+57 300 000 0000" value={nuevoForm.telefono}
+              onChange={(e) => setNuevoForm({ ...nuevoForm, telefono: e.target.value })} />
             <label style={fieldLabel}>Correo Electrónico</label>
-            <input style={formInput} placeholder="correo@email.com" value={nuevoForm.correo} onChange={(e) => setNuevoForm({ ...nuevoForm, correo: e.target.value })} />
-            <label style={fieldLabel}>Fecha de Registro</label>
-            <input style={formInput} value={nuevoForm.fecha} onChange={(e) => setNuevoForm({ ...nuevoForm, fecha: e.target.value })} />
+            <input style={formInput} placeholder="correo@email.com" value={nuevoForm.email}
+              onChange={(e) => setNuevoForm({ ...nuevoForm, email: e.target.value })} />
             <label style={fieldLabel}>Estado</label>
-            <select style={formInput} value={nuevoForm.estado} onChange={(e) => setNuevoForm({ ...nuevoForm, estado: e.target.value })}><option>Activo</option><option>Inactivo</option></select>
-            <div className="d-flex gap-2">
-              <button onClick={() => setMostrarNuevo(false)} className="btn btn-secondary flex-fill">Cancelar</button>
-              <button onClick={guardarNuevo} className="btn rounded-pill btn-sm flex-fill" style={{ backgroundColor: "#B89B6A", color: "#000", border: "none" }}>Guardar</button>
+            <select style={formInput} value={nuevoForm.estado}
+              onChange={(e) => setNuevoForm({ ...nuevoForm, estado: e.target.value })}>
+              <option>Activo</option>
+              <option>Inactivo</option>
+            </select>
+            {errorMsg && (
+              <div style={{ color: "#ef4444", fontSize: 12, marginBottom: 10, padding: "6px 10px", background: "#fef2f2", borderRadius: 8 }}>
+                {errorMsg}
+              </div>
+            )}
+            <div className="d-flex gap-2 mt-2">
+              <button type="button" onClick={() => { setMostrarNuevo(false); setErrorMsg(""); }} style={btnCancelar}>Cancelar</button>
+              <button
+                type="button"
+                onClick={guardarNuevo}
+                disabled={!nuevoForm.nombre_completo || !nuevoForm.numero_documento}
+                style={btnGuardar(!nuevoForm.nombre_completo || !nuevoForm.numero_documento)}
+              >
+                Guardar
+              </button>
             </div>
           </div>
         </div>
