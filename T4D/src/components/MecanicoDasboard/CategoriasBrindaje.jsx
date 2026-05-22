@@ -1,6 +1,15 @@
 import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
-import { Shield, CheckCircle, XCircle, Pencil, Trash2, Plus, Search } from "lucide-react";
+import {
+  Shield,
+  CheckCircle,
+  XCircle,
+  Pencil,
+  Trash2,
+  Plus,
+  Search,
+} from "lucide-react";
+
 import { supabase } from "../../supabase/supabaseClient";
 
 function GestionCategorias() {
@@ -14,10 +23,16 @@ function GestionCategorias() {
   const obtenerCategorias = async () => {
     const { data, error } = await supabase
       .from("categorias")
-      .select("id_categoria, nombre_categoria, descripcion, activo")
+      .select(`
+        id_categoria,
+        nombre_categoria,
+        descripcion,
+        activo
+      `)
       .order("id_categoria", { ascending: true });
 
     if (error) {
+      console.log(error);
       Swal.fire({ icon: "error", title: "Error", text: "No se pudieron cargar las categorías" });
       return;
     }
@@ -184,7 +199,7 @@ function GestionCategorias() {
       </div>
 
       {/* BUSCADOR */}
-      <div className="card p-3 rounded-4 shadow-sm mb-3">
+      <div className="card p-3 rounded-4 shadow-sm mb-3" style={{ background: "#fff" }}>
         <p className="fw-semibold mb-2" style={{ fontSize: "14px" }}>Búsqueda</p>
         <div className="input-group">
           <span className="input-group-text bg-white border-end-0">
@@ -202,7 +217,7 @@ function GestionCategorias() {
       </div>
 
       {/* TABLA */}
-      <div className="card p-3 rounded-4 shadow-sm">
+      <div className="card p-3 rounded-4 shadow-sm" style={{ background: "#fff" }}>
         <div className="mb-3">
           <p className="fw-semibold mb-0" style={{ fontSize: "14px" }}>Categorías Registradas</p>
           <small className="text-muted">{filtradas.length} categorías</small>

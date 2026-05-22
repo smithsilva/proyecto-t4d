@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import Swal from "sweetalert2";
 import { supabase } from "../supabase/supabaseClient";
@@ -273,4 +272,3 @@ function Login({ setVista, setUsuario }) {
 }
 
 export default Login;
-

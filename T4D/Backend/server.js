@@ -9,7 +9,6 @@ const { createClient } = require("@supabase/supabase-js");
 const app = express();
 
 app.use(cors());
-
 app.use(express.json());
 
 // =====================================
@@ -88,17 +87,11 @@ const transporter = nodemailer.createTransport({
 // =====================================
 
 transporter.verify((error) => {
-
   if (error) {
-
     console.log("Error en NodeMailer:", error);
-
   } else {
-
     console.log("Servidor de correo listo");
-
   }
-
 });
 
 // =====================================
@@ -106,25 +99,18 @@ transporter.verify((error) => {
 // =====================================
 
 app.post("/enviar-correo", async (req, res) => {
-
   try {
-
     const { email, password, codigo } = req.body;
 
     if (!email || !codigo) {
-
       return res.status(400).json({
         error: "Faltan datos obligatorios",
       });
-
     }
 
     const info = await transporter.sendMail({
-
       from: `"Sistema Taller" <${process.env.EMAIL_USER}>`,
-
       to: email,
-
       subject: "Datos de acceso",
 
       html: `
@@ -177,9 +163,7 @@ app.post("/enviar-correo", async (req, res) => {
       success: false,
       error: error.message,
     });
-
   }
-
 });
 
 // =====================================
@@ -187,7 +171,6 @@ app.post("/enviar-correo", async (req, res) => {
 // =====================================
 
 app.get("/productos", async (req, res) => {
-
   try {
 
     const { data, error } = await supabase
@@ -198,11 +181,9 @@ app.get("/productos", async (req, res) => {
       });
 
     if (error) {
-
       return res.status(500).json({
         error: error.message,
       });
-
     }
 
     res.json(data);
@@ -212,9 +193,7 @@ app.get("/productos", async (req, res) => {
     res.status(500).json({
       error: "Error del servidor",
     });
-
   }
-
 });
 
 // =====================================
@@ -222,7 +201,6 @@ app.get("/productos", async (req, res) => {
 // =====================================
 
 app.post("/productos", async (req, res) => {
-
   try {
 
     const {
@@ -247,11 +225,9 @@ app.post("/productos", async (req, res) => {
       .select();
 
     if (error) {
-
       return res.status(400).json({
         error: error.message,
       });
-
     }
 
     res.status(201).json({
@@ -264,9 +240,7 @@ app.post("/productos", async (req, res) => {
     res.status(500).json({
       error: "Error del servidor",
     });
-
   }
-
 });
 
 // =====================================
@@ -274,7 +248,6 @@ app.post("/productos", async (req, res) => {
 // =====================================
 
 app.put("/productos/:id", async (req, res) => {
-
   try {
 
     const id = parseInt(req.params.id);
@@ -298,11 +271,9 @@ app.put("/productos/:id", async (req, res) => {
       .select();
 
     if (error) {
-
       return res.status(500).json({
         error: error.message,
       });
-
     }
 
     res.json({
@@ -315,9 +286,7 @@ app.put("/productos/:id", async (req, res) => {
     res.status(500).json({
       error: "Error del servidor",
     });
-
   }
-
 });
 
 // =====================================
@@ -325,7 +294,6 @@ app.put("/productos/:id", async (req, res) => {
 // =====================================
 
 app.delete("/productos/:id", async (req, res) => {
-
   try {
 
     const id = parseInt(req.params.id);
@@ -336,11 +304,9 @@ app.delete("/productos/:id", async (req, res) => {
       .eq("id_producto", id);
 
     if (error) {
-
       return res.status(500).json({
         error: error.message,
       });
-
     }
 
     res.json({
@@ -352,9 +318,7 @@ app.delete("/productos/:id", async (req, res) => {
     res.status(500).json({
       error: "Error del servidor",
     });
-
   }
-
 });
 
 // =====================================
@@ -362,7 +326,6 @@ app.delete("/productos/:id", async (req, res) => {
 // =====================================
 
 app.patch("/productos/:id", async (req, res) => {
-
   try {
 
     const id = parseInt(req.params.id);
@@ -378,11 +341,9 @@ app.patch("/productos/:id", async (req, res) => {
       .select();
 
     if (error) {
-
       return res.status(500).json({
         error: error.message,
       });
-
     }
 
     res.json({
@@ -395,9 +356,7 @@ app.patch("/productos/:id", async (req, res) => {
     res.status(500).json({
       error: "Error del servidor",
     });
-
   }
-
 });
 
 // =====================================
@@ -405,7 +364,6 @@ app.patch("/productos/:id", async (req, res) => {
 // =====================================
 
 app.get("/movimientos", async (req, res) => {
-
   try {
 
     const { data, error } = await supabase
@@ -437,7 +395,6 @@ app.get("/movimientos", async (req, res) => {
       return res.status(500).json({
         error: error.message,
       });
-
     }
 
     return res.status(200).json(data);
@@ -449,17 +406,12 @@ app.get("/movimientos", async (req, res) => {
     return res.status(500).json({
       error: error.message,
     });
-
   }
-
 });
 
 // =====================================
 // INICIAR SERVIDOR
 // =====================================
-
-require("dotenv").config();
-const app = require("./app");
 
 const PORT = 5000;
 
