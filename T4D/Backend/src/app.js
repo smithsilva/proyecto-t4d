@@ -11,11 +11,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// =====================================
+// RUTAS
+// =====================================
+
 app.use("/productos", productosRoutes);
+
 app.use("/movimientos", movimientosRoutes);
+
 app.use("/usuarios", usuariosRoutes);
+
 app.use("/roles", rolesRoutes);
-
-
 
 module.exports = app;
