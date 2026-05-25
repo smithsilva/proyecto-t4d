@@ -1,13 +1,16 @@
 import { useState, useMemo, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
+import {
+  obtenerProveedores,
+  crearProveedor,
+  editarProveedor,
+  eliminarProveedor,
+} from "../api/proveedoresApi";
 import {
   Search, Plus, Eye, Pencil, Trash2, Phone, Mail,
   MapPin, Building2, X, Save, Hash, User,
 } from "lucide-react";
 
-const SUPABASE_URL = "https://nnlpmcwnahjdfqhfccjj.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_3WU0ecokunMuTQMf6xWqLA_TrZVAZ7X";
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 
 const inputStyle = {
   width: "100%",
@@ -41,12 +44,9 @@ export default function Proveedores() {
   const cargarProveedores = async () => {
     setCargando(true);
     try {
-      const { data, error } = await supabase
-        .from("proveedores")
-        .select("*")
-        .order("id_proveedor", { ascending: true });
-      if (error) throw error;
-      setProveedores(data || []);
+      const data = await obtenerProveedores();
+
+      setProveedores(data);
     } catch (err) {
       console.error("Error al cargar:", err.message);
     }
@@ -65,64 +65,77 @@ export default function Proveedores() {
 
   const guardarProveedor = async (e) => {
     e.preventDefault();
-    try {
-      if (modoEdicion) {
-        const { error } = await supabase
-          .from("proveedores")
-          .update({
-            nit: nuevoProveedor.nit,
-            nombre_proveedor: nuevoProveedor.nombre_proveedor,
-            contacto_proveedor: nuevoProveedor.contacto_proveedor,
-            telefono: nuevoProveedor.telefono,
-            email: nuevoProveedor.email,
-            direccion: nuevoProveedor.direccion,
-          })
-          .eq("id_proveedor", proveedorEditar.id_proveedor);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("proveedores")
-          .insert([{
-            nit: nuevoProveedor.nit,
-            nombre_proveedor: nuevoProveedor.nombre_proveedor,
-            contacto_proveedor: nuevoProveedor.contacto_proveedor,
-            telefono: nuevoProveedor.telefono,
-            email: nuevoProveedor.email,
-            direccion: nuevoProveedor.direccion,
-          }]);
-        if (error) throw error;
-      }
-      await cargarProveedores();
-      setMostrarModal(false);
-      setModoEdicion(false);
-      setProveedorEditar(null);
-      setNuevoProveedor({ nit: "", nombre_proveedor: "", contacto_proveedor: "", telefono: "", email: "", direccion: "" });
-    } catch (err) {
-      alert("Error al guardar: " + err.message);
-    }
+   try {
+
+  if (modoEdicion) {
+
+    await editarProveedor(
+      proveedorEditar.id_proveedor,
+      nuevoProveedor
+    );
+
+  } else {
+
+    await crearProveedor(nuevoProveedor);
+
+  }
+
+  await cargarProveedores();
+
+  setMostrarModal(false);
+
+  setModoEdicion(false);
+
+  setProveedorEditar(null);
+
+  setNuevoProveedor({
+    nit: "",
+    nombre_proveedor: "",
+    contacto_proveedor: "",
+    telefono: "",
+    email: "",
+    direccion: "",
+  });
+
+} catch (err) {
+
+  alert("Error al guardar");
+
+  console.log(err);
+
+}
   };
 
-  const editarProveedor = (proveedor) => {
+ const abrirEditarProveedor = (proveedor) => {
     setModoEdicion(true);
     setProveedorEditar(proveedor);
     setNuevoProveedor(proveedor);
     setMostrarModal(true);
   };
 
-  const eliminarProveedor = async (id) => {
-    const confirmar = window.confirm("¿Eliminar proveedor?");
-    if (!confirmar) return;
-    try {
-      const { error } = await supabase
-        .from("proveedores")
-        .delete()
-        .eq("id_proveedor", id);
-      if (error) throw error;
-      await cargarProveedores();
-    } catch (err) {
-      alert("Error al eliminar: " + err.message);
-    }
-  };
+ const eliminarProveedorHandler = async (id) => {
+
+  const confirmar = window.confirm(
+    "¿Eliminar proveedor?"
+  );
+
+  if (!confirmar) return;
+
+  try {
+
+    await eliminarProveedor(id);
+
+    await cargarProveedores();
+
+  } catch (err) {
+
+    alert("Error al eliminar");
+
+    console.log(err);
+
+  }
+
+};
 
   return (
     <div className="p-5" style={{ marginTop: "1px", background: "#fff", minHeight: "100vh" }}>
@@ -217,8 +230,8 @@ export default function Proveedores() {
                   <td>
                     <div className="d-flex gap-2">
                       <Eye size={18} style={{ cursor: "pointer", color: "#374151" }} title="Ver" onClick={() => setVerProveedor(p)} />
-                      <Pencil size={18} style={{ cursor: "pointer", color: "#B89B6A" }} title="Editar" onClick={() => editarProveedor(p)} />
-                      <Trash2 size={18} style={{ cursor: "pointer", color: "#ef4444" }} title="Eliminar" onClick={() => eliminarProveedor(p.id_proveedor)} />
+                      <Pencil size={18} style={{ cursor: "pointer", color: "#B89B6A" }} title="Editar" onClick={() => abrirEditarProveedor(p)} />
+                      <Trash2 size={18} style={{ cursor: "pointer", color: "#ef4444" }} title="Eliminar" onClick={() => eliminarProveedorHandler(p.id_proveedor)} />
                     </div>
                   </td>
                 </tr>
