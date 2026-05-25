@@ -65,12 +65,12 @@ function MisMantenimientos() {
 
     const cargarTareas = () => {
 
-      const mantenimientos =
-        JSON.parse(
-          localStorage.getItem(
-            "mantenimientosMecanico"
-          )
-        ) || [];
+   const mantenimientos =
+  JSON.parse(
+    localStorage.getItem(
+      "tareasMecanico"
+    )
+  ) || [];
 
       setData([
         ...datosIniciales,
@@ -181,8 +181,8 @@ function MisMantenimientos() {
 
     const mantenimientos =
       JSON.parse(
-        localStorage.getItem(
-          "mantenimientosMecanico"
+       localStorage.getItem(
+  "tareasMecanico"
         )
       ) || [];
 
@@ -204,7 +204,7 @@ function MisMantenimientos() {
       });
 
     localStorage.setItem(
-      "mantenimientosMecanico",
+  "tareasMecanico",
       JSON.stringify(
         actualizados
       )
@@ -247,8 +247,8 @@ function MisMantenimientos() {
     const mantenimientos =
       JSON.parse(
         localStorage.getItem(
-          "mantenimientosMecanico"
-        )
+  "tareasMecanico"
+)
       ) || [];
 
     const actualizados =
@@ -268,8 +268,8 @@ function MisMantenimientos() {
         return m;
       });
 
-    localStorage.setItem(
-      "mantenimientosMecanico",
+   localStorage.setItem(
+  "tareasMecanico",
       JSON.stringify(
         actualizados
       )

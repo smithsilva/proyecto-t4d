@@ -29,8 +29,8 @@ function TopbarMecanico({ setVista, usuario }) {
       const guardadas =
         JSON.parse(
           localStorage.getItem(
-            "notificacionesMecanico"
-          )
+  "mantenimientosMecanico"
+)
         ) || [];
 
       setNotificaciones(
@@ -69,33 +69,33 @@ function TopbarMecanico({ setVista, usuario }) {
       ) || [];
 
     const nuevaTarea = {
-      id: noti.id,
+  id_mantenimiento: noti.id,
 
-      vehiculo:
-        noti.vehiculo,
+  fecha_hora:
+    noti.fechaLimite,
 
-      tipoTrabajo:
-        noti.tipoTrabajo,
+  tipo_de_mantenimiento:
+    noti.tipoTrabajo,
 
-      descripcion:
-        noti.descripcion,
+  id_cliente:
+    noti.vehiculo,
 
-      prioridad:
-        noti.prioridad,
+  descripcion:
+    noti.descripcion,
 
-      fechaLimite:
-        noti.fechaLimite,
+  prioridad:
+    noti.prioridad,
 
-      estado:
-        "Pendiente",
-    };
+  estado:
+    "Pendiente",
+};
 
     tareasGuardadas.push(
       nuevaTarea
     );
 
     localStorage.setItem(
-      "tareasMecanico",
+  "mantenimientosMecanico",
 
       JSON.stringify(
         tareasGuardadas
