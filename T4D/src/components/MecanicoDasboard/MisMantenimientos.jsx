@@ -11,90 +11,30 @@ import {
   Check,
 } from "lucide-react";
 
-function MisMantenimientos() {
+import { supabase } from "../../supabase/supabaseClient";
 
-  // =====================================
-  // DATOS INICIALES
-  // =====================================
+function MisMantenimientos({ usuario }) {
 
-  const datosIniciales = [
-    {
-      id_mantenimiento: 1,
-      fecha_hora: "2026-05-12 08:30",
-      tipo_de_mantenimiento: "Fisica",
-      estado: "Pendiente",
-      id_cliente: "Ana López",
-    },
-
-    {
-      id_mantenimiento: 2,
-      fecha_hora: "2026-05-11 14:15",
-      tipo_de_mantenimiento: "Blindaje Nivel 3",
-      estado: "En proceso",
-      id_cliente: "Carlos Ruiz",
-    },
-
-    {
-      id_mantenimiento: 3,
-      fecha_hora: "2026-05-10 10:00",
-      tipo_de_mantenimiento: "Preventivo",
-      estado: "Finalizado",
-      id_cliente: "María Gómez",
-    },
-
-    {
-      id_mantenimiento: 4,
-      fecha_hora: "2026-05-09 16:45",
-      tipo_de_mantenimiento: "Online",
-      estado: "Pendiente",
-      id_cliente: "José Pérez",
-    },
-  ];
-
-  // =====================================
-  // STATE PRINCIPAL
-  // =====================================
+  // =========================
+  // ESTADOS
+  // =========================
 
   const [data, setData] = useState([]);
+  const [cargando, setCargando] = useState(true);
 
-  // =====================================
-  // CARGAR MANTENIMIENTOS
-  // =====================================
+  const [search, setSearch] = useState("");
+  const [filterEstado, setFilterEstado] = useState("");
+  const [filterTipo, setFilterTipo] = useState("");
 
-  useEffect(() => {
-
-    const cargarTareas = () => {
-
-   const mantenimientos =
-  JSON.parse(
-    localStorage.getItem(
-      "tareasMecanico"
-    )
-  ) || [];
-
-      setData([
-        ...datosIniciales,
-        ...mantenimientos,
-      ]);
-    };
-
-    cargarTareas();
-
-    const intervalo = setInterval(
-      cargarTareas,
-      1000
-    );
-
-    return () =>
-      clearInterval(intervalo);
-
-  }, []);
-
-  // =====================================
-  // FILTROS
-  // =====================================
+  // =========================
+  // TIPOS
+  // =========================
 
   const TIPOS = [
+    "Mantenimiento",
+    "Reparación",
+    "Blindamiento",
+    "Inspección",
     "Fisica",
     "Online",
     "Preventivo",
@@ -106,254 +46,283 @@ function MisMantenimientos() {
     "Blindaje Nivel 5",
   ];
 
-  const [search, setSearch] =
-    useState("");
+  // =========================
+  // CARGAR ASIGNACIONES
+  // =========================
 
-  const [filterEstado,
-    setFilterEstado] =
-    useState("");
+  const cargarAsignaciones = async () => {
+console.log("USUARIO COMPLETO:", usuario);
 
-  const [filterTipo,
-    setFilterTipo] =
-    useState("");
+if (!usuario) {
+  console.log("Usuario no existe");
+  setCargando(false);
+  return;
+}
 
-  // =====================================
-  // FILTRADO
-  // =====================================
+console.log("ID DEL USUARIO:", usuario.id_usuario);
+
+    setCargando(true);
+
+    console.log("Usuario logueado:", usuario);
+    console.log("ID usuario:", usuario?.id_usuario);
+
+    const { data: rows, error } = await supabase
+      .from("asignaciones_tareas")
+      .select(`
+        id_asignacion,
+        id_mecanico,
+        vehiculo,
+        tipo_trabajo,
+        descripcion,
+        prioridad,
+        fecha_limite,
+        estado,
+        fecha_asignacion
+      `)
+      .eq("id_mecanico", usuario.id_usuario)
+      .order("fecha_asignacion", { ascending: false });
+
+    console.log("Asignaciones:", rows);
+    console.log("Error:", error);
+
+    if (error) {
+
+      console.error("Error cargando asignaciones:", error.message);
+
+      Swal.fire({
+        icon: "error",
+        title: "Error cargando asignaciones",
+        text: error.message,
+      });
+
+      setCargando(false);
+      return;
+    }
+
+    const asignacionesFormateadas = (rows || []).map((r) => ({
+      id_mantenimiento: r.id_asignacion,
+
+      fecha_hora:
+        r.fecha_asignacion
+          ?.slice(0, 16)
+          .replace("T", " ") || "—",
+
+      tipo_de_mantenimiento: r.tipo_trabajo,
+
+      id_cliente: r.vehiculo,
+
+      descripcion: r.descripcion,
+
+      prioridad: r.prioridad,
+
+      fecha_limite: r.fecha_limite,
+
+      estado: r.estado,
+    }));
+
+    setData(asignacionesFormateadas);
+
+    setCargando(false);
+  };
+
+  // =========================
+  // EFECTO
+  // =========================
+
+  useEffect(() => {
+
+    cargarAsignaciones();
+
+    const intervalo = setInterval(() => {
+      cargarAsignaciones();
+    }, 20000);
+
+    return () => clearInterval(intervalo);
+
+  }, [usuario]);
+
+  // =========================
+  // FILTROS
+  // =========================
 
   const filtered = data.filter((d) => {
 
-    const q = search.toLowerCase();
+    const texto = search.toLowerCase();
 
-    const matchQ =
-      !q ||
-      String(
-        d.id_mantenimiento
-      ).includes(q) ||
-      d.id_cliente
+    const coincideBusqueda =
+      !texto ||
+      String(d.id_mantenimiento).includes(texto) ||
+      (d.id_cliente || "").toLowerCase().includes(texto) ||
+      (d.tipo_de_mantenimiento || "")
         .toLowerCase()
-        .includes(q) ||
-      d.tipo_de_mantenimiento
-        .toLowerCase()
-        .includes(q);
+        .includes(texto);
 
     return (
-      matchQ &&
-      (!filterEstado ||
-        d.estado ===
-          filterEstado) &&
-      (!filterTipo ||
-        d.tipo_de_mantenimiento ===
-          filterTipo)
+      coincideBusqueda &&
+      (!filterEstado || d.estado === filterEstado) &&
+      (!filterTipo || d.tipo_de_mantenimiento === filterTipo)
     );
   });
 
-  // =====================================
+  // =========================
   // MÉTRICAS
-  // =====================================
+  // =========================
 
-  const pendientes =
-    filtered.filter(
-      (d) =>
-        d.estado ===
-        "Pendiente"
-    ).length;
+  const pendientes = data.filter(
+    (d) => d.estado === "Pendiente"
+  ).length;
 
-  const enProceso =
-    filtered.filter(
-      (d) =>
-        d.estado ===
-        "En proceso"
-    ).length;
+  const enProceso = data.filter(
+    (d) => d.estado === "En proceso"
+  ).length;
 
-  const finalizados =
-    filtered.filter(
-      (d) =>
-        d.estado ===
-        "Finalizado"
-    ).length;
+  const finalizados = data.filter(
+    (d) => d.estado === "Finalizada"
+  ).length;
 
-  // =====================================
+  // =========================
   // ACEPTAR TAREA
-  // =====================================
+  // =========================
 
-  const aceptarTarea = (id) => {
+  const aceptarTarea = async (id_asignacion) => {
 
-    const mantenimientos =
-      JSON.parse(
-       localStorage.getItem(
-  "tareasMecanico"
-        )
-      ) || [];
+    const { error } = await supabase
+      .from("asignaciones_tareas")
+      .update({
+        estado: "En proceso",
+      })
+      .eq("id_asignacion", id_asignacion);
 
-    const actualizados =
-      mantenimientos.map((m) => {
+    if (error) {
 
-        if (
-          m.id_mantenimiento === id
-        ) {
-
-          return {
-            ...m,
-            estado:
-              "En proceso",
-          };
-        }
-
-        return m;
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: error.message,
       });
 
-    localStorage.setItem(
-  "tareasMecanico",
-      JSON.stringify(
-        actualizados
-      )
-    );
+      return;
+    }
 
     setData((prev) =>
-      prev.map((d) => {
-
-        if (
-          d.id_mantenimiento === id
-        ) {
-
-          return {
-            ...d,
-            estado:
-              "En proceso",
-          };
-        }
-
-        return d;
-      })
+      prev.map((d) =>
+        d.id_mantenimiento === id_asignacion
+          ? { ...d, estado: "En proceso" }
+          : d
+      )
     );
 
     Swal.fire({
       icon: "success",
       title: "Tarea aceptada",
-      text:
-        "La tarea ahora está en proceso",
-      confirmButtonColor:
-        "#B89B6A",
+      text: "La tarea ahora está en proceso",
+      confirmButtonColor: "#B89B6A",
+      timer: 1800,
+      showConfirmButton: false,
     });
   };
 
-  // =====================================
+  // =========================
   // FINALIZAR TAREA
-  // =====================================
+  // =========================
 
-  const finalizarTarea = (id) => {
+  const finalizarTarea = async (id_asignacion) => {
 
-    const mantenimientos =
-      JSON.parse(
-        localStorage.getItem(
-  "tareasMecanico"
-)
-      ) || [];
+    const { error } = await supabase
+      .from("asignaciones_tareas")
+      .update({
+        estado: "Finalizada",
+      })
+      .eq("id_asignacion", id_asignacion);
 
-    const actualizados =
-      mantenimientos.map((m) => {
+    if (error) {
 
-        if (
-          m.id_mantenimiento === id
-        ) {
-
-          return {
-            ...m,
-            estado:
-              "Finalizado",
-          };
-        }
-
-        return m;
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: error.message,
       });
 
-   localStorage.setItem(
-  "tareasMecanico",
-      JSON.stringify(
-        actualizados
-      )
-    );
+      return;
+    }
 
     setData((prev) =>
-      prev.map((d) => {
-
-        if (
-          d.id_mantenimiento === id
-        ) {
-
-          return {
-            ...d,
-            estado:
-              "Finalizado",
-          };
-        }
-
-        return d;
-      })
+      prev.map((d) =>
+        d.id_mantenimiento === id_asignacion
+          ? { ...d, estado: "Finalizada" }
+          : d
+      )
     );
 
     Swal.fire({
       icon: "success",
-      title:
-        "Trabajo finalizado",
-      confirmButtonColor:
-        "#B89B6A",
+      title: "Trabajo finalizado",
+      confirmButtonColor: "#B89B6A",
+      timer: 1800,
+      showConfirmButton: false,
     });
   };
 
-  // =====================================
+  // =========================
   // VER DETALLE
-  // =====================================
+  // =========================
 
-  const verDetalle = (
-    mantenimiento
-  ) => {
+  const verDetalle = (m) => {
 
     Swal.fire({
-      title: `Mantenimiento #${mantenimiento.id_mantenimiento}`,
+      title: `Asignación #${m.id_mantenimiento}`,
 
       html: `
-        <div style="text-align:left;font-size:14px">
+        <div style="text-align:left;font-size:14px;line-height:1.8">
 
           <p>
-            <b>Vehículo / Cliente:</b>
-            ${mantenimiento.id_cliente}
-          </p>
-
-          <p>
-            <b>Fecha:</b>
-            ${mantenimiento.fecha_hora}
+            <b>Vehículo:</b>
+            ${m.id_cliente || "—"}
           </p>
 
           <p>
             <b>Tipo:</b>
-            ${mantenimiento.tipo_de_mantenimiento}
+            ${m.tipo_de_mantenimiento || "—"}
+          </p>
+
+          <p>
+            <b>Descripción:</b>
+            ${m.descripcion || "—"}
+          </p>
+
+          <p>
+            <b>Prioridad:</b>
+            ${m.prioridad || "—"}
+          </p>
+
+          <p>
+            <b>Fecha asignación:</b>
+            ${m.fecha_hora}
+          </p>
+
+          <p>
+            <b>Fecha límite:</b>
+            ${m.fecha_limite || "—"}
           </p>
 
           <p>
             <b>Estado:</b>
-            ${mantenimiento.estado}
+            ${m.estado}
           </p>
 
         </div>
       `,
 
-      confirmButtonColor:
-        "#B89B6A",
-
-      confirmButtonText:
-        "Cerrar",
+      confirmButtonColor: "#B89B6A",
+      confirmButtonText: "Cerrar",
     });
   };
 
-  // =====================================
-  // BADGE TIPO
-  // =====================================
+  // =========================
+  // BADGES
+  // =========================
 
-  const TipoBadge = ({
-    tipo,
-  }) => (
+  const TipoBadge = ({ tipo }) => (
     <span
       style={{
         background: "#1f2937",
@@ -364,56 +333,43 @@ function MisMantenimientos() {
         fontWeight: "600",
       }}
     >
-      {tipo}
+      {tipo || "—"}
     </span>
   );
 
-  // =====================================
-  // BADGE ESTADO
-  // =====================================
-
-  const EstadoBadge = ({
-    estado,
-  }) => {
+  const EstadoBadge = ({ estado }) => {
 
     const estilos = {
+
       Pendiente: {
-        background:
-          "#B89B6A",
+        background: "#B89B6A",
         color: "#000",
       },
 
       "En proceso": {
-        background:
-          "#1f2937",
+        background: "#1f2937",
         color: "#fff",
       },
 
-      Finalizado: {
-        background:
-          "#374151",
+      Finalizada: {
+        background: "#14532d",
         color: "#fff",
       },
     };
 
+    const estilo =
+      estilos[estado] || {
+        background: "#6b7280",
+        color: "#fff",
+      };
+
     return (
       <span
         style={{
-          background:
-            estilos[estado]
-              ?.background,
-
-          color:
-            estilos[estado]
-              ?.color,
-
+          ...estilo,
           padding: "7px 12px",
-
-          borderRadius:
-            "20px",
-
+          borderRadius: "20px",
           fontSize: "11px",
-
           fontWeight: "600",
         }}
       >
@@ -422,9 +378,9 @@ function MisMantenimientos() {
     );
   };
 
-  // =====================================
-  // CARD
-  // =====================================
+  // =========================
+  // TARJETAS
+  // =========================
 
   const CardMetric = ({
     titulo,
@@ -432,22 +388,21 @@ function MisMantenimientos() {
     subtitulo,
     icono,
   }) => (
+
     <div className="col-md-3">
+
       <div
         className="p-3 rounded-4 shadow-sm d-flex justify-content-between"
         style={{
           background: "#121212",
-          border:
-            "1px solid #B89B6A",
+          border: "1px solid #B89B6A",
           color: "#fff",
         }}
       >
+
         <div>
-          <small
-            style={{
-              color: "#B89B6A",
-            }}
-          >
+
+          <small style={{ color: "#B89B6A" }}>
             {titulo}
           </small>
 
@@ -463,14 +418,22 @@ function MisMantenimientos() {
           >
             {subtitulo}
           </small>
+
         </div>
 
         {icono}
+
       </div>
+
     </div>
   );
 
+  // =========================
+  // RENDER
+  // =========================
+
   return (
+
     <div
       style={{
         padding: "20px",
@@ -483,23 +446,21 @@ function MisMantenimientos() {
       {/* HEADER */}
 
       <div className="mb-4">
+
         <h4 className="fw-bold mb-1">
-          Mis Tareas y
-          Mantenimientos
+          Mis Tareas y Mantenimientos
         </h4>
 
         <p
           className="text-muted mb-0"
-          style={{
-            fontSize: "13px",
-          }}
+          style={{ fontSize: "13px" }}
         >
-          Visualiza y gestiona
-          tus asignaciones
+          Visualiza y gestiona tus asignaciones
         </p>
+
       </div>
 
-      {/* TARJETAS */}
+      {/* MÉTRICAS */}
 
       <div className="row g-3 mb-4">
 
@@ -507,59 +468,39 @@ function MisMantenimientos() {
           titulo="Pendientes"
           valor={pendientes}
           subtitulo="Por aceptar"
-          icono={
-            <Clock3
-              size={20}
-              color="#B89B6A"
-            />
-          }
+          icono={<Clock3 size={20} color="#B89B6A" />}
         />
 
         <CardMetric
           titulo="En proceso"
           valor={enProceso}
           subtitulo="Trabajos activos"
-          icono={
-            <Wrench
-              size={20}
-              color="#B89B6A"
-            />
-          }
+          icono={<Wrench size={20} color="#B89B6A" />}
         />
 
         <CardMetric
           titulo="Finalizados"
           valor={finalizados}
           subtitulo="Completados"
-          icono={
-            <CheckCircle
-              size={20}
-              color="#B89B6A"
-            />
-          }
+          icono={<CheckCircle size={20} color="#B89B6A" />}
         />
 
         <CardMetric
           titulo="Total tareas"
-          valor={filtered.length}
+          valor={data.length}
           subtitulo="Asignaciones"
-          icono={
-            <Shield
-              size={20}
-              color="#B89B6A"
-            />
-          }
+          icono={<Shield size={20} color="#B89B6A" />}
         />
+
       </div>
 
       {/* FILTROS */}
 
       <div
         className="card p-3 rounded-4 shadow-sm mb-4"
-        style={{
-          background: "#fff",
-        }}
+        style={{ background: "#fff" }}
       >
+
         <h6 className="fw-bold mb-3">
           Filtros y búsqueda
         </h6>
@@ -567,17 +508,16 @@ function MisMantenimientos() {
         <div className="row g-2">
 
           <div className="col-md-6">
+
             <div className="position-relative">
 
               <Search
                 size={16}
                 style={{
-                  position:
-                    "absolute",
+                  position: "absolute",
                   top: "12px",
                   left: "12px",
-                  color:
-                    "#6b7280",
+                  color: "#6b7280",
                 }}
               />
 
@@ -586,29 +526,24 @@ function MisMantenimientos() {
                 className="form-control rounded-pill"
                 placeholder="Buscar..."
                 value={search}
-                onChange={(e) =>
-                  setSearch(
-                    e.target.value
-                  )
-                }
-                style={{
-                  paddingLeft:
-                    "35px",
-                }}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{ paddingLeft: "35px" }}
               />
+
             </div>
+
           </div>
 
           <div className="col-md-3">
+
             <select
               className="form-select rounded-pill"
               value={filterEstado}
               onChange={(e) =>
-                setFilterEstado(
-                  e.target.value
-                )
+                setFilterEstado(e.target.value)
               }
             >
+
               <option value="">
                 Todos los estados
               </option>
@@ -621,37 +556,40 @@ function MisMantenimientos() {
                 En proceso
               </option>
 
-              <option value="Finalizado">
-                Finalizado
+              <option value="Finalizada">
+                Finalizada
               </option>
+
             </select>
+
           </div>
 
           <div className="col-md-3">
+
             <select
               className="form-select rounded-pill"
               value={filterTipo}
               onChange={(e) =>
-                setFilterTipo(
-                  e.target.value
-                )
+                setFilterTipo(e.target.value)
               }
             >
+
               <option value="">
                 Todos los tipos
               </option>
 
               {TIPOS.map((t) => (
-                <option
-                  key={t}
-                  value={t}
-                >
+                <option key={t} value={t}>
                   {t}
                 </option>
               ))}
+
             </select>
+
           </div>
+
         </div>
+
       </div>
 
       {/* TABLA */}
@@ -664,177 +602,201 @@ function MisMantenimientos() {
         }}
       >
 
-        <div className="table-responsive">
+        {cargando ? (
 
-          <table
-            className="table align-middle mb-0"
+          <div
             style={{
-              minWidth: "900px",
+              textAlign: "center",
+              padding: "40px 0",
             }}
           >
 
-            <thead>
-              <tr
-                style={{
-                  fontSize: "13px",
-                }}
-              >
-                <th>ID</th>
+            <div
+              style={{
+                display: "inline-block",
+                width: 28,
+                height: 28,
+                border: "3px solid #e5e7eb",
+                borderTop: "3px solid #B89B6A",
+                borderRadius: "50%",
+                animation: "spin 0.8s linear infinite",
+              }}
+            />
 
-                <th>Fecha</th>
+            <p
+              style={{
+                marginTop: 12,
+                color: "#9ca3af",
+                fontSize: 13,
+              }}
+            >
+              Cargando asignaciones...
+            </p>
 
-                <th>Tipo</th>
+            <style>
+              {`
+                @keyframes spin {
+                  to {
+                    transform: rotate(360deg);
+                  }
+                }
+              `}
+            </style>
 
-                <th>Vehículo / Cliente</th>
+          </div>
 
-                <th>Estado</th>
+        ) : (
 
-                <th>Acciones</th>
-              </tr>
-            </thead>
+          <div className="table-responsive">
 
-            <tbody>
+            <table
+              className="table align-middle mb-0"
+              style={{ minWidth: "900px" }}
+            >
 
-              {filtered.length ===
-              0 ? (
-                <tr>
-                  <td
-                    colSpan="6"
-                    className="text-center py-5 text-muted"
-                  >
-                    Sin resultados
-                  </td>
+              <thead>
+
+                <tr style={{ fontSize: "13px" }}>
+                  <th>ID</th>
+                  <th>Fecha</th>
+                  <th>Tipo</th>
+                  <th>Vehículo / Cliente</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
                 </tr>
-              ) : (
-                filtered.map((d) => (
 
-                  <tr
-                    key={
-                      d.id_mantenimiento
-                    }
-                    style={{
-                      fontSize:
-                        "13px",
-                    }}
-                  >
-                    <td>
-                      #
-                      {
-                        d.id_mantenimiento
-                      }
+              </thead>
+
+              <tbody>
+
+                {filtered.length === 0 ? (
+
+                  <tr>
+
+                    <td
+                      colSpan="6"
+                      className="text-center py-5 text-muted"
+                    >
+
+                      {data.length === 0
+                        ? "No tienes asignaciones aún"
+                        : "Sin resultados"}
+
                     </td>
 
-                    <td>
-                      {d.fecha_hora}
-                    </td>
-
-                    <td>
-                      <TipoBadge
-                        tipo={
-                          d.tipo_de_mantenimiento
-                        }
-                      />
-                    </td>
-
-                    <td>
-                      {d.id_cliente}
-                    </td>
-
-                    <td>
-                      <EstadoBadge
-                        estado={
-                          d.estado
-                        }
-                      />
-                    </td>
-
-                    <td>
-                      <div className="d-flex gap-2 align-items-center">
-
-                        <Eye
-                          size={18}
-                          color="#B89B6A"
-                          style={{
-                            cursor:
-                              "pointer",
-                          }}
-                          onClick={() =>
-                            verDetalle(
-                              d
-                            )
-                          }
-                        />
-
-                        {d.estado ===
-                          "Pendiente" && (
-                          <button
-                            onClick={() =>
-                              aceptarTarea(
-                                d.id_mantenimiento
-                              )
-                            }
-                            className="btn btn-sm"
-                            style={{
-                              background:
-                                "#B89B6A",
-                              color:
-                                "#000",
-                              border:
-                                "none",
-                              borderRadius:
-                                "20px",
-                              fontSize:
-                                "11px",
-                              fontWeight:
-                                "600",
-                            }}
-                          >
-                            <Check
-                              size={14}
-                            />
-                          </button>
-                        )}
-
-                        {d.estado ===
-                          "En proceso" && (
-                          <button
-                            onClick={() =>
-                              finalizarTarea(
-                                d.id_mantenimiento
-                              )
-                            }
-                            className="btn btn-sm"
-                            style={{
-                              background:
-                                "#14532d",
-                              color:
-                                "#fff",
-                              border:
-                                "none",
-                              borderRadius:
-                                "20px",
-                              fontSize:
-                                "11px",
-                              fontWeight:
-                                "600",
-                            }}
-                          >
-                            <Check
-                              size={14}
-                            />
-                          </button>
-                        )}
-
-                      </div>
-                    </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
 
-        </div>
+                ) : (
+
+                  filtered.map((d) => (
+
+                    <tr
+                      key={d.id_mantenimiento}
+                      style={{ fontSize: "13px" }}
+                    >
+
+                      <td>
+                        #{d.id_mantenimiento}
+                      </td>
+
+                      <td>
+                        {d.fecha_hora}
+                      </td>
+
+                      <td>
+                        <TipoBadge
+                          tipo={d.tipo_de_mantenimiento}
+                        />
+                      </td>
+
+                      <td>
+                        {d.id_cliente || "—"}
+                      </td>
+
+                      <td>
+                        <EstadoBadge estado={d.estado} />
+                      </td>
+
+                      <td>
+
+                        <div className="d-flex gap-2 align-items-center">
+
+                          <Eye
+                            size={18}
+                            color="#B89B6A"
+                            style={{ cursor: "pointer" }}
+                            onClick={() => verDetalle(d)}
+                          />
+
+                          {d.estado === "Pendiente" && (
+
+                            <button
+                              onClick={() =>
+                                aceptarTarea(
+                                  d.id_mantenimiento
+                                )
+                              }
+                              className="btn btn-sm"
+                              style={{
+                                background: "#B89B6A",
+                                color: "#000",
+                                border: "none",
+                                borderRadius: "20px",
+                                fontSize: "11px",
+                                fontWeight: "600",
+                              }}
+                            >
+
+                              <Check size={14} />
+
+                            </button>
+
+                          )}
+
+                          {d.estado === "En proceso" && (
+
+                            <button
+                              onClick={() =>
+                                finalizarTarea(
+                                  d.id_mantenimiento
+                                )
+                              }
+                              className="btn btn-sm"
+                              style={{
+                                background: "#14532d",
+                                color: "#fff",
+                                border: "none",
+                                borderRadius: "20px",
+                                fontSize: "11px",
+                                fontWeight: "600",
+                              }}
+                            >
+
+                              <Check size={14} />
+
+                            </button>
+
+                          )}
+
+                        </div>
+
+                      </td>
+
+                    </tr>
+
+                  ))
+                )}
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        )}
+
       </div>
+
     </div>
   );
 }
