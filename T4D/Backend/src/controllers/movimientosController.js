@@ -1,23 +1,50 @@
-const {
-  obtenerMovimientosService,
-  crearMovimientoService,
-} = require("../services/movimientosService");
-
-// =====================================
-// GET
-// =====================================
-
-const obtenerMovimientos = async (
+const postProducto = async (
   req,
   res
 ) => {
 
   try {
 
-    const data =
-      await obtenerMovimientosService();
+    const {
+      codigo_barras,
+      nombre_producto,
+      descripcion,
+      precio_actual,
+      stock_actual,
+      unidad_medida,
+      id_categoria,
+      imagen,
+      activo,
+      id_usuario,
+    } = req.body;
 
-    res.json(data);
+    if (
+      !nombre_producto ||
+      !precio_actual
+    ) {
+      return res.status(400).json({
+        error:
+          "Nombre y precio son obligatorios",
+      });
+    }
+
+    const producto =
+      await agregarProducto({
+        codigo_barras,
+        nombre_producto,
+        descripcion,
+        precio_actual,
+        stock_actual,
+        unidad_medida,
+        id_categoria,
+        imagen,
+        activo,
+        id_usuario,
+      });
+
+    res.status(201).json(
+      producto
+    );
 
   } catch (error) {
 
@@ -27,45 +54,4 @@ const obtenerMovimientos = async (
 
   }
 
-};
-
-// =====================================
-// POST
-// =====================================
-
-const crearMovimiento = async (
-  req,
-  res
-) => {
-
-  try {
-
-    const movimiento = {
-      ...req.body,
-      fecha_movimiento: new Date(),
-    };
-
-    const data =
-      await crearMovimientoService(
-        movimiento
-      );
-
-    res.status(201).json({
-      success: true,
-      data,
-    });
-
-  } catch (error) {
-
-    res.status(500).json({
-      error: error.message,
-    });
-
-  }
-
-};
-
-module.exports = {
-  obtenerMovimientos,
-  crearMovimiento,
 };
