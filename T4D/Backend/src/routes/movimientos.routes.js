@@ -7,7 +7,7 @@ const {
   crearMovimiento,
 } = require("../controllers/movimientosController");
 
-// GET
+// GETa
 router.get("/", obtenerMovimientos);
 
 // POST
