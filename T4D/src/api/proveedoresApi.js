@@ -2,7 +2,7 @@ const URL =
   "http://localhost:5000/proveedores";
 
 // GET
-export const obtenerProveedoresApi =
+export const obtenerProveedores =
   async () => {
 
     const response =
@@ -12,8 +12,7 @@ export const obtenerProveedoresApi =
 };
 
 // POST
-export const agregarProveedorApi =
-  async (proveedor) => {
+export const crearProveedor = async (proveedor) => {
 
     const response =
       await fetch(URL, {

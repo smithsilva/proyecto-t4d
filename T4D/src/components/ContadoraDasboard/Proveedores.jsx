@@ -23,7 +23,7 @@ import {
 
 const SUPABASE_URL = "https://nnlpmcwnahjdfqhfccjj.supabase.co";
 const SUPABASE_KEY = "sb_publishable_3WU0ecokunMuTQMf6xWqLA_TrZVAZ7X";
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+import { supabase } from "../../Supabase/SupabaseClient";
 
 const inputStyle = {
   width: "100%",
