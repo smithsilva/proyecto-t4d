@@ -6,24 +6,8 @@ import {
   eliminarProveedorApi,
 } from "../../api/proveedoresApi";
 
-
-import {
-  Search,
-  Plus,
-  Eye,
-  Pencil,
-  Trash2,
-  Phone,
-  Mail,
-  MapPin,
-  Building2,
-  X,
-  Save,
-} from "lucide-react";
-
-const SUPABASE_URL = "https://nnlpmcwnahjdfqhfccjj.supabase.co";
-const SUPABASE_KEY = "sb_publishable_3WU0ecokunMuTQMf6xWqLA_TrZVAZ7X";
 import { supabase } from "../../Supabase/SupabaseClient";
+import { Search, Plus, Eye, Pencil, Trash2, Phone, Mail, MapPin, Building2, X, Save, } from "lucide-react";
 
 const inputStyle = {
   width: "100%",

@@ -1,3 +1,12 @@
+const {
+  obtenerMovimientosService,
+  crearMovimientoService,
+} = require("../services/movimientosService");
+
+// =====================================
+// GET
+// =====================================
+
 const obtenerMovimientos = async (
   req,
   res
@@ -5,12 +14,14 @@ const obtenerMovimientos = async (
 
   try {
 
-    res.json({
-      mensaje:
-        "Lista de movimientos",
-    });
+    const movimientos =
+      await obtenerMovimientosService();
+
+    res.json(movimientos);
 
   } catch (error) {
+
+    console.log(error);
 
     res.status(500).json({
       error: error.message,
@@ -20,6 +31,10 @@ const obtenerMovimientos = async (
 
 };
 
+// =====================================
+// POST
+// =====================================
+
 const crearMovimiento = async (
   req,
   res
@@ -27,15 +42,18 @@ const crearMovimiento = async (
 
   try {
 
-    const datos = req.body;
+    const movimiento =
+      await crearMovimientoService(
+        req.body
+      );
 
-    res.status(201).json({
-      mensaje:
-        "Movimiento creado correctamente",
-      datos,
-    });
+    res.status(201).json(
+      movimiento
+    );
 
   } catch (error) {
+
+    console.log(error);
 
     res.status(500).json({
       error: error.message,
