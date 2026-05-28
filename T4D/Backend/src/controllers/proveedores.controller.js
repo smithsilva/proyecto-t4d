@@ -124,4 +124,4 @@ module.exports = {
   postProveedor,
   putProveedor,
   deleteProveedor,
-}
+};

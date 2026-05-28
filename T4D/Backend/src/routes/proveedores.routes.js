@@ -9,40 +9,16 @@ const {
   deleteProveedor,
 } = require("../controllers/proveedores.controller");
 
-// =====================================
 // GET
-// =====================================
+router.get("/", getProveedores);
 
-router.get(
-  "/",
-  getProveedores
-);
-
-// =====================================
 // POST
-// =====================================
+router.post("/", postProveedor);
 
-router.post(
-  "/",
-  postProveedor
-);
-
-// =====================================
 // PUT
-// =====================================
+router.put("/:id", putProveedor);
 
-router.put(
-  "/:id",
-  putProveedor
-);
-
-// =====================================
 // DELETE
-// =====================================
-
-router.delete(
-  "/:id",
-  deleteProveedor
-);
+router.delete("/:id", deleteProveedor);
 
 module.exports = router;
