@@ -28,6 +28,7 @@ export default function Empleados() {
   const [busqueda, setBusqueda] = useState("");
   const [verEmpleado, setVerEmpleado] = useState(null);
   const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     cargarEmpleados();
@@ -35,15 +36,19 @@ export default function Empleados() {
 
   const cargarEmpleados = async () => {
     setCargando(true);
+    setError(null);
     try {
       const { data, error } = await supabase
         .from("empleados")
         .select("*")
         .order("id_empleado", { ascending: true });
+        console.log("DATA:", data);
+        console.log("ERROR:", error);
       if (error) throw error;
       setEmpleados(data || []);
     } catch (err) {
       console.error("Error al cargar empleados:", err.message);
+      setError(err.message);
     }
     setCargando(false);
   };
@@ -59,7 +64,8 @@ export default function Empleados() {
   }, [empleados, busqueda]);
 
   const nominaMensual = empleados.reduce((acc, e) => acc + Number(e.salario), 0);
-  const salarioPromedio = empleados.length > 0 ? Math.round(nominaMensual / empleados.length) : 0;
+  const salarioPromedio =
+    empleados.length > 0 ? Math.round(nominaMensual / empleados.length) : 0;
 
   return (
     <div className="p-5" style={{ background: "#fff", minHeight: "100vh" }}>
@@ -69,7 +75,9 @@ export default function Empleados() {
         <div>
           <h4 className="fw-bold mb-1">Gestión de Empleados</h4>
           <div style={{ width: "60px", height: "3px", backgroundColor: "#B89B6A", borderRadius: "10px", marginBottom: "5px" }} />
-          <p style={{ color: "#6b7280", fontSize: "13px", margin: 0 }}>Administra el personal de la empresa</p>
+          <p style={{ color: "#6b7280", fontSize: "13px", margin: 0 }}>
+            Administra el personal de la empresa
+          </p>
         </div>
       </div>
 
@@ -131,10 +139,23 @@ export default function Empleados() {
         </div>
       </div>
 
+      {/* ERROR */}
+      {error && (
+        <div className="alert alert-danger rounded-4" style={{ fontSize: 13 }}>
+          ⚠️ Error al conectar con la base de datos: <strong>{error}</strong>
+        </div>
+      )}
+
       {/* TABLA */}
       <div className="card p-3 rounded-4 shadow-sm">
         {cargando ? (
-          <div className="text-center py-4" style={{ color: "#6b7280", fontSize: 13 }}>Cargando empleados...</div>
+          <div className="text-center py-4" style={{ color: "#6b7280", fontSize: 13 }}>
+            Cargando empleados...
+          </div>
+        ) : filtrados.length === 0 ? (
+          <div className="text-center py-4" style={{ color: "#9ca3af", fontSize: 13 }}>
+            No se encontraron empleados.
+          </div>
         ) : (
           <table className="table align-middle">
             <thead>
@@ -153,7 +174,9 @@ export default function Empleados() {
             <tbody>
               {filtrados.map((e) => (
                 <tr key={e.id_empleado}>
-                  <td style={{ color: "#6b7280", fontWeight: 600, letterSpacing: "1.5px", fontSize: "13px" }}>{e.id_empleado}</td>
+                  <td style={{ color: "#6b7280", fontWeight: 600, letterSpacing: "1.5px", fontSize: "13px" }}>
+                    {e.id_empleado}
+                  </td>
                   <td style={{ fontSize: 13, color: "#374151" }}>{e.cedula}</td>
                   <td style={{ fontWeight: 600, color: "#111827", fontSize: 13 }}>{e.nombre_completo}</td>
                   <td>
