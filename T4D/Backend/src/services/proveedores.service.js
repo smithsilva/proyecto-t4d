@@ -1,57 +1,102 @@
-const supabase = require("../config/supabase");
+const supabase =
+  require("../config/supabase");
 
-// OBTENER TODOS
-const obtenerProveedoresService = async () => {
-  const { data, error } = await supabase
-    .from("proveedores")
-    .select("*")
-    .order("id_proveedor", { ascending: true });
+// =====================================
+// GET
+// =====================================
 
-  if (error) throw error;
+const obtenerProveedores =
+  async () => {
 
-  return data;
-};
+    const { data, error } =
+      await supabase
+        .from("proveedores")
+        .select("*")
+        .order(
+          "id_proveedor",
+          {
+            ascending: true,
+          }
+        );
 
-// CREAR
-const crearProveedorService = async (proveedor) => {
-  const { data, error } = await supabase
-    .from("proveedores")
-    .insert([proveedor])
-    .select();
+    if (error) {
+      throw error;
+    }
 
-  if (error) throw error;
+    return data;
+  };
 
-  return data;
-};
+// =====================================
+// POST
+// =====================================
 
-// ACTUALIZAR
-const actualizarProveedorService = async (id, proveedor) => {
-  const { data, error } = await supabase
-    .from("proveedores")
-    .update(proveedor)
-    .eq("id_proveedor", id)
-    .select();
+const agregarProveedor =
+  async (proveedor) => {
 
-  if (error) throw error;
+    const { data, error } =
+      await supabase
+        .from("proveedores")
+        .insert([proveedor])
+        .select();
 
-  return data;
-};
+    if (error) {
+      throw error;
+    }
 
-// ELIMINAR
-const eliminarProveedorService = async (id) => {
-  const { error } = await supabase
-    .from("proveedores")
-    .delete()
-    .eq("id_proveedor", id);
+    return data;
+  };
 
-  if (error) throw error;
+// =====================================
+// PUT
+// =====================================
 
-  return true;
-};
+const actualizarProveedor =
+  async (
+    id,
+    proveedor
+  ) => {
+
+    const { data, error } =
+      await supabase
+        .from("proveedores")
+        .update(proveedor)
+        .eq(
+          "id_proveedor",
+          id
+        )
+        .select();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  };
+
+// =====================================
+// DELETE
+// =====================================
+
+const eliminarProveedor =
+  async (id) => {
+
+    const { error } =
+      await supabase
+        .from("proveedores")
+        .delete()
+        .eq(
+          "id_proveedor",
+          id
+        );
+
+    if (error) {
+      throw error;
+    }
+  };
 
 module.exports = {
-  obtenerProveedoresService,
-  crearProveedorService,
-  actualizarProveedorService,
-  eliminarProveedorService,
+  obtenerProveedores,
+  agregarProveedor,
+  actualizarProveedor,
+  eliminarProveedor,
 };

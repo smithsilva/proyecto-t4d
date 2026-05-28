@@ -1,99 +1,75 @@
-import axios from "axios";
+const URL =
+  "http://localhost:5000/proveedores";
 
-const API_URL = "http://localhost:5000/proveedores";
+// GET
+export const obtenerProveedores =
+  async () => {
 
-// ==========================================
-// OBTENER PROVEEDORES
-// ==========================================
+    const response =
+      await fetch(URL);
 
-export const obtenerProveedores = async () => {
-
-  try {
-
-    const response = await axios.get(API_URL);
-
-    return response.data;
-
-  } catch (error) {
-
-    console.log("Error obteniendo proveedores:", error);
-
-    throw error;
-
-  }
-
+    return await response.json();
 };
 
-// ==========================================
-// CREAR PROVEEDOR
-// ==========================================
-
+// POST
 export const crearProveedor = async (proveedor) => {
 
-  try {
+    const response =
+      await fetch(URL, {
 
-    const response = await axios.post(
-      API_URL,
-      proveedor
-    );
+        method: "POST",
 
-    return response.data;
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
 
-  } catch (error) {
+        body: JSON.stringify(
+          proveedor
+        ),
+      });
 
-    console.log("Error creando proveedor:", error);
-
-    throw error;
-
-  }
-
+    return await response.json();
 };
 
-// ==========================================
-// EDITAR PROVEEDOR
-// ==========================================
+// PUT
+export const editarProveedorApi =
+  async (
+    id,
+    proveedor
+  ) => {
 
-export const editarProveedor = async (id, proveedor) => {
+    const response =
+      await fetch(
+        `${URL}/${id}`,
+        {
+          method: "PUT",
 
-  try {
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
 
-    const response = await axios.put(
-      `${API_URL}/${id}`,
-      proveedor
-    );
+          body: JSON.stringify(
+            proveedor
+          ),
+        }
+      );
 
-    return response.data;
-
-  } catch (error) {
-
-    console.log("Error editando proveedor:", error);
-
-    throw error;
-
-  }
-
+    return await response.json();
 };
 
-// ==========================================
-// ELIMINAR PROVEEDOR
-// ==========================================
+// DELETE
+export const eliminarProveedorApi =
+  async (id) => {
 
-export const eliminarProveedor = async (id) => {
+    const response =
+      await fetch(
+        `${URL}/${id}`,
+        {
+          method: "DELETE",
+        }
+      );
 
-  try {
-
-    const response = await axios.delete(
-      `${API_URL}/${id}`
-    );
-
-    return response.data;
-
-  } catch (error) {
-
-    console.log("Error eliminando proveedor:", error);
-
-    throw error;
-
-  }
-
+    return await response.json();
 };

@@ -1,20 +1,48 @@
 const express = require("express");
 
-const {
-  obtenerProveedores,
-  crearProveedor,
-  actualizarProveedor,
-  eliminarProveedor,
-} = require("../controllers/proveedores.controller");
-
 const router = express.Router();
 
-router.get("/", obtenerProveedores);
+const {
+  getProveedores,
+  postProveedor,
+  putProveedor,
+  deleteProveedor,
+} = require("../controllers/proveedores.controller");
 
-router.post("/", crearProveedor);
+// =====================================
+// GET
+// =====================================
 
-router.put("/:id", actualizarProveedor);
+router.get(
+  "/",
+  getProveedores
+);
 
-router.delete("/:id", eliminarProveedor);
+// =====================================
+// POST
+// =====================================
+
+router.post(
+  "/",
+  postProveedor
+);
+
+// =====================================
+// PUT
+// =====================================
+
+router.put(
+  "/:id",
+  putProveedor
+);
+
+// =====================================
+// DELETE
+// =====================================
+
+router.delete(
+  "/:id",
+  deleteProveedor
+);
 
 module.exports = router;

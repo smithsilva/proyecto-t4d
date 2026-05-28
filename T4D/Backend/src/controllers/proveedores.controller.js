@@ -1,88 +1,127 @@
 const {
-  obtenerProveedoresService,
-  crearProveedorService,
-  actualizarProveedorService,
-  eliminarProveedorService,
+  obtenerProveedores,
+  agregarProveedor,
+  actualizarProveedor,
+  eliminarProveedor,
 } = require("../services/proveedores.service");
 
-// OBTENER
-const obtenerProveedores = async (req, res) => {
-  try {
-    const proveedores = await obtenerProveedoresService();
+// =====================================
+// GET
+// =====================================
 
-    res.json({
-      ok: true,
-      proveedores,
-    });
+const getProveedores = async (
+  req,
+  res
+) => {
+
+  try {
+
+    const proveedores =
+      await obtenerProveedores();
+
+    res.json(proveedores);
+
   } catch (error) {
+
     res.status(500).json({
-      ok: false,
-      mensaje: error.message,
+      error: error.message,
     });
+
   }
 };
 
-// CREAR
-const crearProveedor = async (req, res) => {
+// =====================================
+// POST
+// =====================================
+
+const postProveedor = async (
+  req,
+  res
+) => {
+
   try {
-    const proveedor = await crearProveedorService(req.body);
 
-    res.status(201).json({
-      ok: true,
-      proveedor,
-    });
-  } catch (error) {
-    res.status(500).json({
-      ok: false,
-      mensaje: error.message,
-    });
-  }
-};
+    const proveedor =
+      await agregarProveedor(
+        req.body
+      );
 
-// ACTUALIZAR
-const actualizarProveedor = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const proveedor = await actualizarProveedorService(
-      id,
-      req.body
+    res.status(201).json(
+      proveedor
     );
 
-    res.json({
-      ok: true,
-      proveedor,
-    });
   } catch (error) {
+
     res.status(500).json({
-      ok: false,
-      mensaje: error.message,
+      error: error.message,
     });
+
   }
 };
 
-// ELIMINAR
-const eliminarProveedor = async (req, res) => {
-  try {
-    const { id } = req.params;
+// =====================================
+// PUT
+// =====================================
 
-    await eliminarProveedorService(id);
+const putProveedor = async (
+  req,
+  res
+) => {
+
+  try {
+
+    const id = req.params.id;
+
+    const proveedor =
+      await actualizarProveedor(
+        id,
+        req.body
+      );
+
+    res.json(proveedor);
+
+  } catch (error) {
+
+    res.status(500).json({
+      error: error.message,
+    });
+
+  }
+};
+
+// =====================================
+// DELETE
+// =====================================
+
+const deleteProveedor = async (
+  req,
+  res
+) => {
+
+  try {
+
+    const id = req.params.id;
+
+    await eliminarProveedor(id);
 
     res.json({
-      ok: true,
-      mensaje: "Proveedor eliminado correctamente",
+      success: true,
+      message:
+        "Proveedor eliminado",
     });
+
   } catch (error) {
+
     res.status(500).json({
-      ok: false,
-      mensaje: error.message,
+      error: error.message,
     });
+
   }
 };
 
 module.exports = {
-  obtenerProveedores,
-  crearProveedor,
-  actualizarProveedor,
-  eliminarProveedor,
-};
+  getProveedores,
+  postProveedor,
+  putProveedor,
+  deleteProveedor,
+}
