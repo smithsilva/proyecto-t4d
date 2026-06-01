@@ -72,6 +72,8 @@ function SidebarContadora({ setVistaContadora, vistaContadora }) {
           { key: "proveedores", icon: "bi-people", label: "Proveedores"},
           { key: "empleados", icon: "bi-person", label: "Empleados"},
           { key: "sucursales", icon: "bi-building", label: "Sucursales"},
+          { key: "reportes", icon: "bi-graph-up", label: "Reportes"},
+          { key: "inventario", icon: "bi-building", label: "Inventario"},
           
           
         ].map((item) => (
