@@ -43,7 +43,7 @@ export default function Empleados() {
         .select("*")
         .order("id_empleado", { ascending: true });
         console.log("DATA:", data);
-        console.log("ERROR:", error);
+           console.log("ERROR:", error);
       if (error) throw error;
       setEmpleados(data || []);
     } catch (err) {
