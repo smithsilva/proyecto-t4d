@@ -13,6 +13,9 @@ dist-ssr
 *.local
 .env
 
+certs/*.key
+certs/*.crt
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
