@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../supabase/supabaseClient";
+import { obtenerAsignaciones } from "../../api/asignacionesApi";
 
 const TruckIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -83,46 +84,35 @@ export default function AsignacionTareas() {
   const [form,         setForm]         = useState(FORM_EMPTY);
   const [mecanicos,    setMecanicos]    = useState([]);
   const [cargandoMec,  setCargandoMec]  = useState(false);
+useEffect(() => {
+  cargarAsignaciones();
+}, []);
 
-  useEffect(() => { cargarAsignaciones(); }, []);
+const cargarAsignaciones = async () => {
+  setCargando(true);
+  setError(null);
 
-  const cargarAsignaciones = async () => {
-    setCargando(true);
-    setError(null);
+  try {
+    const data = await obtenerAsignaciones();
 
-    const { data, error: err } = await supabase
-      .from("asignaciones_tareas")
-      .select(`
-        id_asignacion,
-        id_mecanico,
-        vehiculo,
-        tipo_trabajo,
-        descripcion,
-        prioridad,
-        fecha_limite,
-        estado,
-        fecha_asignacion,
-        usuarios!id_mecanico (
-  username
-)
-      `)
-      .order("fecha_asignacion", { ascending: false });
+    console.log("DATOS RECIBIDOS:", data);
 
-    if (err) {
-      setError(err.message);
-    } else {
-      setAsignaciones(
-        (data || []).map((a) => ({
-          ...a,
-          mecanico_nombre: a.usuarios?.username || "Sin asignar",
-        }))
-      );
-    }
+    setAsignaciones(
+      (data || []).map((a) => ({
+        ...a,
+        mecanico_nombre:
+          a.usuarios?.username || "Sin asignar",
+      }))
+    );
+  } catch (error) {
+    console.error(error);
+    setError(error.message);
+  }
 
-    setCargando(false);
-  };
+  setCargando(false);
+};
 
-  const abrirModal = async () => {
+const abrirModal = async () => {
     setModalNueva(true);
     setCargandoMec(true);
 

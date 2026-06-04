@@ -10,6 +10,9 @@ const movimientosRoutes =
 const proveedoresRoutes =
   require("./routes/proveedores.routes");
 
+  const asignacionesRoutes =
+  require(
+    "./routes/asignaciones.routes");
 
 const app = express();
 
@@ -26,6 +29,10 @@ app.use(
 app.use(
   "/proveedores",
   proveedoresRoutes
+);
+ app.use(
+  "/asignaciones",
+  asignacionesRoutes
 );
 
 module.exports = app;
