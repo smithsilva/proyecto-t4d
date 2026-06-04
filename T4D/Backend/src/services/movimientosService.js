@@ -1,6 +1,10 @@
 const supabase =
   require("../config/supabase");
 
+// =====================================
+// GET
+// =====================================
+
 const obtenerMovimientosService =
   async () => {
 
@@ -39,4 +43,29 @@ const obtenerMovimientosService =
 
 module.exports = {
   obtenerMovimientosService,
+};
+
+// =====================================
+// POST
+// =====================================
+
+const crearMovimientoService =
+  async (movimiento) => {
+
+    const { data, error } =
+      await supabase
+        .from("movimientos_inventario")
+        .insert([movimiento])
+        .select();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+};
+
+module.exports = {
+  obtenerMovimientosService,
+  crearMovimientoService,
 };
