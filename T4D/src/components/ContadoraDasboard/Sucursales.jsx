@@ -1,12 +1,17 @@
 import { useState, useMemo, useEffect } from "react";
-import { supabase } from "../../Supabase/SupabaseClient";
+import {
+  obtenerSucursalesApi,
+  agregarSucursalApi,
+  actualizarSucursalApi,
+  eliminarSucursalApi,
+} from "../../api/sucursalesApi";
 import {
   Search, Plus, Eye, Pencil, Trash2,
   Building2, MapPin, Phone, Clock3, X, Save,
 } from "lucide-react";
 
 
-const SUPABASE_ANON_KEY = "sb_publishable_3WU0ecokunMuTQMf6xWqLA_TrZVAZ7X";
+
 
 
 const VACIO = {
@@ -34,21 +39,22 @@ export default function Sucursales() {
   useEffect(() => {
     cargarSucursales();
   }, []);
+const cargarSucursales = async () => {
+  setCargando(true);
 
-  const cargarSucursales = async () => {
-    setCargando(true);
-    try {
-      const { data, error } = await supabase
-        .from("sucursales")
-        .select("*")
-        .order("id_sucursal", { ascending: true });
-      if (error) throw error;
-      setSucursales(data || []);
-    } catch (err) {
-      console.error("Error al cargar sucursales:", err.message);
-    }
-    setCargando(false);
-  };
+  try {
+    const data = await obtenerSucursalesApi();
+
+    setSucursales(data || []);
+  } catch (err) {
+    console.error(
+      "Error al cargar sucursales:",
+      err.message
+    );
+  }
+
+  setCargando(false);
+};
 
   const set = (key, val) => setNuevaSucursal((prev) => ({ ...prev, [key]: val }));
 
@@ -70,56 +76,46 @@ export default function Sucursales() {
   const cerrar = () => { setMostrarModal(false); setNuevaSucursal(VACIO); };
 
   const guardarSucursal = async (e) => {
-    e.preventDefault();
-    try {
-      if (modoEdicion) {
-        const { error } = await supabase
-          .from("sucursales")
-          .update({
-            nombre_sucursal: nuevaSucursal.nombre_sucursal,
-            direccion: nuevaSucursal.direccion,
-            ciudad: nuevaSucursal.ciudad,
-            telefono: nuevaSucursal.telefono,
-            horario_apertura: nuevaSucursal.horario_apertura,
-            horario_cierre: nuevaSucursal.horario_cierre,
-            activo: nuevaSucursal.activo,
-          })
-          .eq("id_sucursal", sucursalEditar.id_sucursal);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("sucursales")
-          .insert([{
-            nombre_sucursal: nuevaSucursal.nombre_sucursal,
-            direccion: nuevaSucursal.direccion,
-            ciudad: nuevaSucursal.ciudad,
-            telefono: nuevaSucursal.telefono,
-            horario_apertura: nuevaSucursal.horario_apertura,
-            horario_cierre: nuevaSucursal.horario_cierre,
-            activo: nuevaSucursal.activo,
-          }]);
-        if (error) throw error;
-      }
-      await cargarSucursales();
-      cerrar();
-    } catch (err) {
-      alert("Error al guardar: " + err.message);
+  e.preventDefault();
+
+  try {
+    const sucursal = {
+      nombre_sucursal: nuevaSucursal.nombre_sucursal,
+      direccion: nuevaSucursal.direccion,
+      ciudad: nuevaSucursal.ciudad,
+      telefono: nuevaSucursal.telefono,
+      horario_apertura: nuevaSucursal.horario_apertura,
+      horario_cierre: nuevaSucursal.horario_cierre,
+      activo: nuevaSucursal.activo,
+    };
+
+    if (modoEdicion) {
+      await actualizarSucursalApi(
+        sucursalEditar.id_sucursal,
+        sucursal
+      );
+    } else {
+      await agregarSucursalApi(sucursal);
     }
-  };
+
+    await cargarSucursales();
+    cerrar();
+  } catch (err) {
+    alert("Error al guardar: " + err.message);
+  }
+};
 
   const eliminarSucursal = async (id) => {
-    if (!window.confirm("¿Eliminar sucursal?")) return;
-    try {
-      const { error } = await supabase
-        .from("sucursales")
-        .delete()
-        .eq("id_sucursal", id);
-      if (error) throw error;
-      await cargarSucursales();
-    } catch (err) {
-      alert("Error al eliminar: " + err.message);
-    }
-  };
+  if (!window.confirm("¿Eliminar sucursal?")) return;
+
+  try {
+    await eliminarSucursalApi(id);
+
+    await cargarSucursales();
+  } catch (err) {
+    alert("Error al eliminar: " + err.message);
+  }
+};
 
   const badgeActivo = (activo) => (
     <span style={{

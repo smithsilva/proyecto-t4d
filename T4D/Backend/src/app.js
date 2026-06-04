@@ -10,13 +10,18 @@ const movimientosRoutes =
 const proveedoresRoutes =
   require("./routes/proveedores.routes");
 
+const sucursalesRoutes =
+  require("./routes/sucursales.routes");
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-app.use("/productos", productosRoutes);
+app.use(
+  "/productos",
+  productosRoutes
+);
 
 app.use(
   "/movimientos",
@@ -26,6 +31,11 @@ app.use(
 app.use(
   "/proveedores",
   proveedoresRoutes
+);
+
+app.use(
+  "/sucursales",
+  sucursalesRoutes
 );
 
 module.exports = app;
