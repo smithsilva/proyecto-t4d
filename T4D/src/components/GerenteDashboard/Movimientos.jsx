@@ -1,5 +1,10 @@
 import { useState, useEffect } from "react";
 import { supabase } from '../../Supabase/SupabaseClient';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, WidthType, AlignmentType, BorderStyle, HeadingLevel } from 'docx';
+import { saveAs } from 'file-saver';
 
 function Movimientos() {
   const [busqueda, setBusqueda] = useState("");
@@ -44,8 +49,6 @@ function Movimientos() {
         observacion: m.observacion || '',
       }));
       setMovimientos(formateados);
-
-      // Usuarios únicos para el filtro
       const unicos = [...new Set(formateados.map(m => m.usuario).filter(u => u !== '—'))];
       setUsuarios(unicos);
     }
@@ -54,6 +57,16 @@ function Movimientos() {
 
   useEffect(() => {
     cargarMovimientos();
+
+    // Suscripción en tiempo real para actualizar automáticamente
+    const canal = supabase
+      .channel('movimientos_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'movimientos_inventario' }, () => {
+        cargarMovimientos();
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(canal);
   }, []);
 
   const normalizar = (texto) =>
@@ -76,6 +89,180 @@ function Movimientos() {
   const totalSalidas = filtrados
     .filter(m => m.tipo === 'salida')
     .reduce((a, m) => a + Math.abs(m.cantidad), 0);
+
+  // ─── EXPORTAR EXCEL ───────────────────────────────────────────────
+  const exportarExcel = () => {
+    const datos = filtrados.map((mov) => ({
+      Fecha: mov.fecha,
+      Usuario: mov.usuario,
+      Producto: mov.producto,
+      Tipo: mov.tipo === 'entrada' ? 'Entrada' : 'Salida',
+      Cantidad: mov.cantidad > 0 ? `+${mov.cantidad}` : `${mov.cantidad}`,
+      Observación: mov.observacion || '—',
+    }));
+
+    datos.push({});
+    datos.push({ Fecha: 'RESUMEN', Usuario: '', Producto: '', Tipo: '', Cantidad: '', Observación: '' });
+    datos.push({ Fecha: 'Total Entradas', Usuario: '', Producto: '', Tipo: '', Cantidad: totalEntradas, Observación: '' });
+    datos.push({ Fecha: 'Total Salidas', Usuario: '', Producto: '', Tipo: '', Cantidad: totalSalidas, Observación: '' });
+
+    const ws = XLSX.utils.json_to_sheet(datos);
+    ws['!cols'] = [
+      { wch: 20 }, { wch: 15 }, { wch: 30 }, { wch: 12 }, { wch: 12 }, { wch: 30 }
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Movimientos');
+    XLSX.writeFile(wb, `Movimientos_Inventario_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  // ─── EXPORTAR PDF ─────────────────────────────────────────────────
+  const exportarPDF = () => {
+    const doc = new jsPDF({ orientation: 'landscape' });
+
+    doc.setFillColor(184, 155, 106);
+    doc.rect(0, 0, doc.internal.pageSize.width, 28, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Movimientos de Inventario', 14, 12);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Generado: ${new Date().toLocaleString('es-CO')}`, 14, 21);
+
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total Entradas: ${totalEntradas} uds`, 14, 36);
+    doc.text(`Total Salidas: ${totalSalidas} uds`, 80, 36);
+    doc.text(`Registros: ${filtrados.length}`, 160, 36);
+
+    autoTable(doc, {
+      startY: 42,
+      head: [['Fecha', 'Usuario', 'Producto', 'Tipo', 'Cantidad', 'Observación']],
+      body: filtrados.map((mov) => [
+        mov.fecha,
+        mov.usuario,
+        mov.producto,
+        mov.tipo === 'entrada' ? 'Entrada' : 'Salida',
+        mov.cantidad > 0 ? `+${mov.cantidad}` : `${mov.cantidad}`,
+        mov.observacion || '—',
+      ]),
+      styles: { fontSize: 8, cellPadding: 3 },
+      headStyles: { fillColor: [184, 155, 106], textColor: [255, 255, 255], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [250, 248, 245] },
+      columnStyles: {
+        0: { cellWidth: 38 },
+        1: { cellWidth: 28 },
+        2: { cellWidth: 60 },
+        3: { cellWidth: 22 },
+        4: { cellWidth: 22 },
+        5: { cellWidth: 'auto' },
+      },
+    });
+
+    doc.save(`Movimientos_Inventario_${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
+
+  // ─── EXPORTAR WORD ────────────────────────────────────────────────
+  const exportarWord = async () => {
+    const headerColor = 'B89B6A';
+
+    const headerRow = new TableRow({
+      tableHeader: true,
+      children: ['Fecha', 'Usuario', 'Producto', 'Tipo', 'Cantidad', 'Observación'].map(
+        (text) =>
+          new TableCell({
+            shading: { fill: headerColor },
+            children: [
+              new Paragraph({
+                children: [new TextRun({ text, bold: true, color: 'FFFFFF', size: 20 })],
+                alignment: AlignmentType.CENTER,
+              }),
+            ],
+            width: { size: 16, type: WidthType.PERCENTAGE },
+          })
+      ),
+    });
+
+    const dataRows = filtrados.map(
+      (mov) =>
+        new TableRow({
+          children: [
+            mov.fecha,
+            mov.usuario,
+            mov.producto,
+            mov.tipo === 'entrada' ? 'Entrada' : 'Salida',
+            mov.cantidad > 0 ? `+${mov.cantidad}` : `${mov.cantidad}`,
+            mov.observacion || '—',
+          ].map(
+            (text) =>
+              new TableCell({
+                children: [
+                  new Paragraph({
+                    children: [new TextRun({ text: String(text), size: 18 })],
+                  }),
+                ],
+                borders: {
+                  top: { style: BorderStyle.SINGLE, size: 1, color: 'E5E7EB' },
+                  bottom: { style: BorderStyle.SINGLE, size: 1, color: 'E5E7EB' },
+                  left: { style: BorderStyle.SINGLE, size: 1, color: 'E5E7EB' },
+                  right: { style: BorderStyle.SINGLE, size: 1, color: 'E5E7EB' },
+                },
+              })
+          ),
+        })
+    );
+
+    const doc = new Document({
+      sections: [
+        {
+          children: [
+            new Paragraph({
+              text: 'Movimientos de Inventario',
+              heading: HeadingLevel.HEADING_1,
+              spacing: { after: 200 },
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: `Fecha de exportación: `, bold: true }),
+                new TextRun({ text: new Date().toLocaleString('es-CO') }),
+              ],
+              spacing: { after: 100 },
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({ text: `Total Entradas: `, bold: true }),
+                new TextRun({ text: `${totalEntradas} unidades     ` }),
+                new TextRun({ text: `Total Salidas: `, bold: true }),
+                new TextRun({ text: `${totalSalidas} unidades     ` }),
+                new TextRun({ text: `Registros: `, bold: true }),
+                new TextRun({ text: `${filtrados.length}` }),
+              ],
+              spacing: { after: 300 },
+            }),
+            new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE },
+              rows: [headerRow, ...dataRows],
+            }),
+          ],
+        },
+      ],
+    });
+
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, `Movimientos_Inventario_${new Date().toISOString().slice(0, 10)}.docx`);
+  };
+
+  // ─── ESTILO COMPARTIDO PARA TODOS LOS BOTONES ─────────────────────
+  const btnEstilo = {
+    border: "none",
+    fontSize: "13px",
+    padding: "8px 18px",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+  };
 
   return (
     <div
@@ -100,13 +287,52 @@ function Movimientos() {
             Historial de entradas y salidas de productos
           </p>
         </div>
-        <button
-          className="btn rounded-pill btn-sm"
-          style={{ backgroundColor: "#B89B6A", color: "#000", border: "none", fontSize: "13px", padding: "8px 18px" }}
-          onClick={() => cargarMovimientos()}
-        >
-          ↻ Actualizar
-        </button>
+
+        <div className="d-flex gap-2 align-items-center flex-wrap">
+          <button
+            className="btn rounded-pill btn-sm"
+            onClick={exportarExcel}
+            title="Exportar a Excel"
+            style={{ ...btnEstilo, backgroundColor: "#217346", color: "#fff" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM8 12.5l1.5 2.5L8 17.5H9.5l1-1.8 1 1.8H13l-1.5-2.5L13 12.5H11.5l-1 1.8-1-1.8H8z"/>
+            </svg>
+            Excel
+          </button>
+
+          <button
+            className="btn rounded-pill btn-sm"
+            onClick={exportarPDF}
+            title="Exportar a PDF"
+            style={{ ...btnEstilo, backgroundColor: "#dc2626", color: "#fff" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM11 13h1v4h-1v-4zm-2 1h1v3H9v-3zm4-1h1v4h-1v-4z"/>
+            </svg>
+            PDF
+          </button>
+
+          <button
+            className="btn rounded-pill btn-sm"
+            onClick={exportarWord}
+            title="Exportar a Word"
+            style={{ ...btnEstilo, backgroundColor: "#2b579a", color: "#fff" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM7 13h1.5l1 3.5 1-3.5H12l-1.5 5h-2L7 13z"/>
+            </svg>
+            Word
+          </button>
+
+          <button
+            className="btn rounded-pill btn-sm"
+            style={{ ...btnEstilo, backgroundColor: "#B89B6A", color: "#000" }}
+            onClick={() => cargarMovimientos()}
+          >
+            ↻ Actualizar
+          </button>
+        </div>
       </div>
 
       {/* TARJETAS */}

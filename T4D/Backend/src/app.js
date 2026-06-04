@@ -1,26 +1,23 @@
-const express = require("express");
-const cors = require("cors");
+const express = require('express');
+const cors    = require('cors');
 
-const productosRoutes = require("./routes/productos.routes");
-const movimientosRoutes = require("./routes/movimientos.routes");
-const usuariosRoutes = require("./routes/usuarios.routes");
-const rolesRoutes = require("./routes/roles.routes");
+const productosRoutes  = require('./routes/productos.routes');
+const movimientosRoutes = require('./routes/movimientos.routes');
+const usuariosRoutes   = require('./routes/usuarios.routes');
+const rolesRoutes      = require('./routes/roles.routes');
+const reportesRoutes   = require('./routes/reportes.routes');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// =====================================
-// RUTAS
-// =====================================
 
-app.use("/productos", productosRoutes);
 
-app.use("/movimientos", movimientosRoutes);
-
-app.use("/usuarios", usuariosRoutes);
-
-app.use("/roles", rolesRoutes);
+app.use('/productos',   productosRoutes);
+app.use('/movimientos', movimientosRoutes);
+app.use('/usuarios',    usuariosRoutes);
+app.use('/roles',       rolesRoutes);
+app.use('/reportes',    reportesRoutes);
 
 module.exports = app;
