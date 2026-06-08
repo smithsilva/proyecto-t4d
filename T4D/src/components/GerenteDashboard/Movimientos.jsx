@@ -5,6 +5,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, WidthType, AlignmentType, BorderStyle, HeadingLevel } from 'docx';
 import { saveAs } from 'file-saver';
+import { Download } from "lucide-react";
 
 function Movimientos() {
   const [busqueda, setBusqueda] = useState("");
@@ -13,6 +14,7 @@ function Movimientos() {
   const [movimientos, setMovimientos] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [exportMenu, setExportMenu] = useState(false);
 
   const cargarMovimientos = async () => {
     setCargando(true);
@@ -58,7 +60,6 @@ function Movimientos() {
   useEffect(() => {
     cargarMovimientos();
 
-    // Suscripción en tiempo real para actualizar automáticamente
     const canal = supabase
       .channel('movimientos_realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'movimientos_inventario' }, () => {
@@ -254,15 +255,45 @@ function Movimientos() {
     saveAs(blob, `Movimientos_Inventario_${new Date().toISOString().slice(0, 10)}.docx`);
   };
 
-  // ─── ESTILO COMPARTIDO PARA TODOS LOS BOTONES ─────────────────────
-  const btnEstilo = {
-    border: "none",
-    fontSize: "13px",
-    padding: "8px 18px",
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-  };
+  // ─── ITEMS DEL MENÚ DE EXPORTAR ──────────────────────────────────
+  const exportItems = [
+    {
+      label: "Exportar Excel",
+      action: () => { exportarExcel(); setExportMenu(false); },
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <rect width="24" height="24" rx="4" fill="#1D6F42"/>
+          <path d="M7 7l3 5-3 5h2.5l1.75-3L13 17h2.5l-3-5 3-5H13l-1.75 3L9.5 7H7z" fill="#fff"/>
+          <rect x="14" y="7" width="3" height="1.5" rx="0.5" fill="#fff" opacity="0.6"/>
+          <rect x="14" y="10.25" width="3" height="1.5" rx="0.5" fill="#fff" opacity="0.6"/>
+          <rect x="14" y="13.5" width="3" height="1.5" rx="0.5" fill="#fff" opacity="0.6"/>
+        </svg>
+      ),
+    },
+    {
+      label: "Exportar Word",
+      action: () => { exportarWord(); setExportMenu(false); },
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <rect width="24" height="24" rx="4" fill="#2B579A"/>
+          <path d="M5 7h14v1.5H5V7zm0 4.5h8V13H5v-1.5zm0 4.5h14V17.5H5V16z" fill="#fff" opacity="0.25"/>
+          <path d="M6 8.5l2 7 2-5 2 5 2-7h-1.5l-1 4.5-1.5-4.5h-2l-1.5 4.5-1-4.5H6z" fill="#fff"/>
+        </svg>
+      ),
+    },
+    {
+      label: "Exportar PDF",
+      action: () => { exportarPDF(); setExportMenu(false); },
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <rect width="24" height="24" rx="4" fill="#E53935"/>
+          <path d="M7 6h6l4 4v8a1 1 0 01-1 1H8a1 1 0 01-1-1V7a1 1 0 011-1z" fill="#fff" opacity="0.15"/>
+          <path d="M13 6l4 4h-3a1 1 0 01-1-1V6z" fill="#fff" opacity="0.5"/>
+          <path d="M8.5 13.5h2c.8 0 1.3-.5 1.3-1.2S11.3 11 10.5 11H8v5h.5v-2.5zm0-2h1.9c.5 0 .8.3.8.8s-.3.8-.8.8H8.5v-1.6zm4 5H14c1.1 0 1.8-.7 1.8-2s-.7-2-1.8-2h-1.5v4zm.5-3.5h.9c.8 0 1.3.5 1.3 1.5s-.5 1.5-1.3 1.5H13v-3z" fill="#fff"/>
+        </svg>
+      ),
+    },
+  ];
 
   return (
     <div
@@ -289,51 +320,73 @@ function Movimientos() {
         </div>
 
         <div className="d-flex gap-2 align-items-center flex-wrap">
-          <button
-            className="btn rounded-pill btn-sm"
-            onClick={exportarExcel}
-            title="Exportar a Excel"
-            style={{ ...btnEstilo, backgroundColor: "#217346", color: "#fff" }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM8 12.5l1.5 2.5L8 17.5H9.5l1-1.8 1 1.8H13l-1.5-2.5L13 12.5H11.5l-1 1.8-1-1.8H8z"/>
-            </svg>
-            Excel
-          </button>
+
+          {/* ─── DROPDOWN EXPORTAR (mismo estilo que MovimientosContables) ─── */}
+          <div style={{ position: "relative" }}>
+            <button
+              className="btn rounded-pill btn-sm"
+              style={{
+                border: "none",
+                background: "#B89B6A",
+                color: "#000",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+              onClick={() => setExportMenu((v) => !v)}
+            >
+              <Download size={14} /> Exportar ▾
+            </button>
+
+            {exportMenu && (
+              <div style={{
+                position: "absolute", right: 0, top: "110%", zIndex: 999,
+                background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10,
+                boxShadow: "0 4px 16px rgba(0,0,0,0.10)", minWidth: 170, overflow: "hidden",
+              }}>
+                {exportItems.map((item) => (
+                  <button
+                    key={item.label}
+                    onClick={item.action}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      width: "100%", textAlign: "left",
+                      padding: "9px 14px", background: "none", border: "none",
+                      fontSize: 13, color: "#374151", cursor: "pointer",
+                      transition: "background 0.15s",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "#f9fafb"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <button
             className="btn rounded-pill btn-sm"
-            onClick={exportarPDF}
-            title="Exportar a PDF"
-            style={{ ...btnEstilo, backgroundColor: "#dc2626", color: "#fff" }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM11 13h1v4h-1v-4zm-2 1h1v3H9v-3zm4-1h1v4h-1v-4z"/>
-            </svg>
-            PDF
-          </button>
-
-          <button
-            className="btn rounded-pill btn-sm"
-            onClick={exportarWord}
-            title="Exportar a Word"
-            style={{ ...btnEstilo, backgroundColor: "#2b579a", color: "#fff" }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zM7 13h1.5l1 3.5 1-3.5H12l-1.5 5h-2L7 13z"/>
-            </svg>
-            Word
-          </button>
-
-          <button
-            className="btn rounded-pill btn-sm"
-            style={{ ...btnEstilo, backgroundColor: "#B89B6A", color: "#000" }}
+            style={{
+              backgroundColor: "#B89B6A", color: "#000", border: "none",
+              fontSize: "13px", padding: "8px 18px",
+              display: "flex", alignItems: "center", gap: "6px",
+            }}
             onClick={() => cargarMovimientos()}
           >
             ↻ Actualizar
           </button>
         </div>
       </div>
+
+      {/* Overlay para cerrar menú al hacer clic fuera */}
+      {exportMenu && (
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 998 }}
+          onClick={() => setExportMenu(false)}
+        />
+      )}
 
       {/* TARJETAS */}
       <div
