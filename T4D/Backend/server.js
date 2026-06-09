@@ -1,5 +1,6 @@
 require("dotenv").config();
 
+
 const express = require("express");
 const cors = require("cors");
 const nodemailer = require("nodemailer");
@@ -460,6 +461,9 @@ app.get("/movimientos", async (req, res) => {
 
 require("dotenv").config();
 const app = require("./app");
+
+const app = require("./src/app");
+
 
 const PORT = 5000;
 

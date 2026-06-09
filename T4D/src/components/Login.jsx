@@ -274,3 +274,4 @@ function Login({ setVista, setUsuario }) {
 
 export default Login;
 
+export default Login;

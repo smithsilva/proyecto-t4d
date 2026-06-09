@@ -15,7 +15,7 @@ import Sucursales from "../components/ContadoraDasboard/Sucursales";
 
 function ContadoraDashboard() {
 
-  const [vistaContadora, setVistaContadora] = useState("inventario");
+  const [vistaContadora, setVistaContadora] = useState("movimientoscontables");
 
   const [usuario, setUsuario] = useState(() => {
     const guardado = localStorage.getItem("usuario");

@@ -10,7 +10,7 @@ const supabase = require("../config/supabase");
 // GET
 router.get("/", obtenerMovimientos);
 
-// POST 👇 AQUÍ LO PONES
+// POST
 router.post("/", async (req, res) => {
   try {
     const {
@@ -28,7 +28,7 @@ router.post("/", async (req, res) => {
           id_usuario,
           tipo_movimiento,
           cantidad,
-          fecha_movimiento: new Date(), // opcional
+          fecha_movimiento: new Date(),
         },
       ])
       .select();
@@ -43,7 +43,6 @@ router.post("/", async (req, res) => {
       success: true,
       data,
     });
-
   } catch (error) {
     res.status(500).json({
       error: error.message,

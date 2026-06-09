@@ -1,29 +1,23 @@
 import { useState } from "react";
+
 import TopbarMecanico from "../components/MecanicoDasboard/TopbarMecanico";
 import SidebarMecanico from "../components/MecanicoDasboard/SidebarMecanico";
 import Inventario from "../components/MecanicoDasboard/Inventario";
 import PerfilUsuario from "../components/AdminDasboard/PerfilUsuario";
 import MisMantenimientos from "../components/MecanicoDasboard/MisMantenimientos";
-import CategoriasBrindajes from "../components/MecanicoDasboard/CategoriasBrindaje"
+import CategoriasBrindajes from "../components/MecanicoDasboard/CategoriasBrindaje";
 
-function MecanicoDashboard({ setVista }) {
+function MecanicoDashboard({
+  usuario,
+  setVista,
+  setUsuario,
+}) {
 
-  const [vistaMecanico, setVistaMecanico] = useState("inventario");
-
-  const [usuario, setUsuario] = useState(() => {
-    const guardado = localStorage.getItem("usuario");
-
-    return guardado
-      ? JSON.parse(guardado)
-      : {
-          nombre: "Pedro Martinez",
-          correo: "mecanico@gmail.com",
-          rol: "Mecánico",
-          foto: null,
-        };
-  });
+  const [vistaMecanico, setVistaMecanico] =
+    useState("inventario");
 
   return (
+
     <div
       className="d-flex"
       style={{
@@ -46,12 +40,17 @@ function MecanicoDashboard({ setVista }) {
 
         <main className="p-4">
 
-          {vistaMecanico === "inventario" && <Inventario />}
+          {vistaMecanico === "inventario" && (
+            <Inventario />
+          )}
 
+          {vistaMecanico === "mantenimientos" && (
+            <MisMantenimientos usuario={usuario} />
+          )}
 
-          {vistaMecanico === "mismantenimientos"  && <MisMantenimientos/>}
-
-          {vistaMecanico === "categoriasbrindaje" && <CategoriasBrindajes/>}
+          {vistaMecanico === "categoriasbrindaje" && (
+            <CategoriasBrindajes />
+          )}
 
           {vistaMecanico === "perfil" && (
             <PerfilUsuario
@@ -63,6 +62,7 @@ function MecanicoDashboard({ setVista }) {
         </main>
 
       </div>
+
     </div>
   );
 }

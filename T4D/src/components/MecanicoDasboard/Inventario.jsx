@@ -38,7 +38,14 @@ function Inventario() {
     setCargando(true);
     const { data, error } = await supabase
       .from("productos")
-      .select(`*, usuarios (id_usuario, username, rol)`)
+      .select(`
+        *,
+        usuarios (
+          id_usuario,
+          username,
+          rol
+        )
+      `)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -46,6 +53,7 @@ function Inventario() {
       setCargando(false);
       return;
     }
+
     setProductos(data || []);
     setCargando(false);
   };
@@ -69,13 +77,18 @@ function Inventario() {
 
   const getBadgeEstado = (producto) => {
     const estado = calcularEstado(producto);
-    if (estado === "alto") return <span className="badge bg-success">Stock Alto</span>;
-    if (estado === "medio") return <span className="badge bg-warning text-dark">Stock Medio</span>;
+    if (estado === "alto")
+      return <span className="badge bg-success">Stock Alto</span>;
+    if (estado === "medio")
+      return <span className="badge bg-warning text-dark">Stock Medio</span>;
     return <span className="badge bg-danger">Stock Bajo</span>;
   };
 
   const normalizar = (texto = "") =>
-    texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    texto
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
 
   const filtrados = productos.filter((p) => {
     const texto = normalizar(busqueda);
@@ -87,8 +100,14 @@ function Inventario() {
 
     const estado = calcularEstado(p);
     const matchEstado = filtroEstado === "todos" || estado === filtroEstado;
-    const matchCategoria = filtroCategoria === "todas" || String(p.id_categoria) === String(filtroCategoria);
-    const matchRol = filtroRol === "todos" || normalizar(p.usuarios?.rol || "") === normalizar(filtroRol);
+
+    const matchCategoria =
+      filtroCategoria === "todas" ||
+      String(p.id_categoria) === String(filtroCategoria);
+
+    const matchRol =
+      filtroRol === "todos" ||
+      normalizar(p.usuarios?.rol || "") === normalizar(filtroRol);
 
     return matchTexto && matchEstado && matchCategoria && matchRol;
   });
@@ -96,16 +115,20 @@ function Inventario() {
   const guardarProducto = async (e) => {
     e.preventDefault();
 
-    const usuarioLogueado = JSON.parse(localStorage.getItem("usuario"));
+    const usuarioLogueado = JSON.parse(localStorage.getItem("usuario")); // ← leer fresco
 
     const payload = {
       nombre_producto: nuevoProducto.nombre_producto,
       descripcion: nuevoProducto.descripcion || null,
-      precio_actual: nuevoProducto.precio_actual ? parseFloat(nuevoProducto.precio_actual) : null,
+      precio_actual: nuevoProducto.precio_actual
+        ? parseFloat(nuevoProducto.precio_actual)
+        : null,
       stock_actual: parseInt(nuevoProducto.stock_actual) || 0,
       unidad_medida: nuevoProducto.unidad_medida || null,
       codigo_barras: nuevoProducto.codigo_barras || null,
-      id_categoria: nuevoProducto.id_categoria ? parseInt(nuevoProducto.id_categoria) : null,
+      id_categoria: nuevoProducto.id_categoria
+        ? parseInt(nuevoProducto.id_categoria)
+        : null,
       imagen: nuevoProducto.imagen || null,
       activo: true,
       id_usuario: usuarioLogueado?.id_usuario || null,
@@ -147,7 +170,10 @@ function Inventario() {
           observacion: "Ingreso inicial de inventario",
         }]);
 
-      if (movError) console.error("Error al registrar movimiento:", movError);
+      if (movError) {
+        console.error("Error al registrar movimiento:", movError);
+      }
+
       error = null;
     }
 
@@ -161,30 +187,35 @@ function Inventario() {
     recargar();
   };
 
-  const eliminarProducto = async (id) => {
-    if (!window.confirm("¿Eliminar este producto?")) return;
+ const eliminarProducto = async (id) => {
+  if (!window.confirm("¿Eliminar este producto?")) return;
 
-    const { error: movError } = await supabase
-      .from("movimientos_inventario")
-      .delete()
-      .eq("id_producto", id);
+  // Eliminar movimientos relacionados
+  const { error: movError } = await supabase
+    .from("movimientos_inventario")
+    .delete()
+    .eq("id_producto", id);
 
-    if (movError) {
-      console.error("Error eliminando movimientos:", movError);
-      alert("Error eliminando movimientos");
-      return;
-    }
+  if (movError) {
+    console.error("Error eliminando movimientos:", movError);
+    alert("Error eliminando movimientos");
+    return;
+  }
 
-    const { error } = await supabase.from("productos").delete().eq("id_producto", id);
+  // Eliminar producto
+  const { error } = await supabase
+    .from("productos")
+    .delete()
+    .eq("id_producto", id);
 
-    if (error) {
-      console.error("Error al eliminar:", error);
-      alert("Error al eliminar: " + error.message);
-      return;
-    }
+  if (error) {
+    console.error("Error al eliminar:", error);
+    alert("Error al eliminar: " + error.message);
+    return;
+  }
 
-    recargar();
-  };
+  recargar();
+};
 
   const editarProducto = (producto) => {
     setNuevoProducto({
@@ -211,7 +242,8 @@ function Inventario() {
   };
 
   const nombreCategoria = (id) =>
-    categorias.find((c) => c.id_categoria == id)?.nombre_categoria || "Sin categoría";
+    categorias.find((c) => c.id_categoria == id)?.nombre_categoria ||
+    "Sin categoría";
 
   return (
     <div className="p-4" style={{ marginTop: "1px" }}>
@@ -219,10 +251,17 @@ function Inventario() {
       <div className="d-flex justify-content-between align-items-center mb-3">
         <div>
           <h4 className="fw-bold mb-0">Gestión de Inventario</h4>
-          <p className="text-muted mb-0">Administra productos de vehículos blindados</p>
+          <p className="text-muted mb-0">
+            Administra productos de vehículos blindados
+          </p>
         </div>
+
         <button
-          onClick={() => { setModoEdicion(false); setNuevoProducto(productoVacio); setMostrarModal(true); }}
+          onClick={() => {
+            setModoEdicion(false);
+            setNuevoProducto(productoVacio);
+            setMostrarModal(true);
+          }}
           className="btn rounded-pill d-flex align-items-center gap-2"
           style={{ backgroundColor: "#b89b6a", color: "#fff" }}
         >
@@ -234,6 +273,7 @@ function Inventario() {
       {/* FILTROS */}
       <div className="card p-3 rounded-4 shadow-sm mb-4">
         <h6 className="fw-bold mb-2">Filtros y Búsqueda</h6>
+        {/* Fila 1: Búsqueda */}
         <div className="mb-2">
           <input
             type="text"
@@ -243,22 +283,44 @@ function Inventario() {
             onChange={(e) => setBusqueda(e.target.value)}
           />
         </div>
+
+        {/* Fila 2: Selects */}
         <div className="d-flex gap-3 flex-wrap">
-          <select className="form-select rounded-pill" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)} style={{ maxWidth: "170px" }}>
+          {/* Filtro stock */}
+          <select
+            className="form-select rounded-pill"
+            value={filtroEstado}
+            onChange={(e) => setFiltroEstado(e.target.value)}
+            style={{ maxWidth: "170px" }}
+          >
             <option value="todos">Todo el stock</option>
             <option value="alto">Stock Alto</option>
             <option value="medio">Stock Medio</option>
             <option value="bajo">Stock Bajo</option>
           </select>
 
-          <select className="form-select rounded-pill" value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)} style={{ maxWidth: "190px" }}>
+          {/* Filtro categoría (cargado desde Supabase) */}
+          <select
+            className="form-select rounded-pill"
+            value={filtroCategoria}
+            onChange={(e) => setFiltroCategoria(e.target.value)}
+            style={{ maxWidth: "190px" }}
+          >
             <option value="todas">Todas las categorías</option>
             {categorias.map((cat) => (
-              <option key={cat.id_categoria} value={cat.id_categoria}>{cat.nombre_categoria}</option>
+              <option key={cat.id_categoria} value={cat.id_categoria}>
+                {cat.nombre_categoria}
+              </option>
             ))}
           </select>
 
-          <select className="form-select rounded-pill" value={filtroRol} onChange={(e) => setFiltroRol(e.target.value)} style={{ maxWidth: "160px" }}>
+          {/* Filtro rol */}
+          <select
+            className="form-select rounded-pill"
+            value={filtroRol}
+            onChange={(e) => setFiltroRol(e.target.value)}
+            style={{ maxWidth: "160px" }}
+          >
             <option value="todos">Todos los roles</option>
             <option value="mecanico">Mecánico</option>
             <option value="admin">Admin</option>
@@ -298,36 +360,86 @@ function Inventario() {
                 {filtrados.map((p) => (
                   <tr key={p.id_producto}>
                     <td className="text-muted small">#{p.id_producto}</td>
+
                     <td className="text-muted small">{p.codigo_barras || "—"}</td>
+
                     <td>
                       <div className="d-flex align-items-center gap-2">
                         {p.imagen ? (
-                          <img src={p.imagen} alt="" style={{ width: "35px", height: "35px", borderRadius: "8px", objectFit: "cover", flexShrink: 0 }} />
+                          <img
+                            src={p.imagen}
+                            alt=""
+                            style={{
+                              width: "35px",
+                              height: "35px",
+                              borderRadius: "8px",
+                              objectFit: "cover",
+                              flexShrink: 0,
+                            }}
+                          />
                         ) : (
-                          <div style={{ width: "35px", height: "35px", borderRadius: "8px", background: "#f0ece4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <div
+                            style={{
+                              width: "35px",
+                              height: "35px",
+                              borderRadius: "8px",
+                              background: "#f0ece4",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                            }}
+                          >
                             <Package size={16} color="#b89b6a" />
                           </div>
                         )}
                         <span className="fw-semibold">{p.nombre_producto}</span>
                       </div>
                     </td>
-                    <td className="text-muted small text-truncate" style={{ maxWidth: "130px" }}>{p.descripcion || "—"}</td>
-                    <td>{nombreCategoria(p.id_categoria)}</td>
-                    <td>{p.usuarios?.username || "—"}</td>
-                    <td>
-                      {p.usuarios?.rol
-                        ? <span className="badge bg-dark">{p.usuarios.rol}</span>
-                        : <span className="text-muted">—</span>}
+
+                    <td className="text-muted small text-truncate" style={{ maxWidth: "130px" }}>
+                      {p.descripcion || "—"}
                     </td>
+
+                    <td>{nombreCategoria(p.id_categoria)}</td>
+
+                    <td>{p.usuarios?.username || "—"}</td>
+
+                    <td>
+                      {p.usuarios?.rol ? (
+                        <span className="badge bg-dark">{p.usuarios.rol}</span>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
+                    </td>
+
                     <td className="text-muted small">{p.unidad_medida || "—"}</td>
+
                     <td className="fw-bold">{p.stock_actual}</td>
-                    <td className="fw-bold">{p.precio_actual ? `$${p.precio_actual}` : "—"}</td>
+
+                    <td className="fw-bold">
+                      {p.precio_actual ? `$${p.precio_actual}` : "—"}
+                    </td>
+
                     <td>{getBadgeEstado(p)}</td>
+
                     <td>
                       <div className="d-flex gap-3 align-items-center">
-                        <Eye size={18} style={{ cursor: "pointer", color: "#6c757d" }} onClick={() => setVerProducto(p)} />
-                        <Pencil size={18} style={{ cursor: "pointer", color: "#b89b6a" }} onClick={() => editarProducto(p)} />
-                        <Trash2 size={18} style={{ cursor: "pointer", color: "#dc3545" }} onClick={() => eliminarProducto(p.id_producto)} />
+                        <Eye
+                          size={18}
+                          style={{ cursor: "pointer", color: "#6c757d" }}
+                          onClick={() => setVerProducto(p)}
+                        />
+                        <Pencil
+                          size={18}
+                          style={{ cursor: "pointer", color: "#b89b6a" }}
+                          onClick={() => editarProducto(p)}
+                        />
+                        <Trash2
+                          size={18}
+                          style={{ cursor: "pointer", color: "#dc3545" }}
+                          onClick={() => eliminarProducto(p.id_producto)}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -345,16 +457,39 @@ function Inventario() {
           style={{ background: "rgba(0,0,0,0.5)", zIndex: 1050 }}
           onClick={() => setVerProducto(null)}
         >
-          <div className="bg-white p-4 rounded-4 shadow" style={{ width: "360px", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+          <div
+            className="bg-white p-4 rounded-4 shadow"
+            style={{ width: "360px", maxHeight: "90vh", overflowY: "auto" }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="d-flex justify-content-between align-items-center mb-3">
               <h5 className="fw-bold mb-0">Detalle del Producto</h5>
-              <X size={20} style={{ cursor: "pointer" }} onClick={() => setVerProducto(null)} />
+              <X
+                size={20}
+                style={{ cursor: "pointer" }}
+                onClick={() => setVerProducto(null)}
+              />
             </div>
 
             {verProducto.imagen ? (
-              <img src={verProducto.imagen} alt="" style={{ width: "100%", borderRadius: "10px", marginBottom: "12px" }} />
+              <img
+                src={verProducto.imagen}
+                alt=""
+                style={{ width: "100%", borderRadius: "10px", marginBottom: "12px" }}
+              />
             ) : (
-              <div style={{ width: "100%", height: "120px", borderRadius: "10px", background: "#f0ece4", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "12px" }}>
+              <div
+                style={{
+                  width: "100%",
+                  height: "120px",
+                  borderRadius: "10px",
+                  background: "#f0ece4",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: "12px",
+                }}
+              >
                 <Package size={40} color="#b89b6a" />
               </div>
             )}
@@ -372,12 +507,21 @@ function Inventario() {
               ["Stock actual", verProducto.stock_actual],
               ["Activo", verProducto.activo ? "Sí" : "No"],
             ].map(([label, val]) => (
-              <p key={label} className="mb-1"><strong>{label}:</strong> {val}</p>
+              <p key={label} className="mb-1">
+                <strong>{label}:</strong> {val}
+              </p>
             ))}
 
-            <p className="mb-1"><strong>Estado:</strong> {getBadgeEstado(verProducto)}</p>
+            <p className="mb-1">
+              <strong>Estado:</strong> {getBadgeEstado(verProducto)}
+            </p>
 
-            <button onClick={() => setVerProducto(null)} className="btn btn-secondary w-100 mt-3">Cerrar</button>
+            <button
+              onClick={() => setVerProducto(null)}
+              className="btn btn-secondary w-100 mt-3"
+            >
+              Cerrar
+            </button>
           </div>
         </div>
       )}
@@ -389,62 +533,131 @@ function Inventario() {
           style={{ background: "rgba(0,0,0,0.5)", zIndex: 1050 }}
           onClick={cerrarModal}
         >
-          <div className="bg-white p-4 rounded-4 shadow" style={{ width: "420px", maxHeight: "90vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+          <div
+            className="bg-white p-4 rounded-4 shadow"
+            style={{ width: "420px", maxHeight: "90vh", overflowY: "auto" }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="d-flex justify-content-between align-items-center mb-3">
-              <h5 className="fw-bold mb-0">{modoEdicion ? "Editar Producto" : "Agregar Producto"}</h5>
+              <h5 className="fw-bold mb-0">
+                {modoEdicion ? "Editar Producto" : "Agregar Producto"}
+              </h5>
               <X size={20} style={{ cursor: "pointer" }} onClick={cerrarModal} />
             </div>
 
             <form onSubmit={guardarProducto}>
               <label className="form-label fw-semibold mb-1">Nombre *</label>
-              <input className="form-control mb-3" placeholder="Nombre del producto" value={nuevoProducto.nombre_producto} required
-                onChange={(e) => setNuevoProducto({ ...nuevoProducto, nombre_producto: e.target.value })} />
+              <input
+                className="form-control mb-3"
+                placeholder="Nombre del producto"
+                value={nuevoProducto.nombre_producto}
+                required
+                onChange={(e) =>
+                  setNuevoProducto({ ...nuevoProducto, nombre_producto: e.target.value })
+                }
+              />
 
               <label className="form-label fw-semibold mb-1">Descripción</label>
-              <textarea className="form-control mb-3" placeholder="Descripción opcional" rows={2} value={nuevoProducto.descripcion}
-                onChange={(e) => setNuevoProducto({ ...nuevoProducto, descripcion: e.target.value })} />
+              <textarea
+                className="form-control mb-3"
+                placeholder="Descripción opcional"
+                rows={2}
+                value={nuevoProducto.descripcion}
+                onChange={(e) =>
+                  setNuevoProducto({ ...nuevoProducto, descripcion: e.target.value })
+                }
+              />
 
               <label className="form-label fw-semibold mb-1">Código de Barras</label>
-              <input className="form-control mb-3" placeholder="Ej: 7501234567890" value={nuevoProducto.codigo_barras}
-                onChange={(e) => setNuevoProducto({ ...nuevoProducto, codigo_barras: e.target.value })} />
+              <input
+                className="form-control mb-3"
+                placeholder="Ej: 7501234567890"
+                value={nuevoProducto.codigo_barras}
+                onChange={(e) =>
+                  setNuevoProducto({ ...nuevoProducto, codigo_barras: e.target.value })
+                }
+              />
 
               <div className="row g-2 mb-3">
                 <div className="col">
                   <label className="form-label fw-semibold mb-1">Stock actual *</label>
-                  <input type="number" className="form-control" placeholder="0" min="0" required value={nuevoProducto.stock_actual}
-                    onChange={(e) => setNuevoProducto({ ...nuevoProducto, stock_actual: e.target.value })} />
+                  <input
+                    type="number"
+                    className="form-control"
+                    placeholder="0"
+                    min="0"
+                    required
+                    value={nuevoProducto.stock_actual}
+                    onChange={(e) =>
+                      setNuevoProducto({ ...nuevoProducto, stock_actual: e.target.value })
+                    }
+                  />
                 </div>
               </div>
 
               <div className="row g-2 mb-3">
                 <div className="col">
                   <label className="form-label fw-semibold mb-1">Precio</label>
-                  <input type="number" className="form-control" placeholder="0.00" min="0" step="0.01" value={nuevoProducto.precio_actual}
-                    onChange={(e) => setNuevoProducto({ ...nuevoProducto, precio_actual: e.target.value })} />
+                  <input
+                    type="number"
+                    className="form-control"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    value={nuevoProducto.precio_actual}
+                    onChange={(e) =>
+                      setNuevoProducto({ ...nuevoProducto, precio_actual: e.target.value })
+                    }
+                  />
                 </div>
                 <div className="col">
                   <label className="form-label fw-semibold mb-1">Unidad</label>
-                  <input className="form-control" placeholder="ej: unidad, kg..." value={nuevoProducto.unidad_medida}
-                    onChange={(e) => setNuevoProducto({ ...nuevoProducto, unidad_medida: e.target.value })} />
+                  <input
+                    className="form-control"
+                    placeholder="ej: unidad, kg..."
+                    value={nuevoProducto.unidad_medida}
+                    onChange={(e) =>
+                      setNuevoProducto({ ...nuevoProducto, unidad_medida: e.target.value })
+                    }
+                  />
                 </div>
               </div>
 
               <label className="form-label fw-semibold mb-1">Categoría</label>
-              <select className="form-select mb-3" value={nuevoProducto.id_categoria}
-                onChange={(e) => setNuevoProducto({ ...nuevoProducto, id_categoria: e.target.value })}>
+              <select
+                className="form-select mb-3"
+                value={nuevoProducto.id_categoria}
+                onChange={(e) =>
+                  setNuevoProducto({ ...nuevoProducto, id_categoria: e.target.value })
+                }
+              >
                 <option value="">Seleccione categoría</option>
                 {categorias.map((cat) => (
-                  <option key={cat.id_categoria} value={cat.id_categoria}>{cat.nombre_categoria}</option>
+                  <option key={cat.id_categoria} value={cat.id_categoria}>
+                    {cat.nombre_categoria}
+                  </option>
                 ))}
               </select>
 
               <label className="form-label fw-semibold mb-1">URL de imagen</label>
-              <input className="form-control mb-4" placeholder="https://..." value={nuevoProducto.imagen}
-                onChange={(e) => setNuevoProducto({ ...nuevoProducto, imagen: e.target.value })} />
+              <input
+                className="form-control mb-4"
+                placeholder="https://..."
+                value={nuevoProducto.imagen}
+                onChange={(e) =>
+                  setNuevoProducto({ ...nuevoProducto, imagen: e.target.value })
+                }
+              />
 
               <div className="d-flex justify-content-end gap-2">
-                <button type="button" onClick={cerrarModal} className="btn btn-secondary">Cancelar</button>
-                <button type="submit" className="btn" style={{ backgroundColor: "#b89b6a", color: "#fff" }}>
+                <button type="button" onClick={cerrarModal} className="btn btn-secondary">
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="btn"
+                  style={{ backgroundColor: "#b89b6a", color: "#fff" }}
+                >
                   {modoEdicion ? "Actualizar" : "Guardar"}
                 </button>
               </div>
