@@ -10,19 +10,28 @@ import { supabase } from "../../Supabase/SupabaseClient";
 const Input = ({ label, icon, ...props }) => (
   <div>
     <label style={{ fontSize: "13px", fontWeight: "500" }}>{label}</label>
-    <div style={{
-      display: "flex", alignItems: "center",
-      border: "1px solid #dee2e6", borderRadius: "20px",
-      padding: "7px 12px", marginTop: "4px", background: "#fff",
-    }}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        border: "1px solid #dee2e6",
+        borderRadius: "20px",
+        padding: "7px 12px",
+        marginTop: "4px",
+        background: "#fff",
+      }}
+    >
       <div style={{ color: "#B89B6A" }}>{icon}</div>
       <input
         {...props}
         placeholder={label}
         style={{
-          border: "none", outline: "none",
-          marginLeft: "8px", width: "100%",
-          fontSize: "13px", background: "transparent",
+          border: "none",
+          outline: "none",
+          marginLeft: "8px",
+          width: "100%",
+          fontSize: "13px",
+          background: "transparent",
         }}
       />
     </div>
@@ -58,23 +67,12 @@ function RegistroUsuarios() {
   // =========================
 
   const mapearRol = (rol) => {
-
     switch (rol) {
-
-      case "Administrador":
-        return "Admin";
-
-      case "Gerente":
-        return "Gerente";
-
-      case "Mecánico":
-        return "Mecanico";
-
-      case "Contador":
-        return "Contador";
-
-      default:
-        return "";
+      case "Administrador": return "Admin";
+      case "Gerente":       return "Gerente";
+      case "Mecánico":      return "Mecanico";
+      case "Contador":      return "Contador";
+      default:              return "";
     }
   };
 
@@ -84,18 +82,8 @@ function RegistroUsuarios() {
 
   const manejarRegistro = async () => {
 
-    if (
-      !form.nombre ||
-      !form.correo ||
-      !form.password ||
-      !form.confirmar ||
-      !form.rol
-    ) {
-      return Swal.fire(
-        "Error",
-        "Completa todos los campos",
-        "error"
-      );
+    if (!form.nombre || !form.correo || !form.password || !form.confirmar || !form.rol) {
+      return Swal.fire("Error", "Completa todos los campos", "error");
     }
     if (form.password.length < 6) {
       return Swal.fire("Error", "La contraseña debe tener mínimo 6 caracteres", "error");
@@ -105,6 +93,8 @@ function RegistroUsuarios() {
     }
 
     setCargando(true);
+
+    try {
 
       // =========================
       // GENERAR CÓDIGO
@@ -164,9 +154,7 @@ function RegistroUsuarios() {
 
       await fetch("http://localhost:5000/enviar-correo", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: form.correo,
           password: form.password,
@@ -175,7 +163,7 @@ function RegistroUsuarios() {
       });
 
       // =========================
-      // ALERTA
+      // ALERTA ÉXITO
       // =========================
 
       Swal.fire({
@@ -205,6 +193,9 @@ function RegistroUsuarios() {
         title: "Error",
         text: error.message,
       });
+
+    } finally {
+      setCargando(false);
     }
   };
 
@@ -215,11 +206,7 @@ function RegistroUsuarios() {
   const reenviarCorreo = async () => {
 
     if (!form.correo) {
-      return Swal.fire(
-        "Error",
-        "Ingresa el correo",
-        "error"
-      );
+      return Swal.fire("Error", "Ingresa el correo", "error");
     }
 
     try {
@@ -235,11 +222,7 @@ function RegistroUsuarios() {
         .single();
 
       if (error || !usuario) {
-        return Swal.fire(
-          "Error",
-          "Usuario no encontrado",
-          "error"
-        );
+        return Swal.fire("Error", "Usuario no encontrado", "error");
       }
 
       // =========================
@@ -248,9 +231,7 @@ function RegistroUsuarios() {
 
       await fetch("http://localhost:5000/enviar-correo", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: usuario.email,
           password: "La contraseña es la registrada anteriormente",
@@ -271,41 +252,39 @@ function RegistroUsuarios() {
         title: "Error",
         text: error.message,
       });
-
     }
   };
 
   // ── RENDER ───────────────────────────────
-  return (
 
+  return (
     <div
       className="p-5"
-      style={{
-        marginTop: "1px",
-        background: "#fff",
-        minHeight: "100vh",
-      }}
+      style={{ marginTop: "1px", background: "#fff", minHeight: "100vh" }}
     >
 
       {/* HEADER */}
       <div className="d-flex justify-content-between align-items-center mb-3">
         <div>
           <h4 className="fw-bold mb-1">Registro de Usuarios</h4>
-          <div style={{ width: "60px", height: "3px", backgroundColor: "#B89B6A", borderRadius: "10px", marginBottom: "5px" }} />
-          <p style={{ color: "#6b7280", fontSize: "13px", margin: 0 }}>Registra nuevos usuarios en el sistema</p>
+          <div
+            style={{
+              width: "60px", height: "3px",
+              backgroundColor: "#B89B6A",
+              borderRadius: "10px", marginBottom: "5px",
+            }}
+          />
+          <p style={{ color: "#6b7280", fontSize: "13px", margin: 0 }}>
+            Registra nuevos usuarios en el sistema
+          </p>
         </div>
       </div>
 
       {/* FORM */}
-
       <div
         className="card p-3 rounded-4 shadow-sm mb-4"
-        style={{
-          background: "#fff",
-          border: "1px solid #e5e7eb",
-        }}
+        style={{ background: "#fff", border: "1px solid #e5e7eb" }}
       >
-
         <h6 className="fw-bold mb-2" style={{ color: "#B89B6A" }}>Nuevo Usuario</h6>
 
         <div style={{ display: "grid", gap: "10px", marginTop: "6px" }}>
@@ -314,53 +293,51 @@ function RegistroUsuarios() {
             icon={<User size={16} />}
             label="Nombre Completo"
             value={form.nombre}
-            onChange={(e) =>
-              setForm({ ...form, nombre: e.target.value })
-            }
+            onChange={(e) => setForm({ ...form, nombre: e.target.value })}
           />
 
           <Input
             icon={<Mail size={16} />}
             label="Correo Electrónico"
             value={form.correo}
-            onChange={(e) =>
-              setForm({ ...form, correo: e.target.value })
-            }
+            onChange={(e) => setForm({ ...form, correo: e.target.value })}
           />
 
           <div style={{ display: "flex", gap: "10px" }}>
-
             <Input
               icon={<Lock size={16} />}
               type="password"
               label="Contraseña"
               value={form.password}
-              onChange={(e) =>
-                setForm({ ...form, password: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
             />
-
             <Input
               icon={<Lock size={16} />}
               type="password"
               label="Confirmar"
               value={form.confirmar}
-              onChange={(e) =>
-                setForm({ ...form, confirmar: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, confirmar: e.target.value })}
             />
-
           </div>
 
-          {/* ROL — value coincide exactamente con nombre_rol en la BD */}
+          {/* ROL */}
           <div>
             <label style={{ fontSize: "13px", fontWeight: "500" }}>Rol del Usuario</label>
-            <div style={{ display: "flex", alignItems: "center", border: "1px solid #dee2e6", borderRadius: "20px", padding: "7px 12px", marginTop: "4px", background: "#fff" }}>
+            <div
+              style={{
+                display: "flex", alignItems: "center",
+                border: "1px solid #dee2e6", borderRadius: "20px",
+                padding: "7px 12px", marginTop: "4px", background: "#fff",
+              }}
+            >
               <Shield size={16} style={{ marginRight: "8px", color: "#B89B6A" }} />
               <select
                 value={form.rol}
                 onChange={(e) => setForm({ ...form, rol: e.target.value })}
-                style={{ border: "none", outline: "none", width: "100%", fontSize: "13px", background: "transparent" }}
+                style={{
+                  border: "none", outline: "none",
+                  width: "100%", fontSize: "13px", background: "transparent",
+                }}
               >
                 <option value="">Seleccionar rol</option>
                 <option value="Admin">Administrador</option>
@@ -372,7 +349,6 @@ function RegistroUsuarios() {
           </div>
 
           {/* BOTÓN REGISTRAR */}
-
           <button
             onClick={manejarRegistro}
             disabled={cargando}
@@ -384,14 +360,13 @@ function RegistroUsuarios() {
               border: "none",
               padding: "10px",
               fontSize: "13px",
-              cursor: "pointer",
+              cursor: cargando ? "not-allowed" : "pointer",
             }}
           >
-            Registrar Usuario
+            {cargando ? "Registrando..." : "Registrar Usuario"}
           </button>
 
           {/* BOTÓN REENVIAR */}
-
           <button
             onClick={reenviarCorreo}
             className="btn rounded-pill btn-sm"
@@ -412,49 +387,5 @@ function RegistroUsuarios() {
     </div>
   );
 }
-
-/* INPUT */
-
-const Input = ({ label, icon, ...props }) => (
-
-  <div>
-
-    <label style={{ fontSize: "13px", fontWeight: "500" }}>
-      {label}
-    </label>
-
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        border: "1px solid #dee2e6",
-        borderRadius: "20px",
-        padding: "7px 12px",
-        marginTop: "4px",
-        background: "#fff",
-      }}
-    >
-
-      <div style={{ color: "#B89B6A" }}>
-        {icon}
-      </div>
-
-      <input
-        {...props}
-        placeholder={label}
-        style={{
-          border: "none",
-          outline: "none",
-          marginLeft: "8px",
-          width: "100%",
-          fontSize: "13px",
-          background: "transparent",
-        }}
-      />
-
-    </div>
-  </div>
-
-);
 
 export default RegistroUsuarios;
