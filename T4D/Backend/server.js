@@ -454,18 +454,11 @@ app.get("/movimientos", async (req, res) => {
   }
 
 });
-
 // =====================================
 // INICIAR SERVIDOR
 // =====================================
 
-require("dotenv").config();
-const app = require("./app");
-
-const app = require("./src/app");
-
-
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en ${PORT}`);
