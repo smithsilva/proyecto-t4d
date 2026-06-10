@@ -1,62 +1,5 @@
-import { useState, useCallback } from "react";
-
-const clientesBase = [
-  {
-    id: 1, iniciales: "MG", nombre: "María Fernanda Gómez",
-    tipoDocumento: "Cédula de ciudadanía", numeroDocumento: "1032456789",
-    telefono: "3114567890", correo: "maria.gomez@email.com",
-    fechaRegistro: "22/05/2025", estado: "Activo",
-    color: "#E6F1FB", colorTexto: "#0C447C",
-    direcciones: [
-      { id: "D-001", direccion: "Carrera 52 #18-45 Apartamento 302", ciudad: "Medellín", barrio: "Laureles", indicaciones: "Ingresar por portería principal.", esPrincipal: true, estado: "Activa" },
-      { id: "D-002", direccion: "Calle 10 #45-90 Casa 2", ciudad: "Medellín", barrio: "Belén", indicaciones: "Casa color blanco frente al parque.", esPrincipal: false, estado: "Activa" },
-    ],
-  },
-  {
-    id: 2, iniciales: "JR", nombre: "Juan Sebastián Rojas",
-    tipoDocumento: "Cédula de ciudadanía", numeroDocumento: "1029988776",
-    telefono: "3204567890", correo: "juan.rojas@email.com",
-    fechaRegistro: "15/04/2025", estado: "Activo",
-    color: "#E1F5EE", colorTexto: "#085041",
-    direcciones: [
-      { id: "D-003", direccion: "Calle 50 #12-40", ciudad: "Bogotá", barrio: "Suba", indicaciones: "Casa esquinera.", esPrincipal: true, estado: "Activa" },
-      { id: "D-004", direccion: "Carrera 22 #33-10", ciudad: "Bogotá", barrio: "Engativá", indicaciones: "Portón negro.", esPrincipal: false, estado: "Activa" },
-    ],
-  },
-  {
-    id: 3, iniciales: "LT", nombre: "Laura Camila Torres",
-    tipoDocumento: "Cédula de ciudadanía", numeroDocumento: "1012456678",
-    telefono: "3159987766", correo: "laura.torres@email.com",
-    fechaRegistro: "11/03/2025", estado: "Activo",
-    color: "#FBEAF0", colorTexto: "#72243E",
-    direcciones: [
-      { id: "D-005", direccion: "Carrera 18 #45-90", ciudad: "Medellín", barrio: "El Poblado", indicaciones: "Apartamento 1202.", esPrincipal: true, estado: "Activa" },
-      { id: "D-006", direccion: "Calle 100 #20-55", ciudad: "Bogotá", barrio: "Usaquén", indicaciones: "Tocar intercomunicador.", esPrincipal: false, estado: "Activa" },
-    ],
-  },
-  {
-    id: 4, iniciales: "AC", nombre: "Andrés Felipe Castro",
-    tipoDocumento: "Cédula de ciudadanía", numeroDocumento: "1009876543",
-    telefono: "3174455667", correo: "andres.castro@email.com",
-    fechaRegistro: "05/06/2025", estado: "Activo",
-    color: "#EEEDFE", colorTexto: "#3C3489",
-    direcciones: [
-      { id: "D-007", direccion: "Avenida 45 #80-12", ciudad: "Cali", barrio: "Granada", indicaciones: "Torre 3 apartamento 601.", esPrincipal: true, estado: "Activa" },
-      { id: "D-008", direccion: "Calle 90 #15-77", ciudad: "Pereira", barrio: "Centro", indicaciones: "Frente al supermercado.", esPrincipal: false, estado: "Activa" },
-    ],
-  },
-  {
-    id: 5, iniciales: "VR", nombre: "Valentina Ramírez López",
-    tipoDocumento: "Cédula de ciudadanía", numeroDocumento: "1098765432",
-    telefono: "3107788990", correo: "valentina.ramirez@email.com",
-    fechaRegistro: "18/02/2025", estado: "Activo",
-    color: "#FEF3C7", colorTexto: "#92400E",
-    direcciones: [
-      { id: "D-009", direccion: "Carrera 60 #18-22", ciudad: "Bucaramanga", barrio: "Cabecera", indicaciones: "Casa color gris.", esPrincipal: true, estado: "Activa" },
-      { id: "D-010", direccion: "Calle 44 #11-89", ciudad: "Cartagena", barrio: "Manga", indicaciones: "Recepción principal.", esPrincipal: false, estado: "Activa" },
-    ],
-  },
-];
+import { useState, useCallback, useEffect } from "react";
+import { supabase } from '../../Supabase/SupabaseClient';
 
 // ─── Iconos SVG inline (Tabler style) ────────────────────────────────────────
 const IconSearch = () => (
@@ -187,6 +130,15 @@ const S = {
   },
 };
 
+// ─── Colores para avatares (se asignan por índice) ────────────────────────────
+const COLORES = [
+  { color: "#E6F1FB", colorTexto: "#0C447C" },
+  { color: "#E1F5EE", colorTexto: "#085041" },
+  { color: "#FBEAF0", colorTexto: "#72243E" },
+  { color: "#EEEDFE", colorTexto: "#3C3489" },
+  { color: "#FEF3C7", colorTexto: "#92400E" },
+];
+
 // ─── Toast ────────────────────────────────────────────────────────────────────
 function Toast({ message }) {
   if (!message) return null;
@@ -208,7 +160,7 @@ function ModalDireccion({ tipo, cliente, dirInicial, onGuardar, onCerrar }) {
   const [form, setForm] = useState(
     dirInicial
       ? { ...dirInicial }
-      : { direccion: "", ciudad: "", barrio: "", indicaciones: "", esPrincipal: false, estado: "Activa" }
+      : { direccion: "", ciudad: "", barrio: "", indicaciones: "", esPrincipal: false }
   );
   const [errores, setErrores] = useState({});
 
@@ -428,117 +380,198 @@ function ModalEditarCliente({ cliente, onGuardar, onCerrar }) {
 
 // ─── Componente principal ────────────────────────────────────────────────────
 function DireccionesCliente({ onVolver }) {
-  const [clientes, setClientes] = useState(JSON.parse(JSON.stringify(clientesBase)));
+  const [clientes, setClientes] = useState([]);
+  const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState("");
   const [modal, setModal] = useState(null);
   const [toast, setToast] = useState("");
-  const [dirCounter, setDirCounter] = useState(11);
 
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(""), 2500);
   };
 
-  const genId = () => {
-    const id = `D-${String(dirCounter).padStart(3, "0")}`;
-    setDirCounter(n => n + 1);
-    return id;
+  // ── Cargar datos desde Supabase ──────────────────────────────────────────
+  const cargarClientes = async () => {
+    setCargando(true);
+    const { data, error } = await supabase
+      .from('clientes')
+      .select(`
+        id_cliente,
+        nombre_completo,
+        tipo_documento,
+        numero_documento,
+        telefono,
+        email,
+        fecha_registro,
+        estado,
+        direcciones_cliente (
+          id_direccion,
+          direccion,
+          ciudad,
+          barrio,
+          indicaciones_entrega,
+          es_principal
+        )
+      `)
+      .order('id_cliente');
+
+    if (error) {
+      showToast("Error al cargar los datos.");
+      setCargando(false);
+      return;
+    }
+
+    const formateados = data.map((c, i) => {
+      const nombre = c.nombre_completo || '';
+      const iniciales = nombre.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase();
+      const color = COLORES[i % COLORES.length];
+      const fecha = c.fecha_registro
+        ? new Date(c.fecha_registro).toLocaleDateString('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        : '';
+      return {
+        id: c.id_cliente,
+        iniciales,
+        nombre,
+        tipoDocumento: c.tipo_documento,
+        numeroDocumento: c.numero_documento,
+        telefono: c.telefono,
+        correo: c.email,
+        fechaRegistro: fecha,
+        estado: c.estado || 'Activo',
+        color: color.color,
+        colorTexto: color.colorTexto,
+        direcciones: (c.direcciones_cliente || []).map(d => ({
+          id: d.id_direccion,
+          direccion: d.direccion,
+          ciudad: d.ciudad,
+          barrio: d.barrio,
+          indicaciones: d.indicaciones_entrega,
+          esPrincipal: d.es_principal,
+          estado: "Activa",
+        })),
+      };
+    });
+
+    setClientes(formateados);
+    setCargando(false);
+  };
+
+  useEffect(() => {
+    cargarClientes();
+  }, []);
+
+  // ── Agregar dirección ────────────────────────────────────────────────────
+  const handleGuardarDireccion = useCallback(async (form) => {
+    if (form.esPrincipal) {
+      await supabase
+        .from('direcciones_cliente')
+        .update({ es_principal: false })
+        .eq('id_cliente', modal.clienteId);
+    }
+    const { error } = await supabase.from('direcciones_cliente').insert({
+      id_cliente: modal.clienteId,
+      direccion: form.direccion,
+      ciudad: form.ciudad,
+      barrio: form.barrio,
+      indicaciones_entrega: form.indicaciones,
+      es_principal: form.esPrincipal,
+    });
+    if (error) { showToast("Error al agregar dirección."); return; }
+    showToast("Dirección agregada correctamente.");
+    setModal(null);
+    cargarClientes();
+  }, [modal]);
+
+  // ── Editar dirección ─────────────────────────────────────────────────────
+  const handleGuardarEdicionDir = useCallback(async (form) => {
+    if (form.esPrincipal) {
+      await supabase
+        .from('direcciones_cliente')
+        .update({ es_principal: false })
+        .eq('id_cliente', modal.clienteId);
+    }
+    const { error } = await supabase
+      .from('direcciones_cliente')
+      .update({
+        direccion: form.direccion,
+        ciudad: form.ciudad,
+        barrio: form.barrio,
+        indicaciones_entrega: form.indicaciones,
+        es_principal: form.esPrincipal,
+      })
+      .eq('id_direccion', modal.dirId);
+    if (error) { showToast("Error al actualizar dirección."); return; }
+    showToast("Dirección actualizada.");
+    setModal(null);
+    cargarClientes();
+  }, [modal]);
+
+  // ── Editar cliente ───────────────────────────────────────────────────────
+  const handleGuardarCliente = useCallback(async (form) => {
+    const { error } = await supabase
+      .from('clientes')
+      .update({
+        nombre_completo: form.nombre,
+        telefono: form.telefono,
+        email: form.correo,
+        tipo_documento: form.tipoDocumento,
+        numero_documento: form.numeroDocumento,
+      })
+      .eq('id_cliente', modal.clienteId);
+    if (error) { showToast("Error al actualizar cliente."); return; }
+    showToast("Cliente actualizado.");
+    setModal(null);
+    cargarClientes();
+  }, [modal]);
+
+  // ── Eliminar dirección ───────────────────────────────────────────────────
+  const eliminarDireccion = async (clienteId, dirId) => {
+    const cliente = clientes.find(x => x.id === clienteId);
+    if (cliente.direcciones.length === 1) {
+      showToast("El cliente debe tener al menos una dirección.");
+      return;
+    }
+    const { error } = await supabase
+      .from('direcciones_cliente')
+      .delete()
+      .eq('id_direccion', dirId);
+    if (error) { showToast("Error al eliminar dirección."); return; }
+    showToast("Dirección eliminada.");
+    cargarClientes();
   };
 
   const clientesFiltrados = clientes.filter(c =>
     c.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-    c.numeroDocumento.includes(busqueda)
+    c.numeroDocumento?.includes(busqueda)
   );
 
   const totalDirecciones = clientes.reduce((a, c) => a + c.direcciones.length, 0);
   const totalPrincipales = clientes.reduce((a, c) => a + c.direcciones.filter(d => d.esPrincipal).length, 0);
 
-  const handleGuardarDireccion = useCallback((form) => {
-    setClientes(prev => prev.map(c => {
-      if (c.id !== modal.clienteId) return c;
-      const dirs = form.esPrincipal
-        ? c.direcciones.map(d => ({ ...d, esPrincipal: false }))
-        : [...c.direcciones];
-      return { ...c, direcciones: [...dirs, { ...form, id: genId() }] };
-    }));
-    showToast("Dirección agregada correctamente.");
-    setModal(null);
-  }, [modal, dirCounter]);
-
-  const handleGuardarEdicionDir = useCallback((form) => {
-    setClientes(prev => prev.map(c => {
-      if (c.id !== modal.clienteId) return c;
-      const dirs = c.direcciones.map(d => {
-        if (form.esPrincipal && d.id !== modal.dirId) return { ...d, esPrincipal: false };
-        if (d.id === modal.dirId) return { ...form };
-        return d;
-      });
-      return { ...c, direcciones: dirs };
-    }));
-    showToast("Dirección actualizada.");
-    setModal(null);
-  }, [modal]);
-
-  const handleGuardarCliente = useCallback((form) => {
-    setClientes(prev => prev.map(c => {
-      if (c.id !== modal.clienteId) return c;
-      const iniciales = form.nombre.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase();
-      return { ...c, ...form, iniciales };
-    }));
-    showToast("Cliente actualizado.");
-    setModal(null);
-  }, [modal]);
-
-  const eliminarDireccion = (clienteId, dirId) => {
-    const c = clientes.find(x => x.id === clienteId);
-    if (c.direcciones.length === 1) {
-      showToast("El cliente debe tener al menos una dirección.");
-      return;
-    }
-    setClientes(prev => prev.map(cl => {
-      if (cl.id !== clienteId) return cl;
-      return { ...cl, direcciones: cl.direcciones.filter(d => d.id !== dirId) };
-    }));
-    showToast("Dirección eliminada.");
-  };
-
   const clienteDelModal = modal ? clientes.find(c => c.id === modal.clienteId) : null;
   const dirDelModal = modal?.dirId ? clienteDelModal?.direcciones.find(d => d.id === modal.dirId) : null;
 
   return (
-    <div
-      className="p-5"
-      style={{ background: "#fff", minHeight: "100vh", marginTop: "1px" }}
-    >
+    <div className="p-5" style={{ background: "#fff", minHeight: "100vh", marginTop: "1px" }}>
 
       {/* HEADER */}
       <div className="d-flex justify-content-between align-items-center mb-3">
         <div>
           <h4 className="fw-bold mb-1">Direcciones del cliente</h4>
-          <div
-            style={{
-              width: "60px",
-              height: "3px",
-              backgroundColor: "#B89B6A",
-              borderRadius: "10px",
-              marginBottom: "5px",
-            }}
-          />
+          <div style={{ width: "60px", height: "3px", backgroundColor: "#B89B6A", borderRadius: "10px", marginBottom: "5px" }} />
           <p style={{ color: "#6b7280", fontSize: "13px", margin: 0 }}>
             Gestión y administración de direcciones registradas por los clientes
           </p>
         </div>
         <div style={{ display: "flex", gap: "10px" }}>
-          <button
-            style={S.btnGhost}
-            onClick={onVolver || (() => window.history.back())}
-          >
+          <button style={S.btnGhost} onClick={onVolver || (() => window.history.back())}>
             <IconArrowLeft /> Volver
           </button>
           <button
             className="btn rounded-pill btn-sm"
             style={{ backgroundColor: "#B89B6A", color: "#000", border: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}
-            onClick={() => setModal({ tipo: "agregar", clienteId: clientesFiltrados[0]?.id || clientes[0].id })}
+            onClick={() => clientesFiltrados[0] && setModal({ tipo: "agregar", clienteId: clientesFiltrados[0].id })}
           >
             <IconPlus /> Agregar dirección
           </button>
@@ -561,24 +594,13 @@ function DireccionesCliente({ onVolver }) {
       </div>
 
       {/* STATS */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: "16px",
-          marginBottom: "24px",
-        }}
-      >
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", marginBottom: "24px" }}>
         {[
           { label: "Total clientes", valor: clientes.length, border: "#B89B6A", color: "#B89B6A", icon: <IconUsers /> },
           { label: "Total direcciones", valor: totalDirecciones, border: "#9ca3af", color: "#374151", icon: <IconMapPin /> },
           { label: "Direcciones principales", valor: totalPrincipales, border: "#ddd0b0", color: "#8a7450", icon: <IconStar /> },
         ].map((stat, i) => (
-          <div
-            key={i}
-            className="card shadow-sm rounded-4"
-            style={{ padding: "18px 20px", border: `1.5px solid ${stat.border}` }}
-          >
+          <div key={i} className="card shadow-sm rounded-4" style={{ padding: "18px 20px", border: `1.5px solid ${stat.border}` }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
               <span style={{ color: stat.color }}>{stat.icon}</span>
               <span style={{ fontSize: "28px", fontWeight: "700", color: stat.color }}>{stat.valor}</span>
@@ -588,145 +610,148 @@ function DireccionesCliente({ onVolver }) {
         ))}
       </div>
 
+      {/* ESTADO DE CARGA */}
+      {cargando && (
+        <div style={{ textAlign: "center", padding: "40px", color: "#9ca3af", fontSize: "14px" }}>
+          Cargando datos...
+        </div>
+      )}
+
       {/* LISTA DE CLIENTES */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-        {clientesFiltrados.length === 0 && (
-          <div
-            className="card rounded-4"
-            style={{ textAlign: "center", padding: "40px", color: "#9ca3af", border: "1.5px solid #e5e7eb" }}
-          >
-            No se encontraron clientes.
-          </div>
-        )}
-        {clientesFiltrados.map((cliente) => (
-          <div
-            key={cliente.id}
-            className="card shadow-sm rounded-4"
-            style={{ border: "1.5px solid #e5e7eb", overflow: "hidden" }}
-          >
-            {/* Header cliente */}
-            <div style={{
-              padding: "18px 24px", borderBottom: "1px solid #f3f4f6",
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              background: "#fafafa", flexWrap: "wrap", gap: "12px",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-                <div style={{
-                  width: "48px", height: "48px", borderRadius: "50%",
-                  background: cliente.color, color: cliente.colorTexto,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontWeight: "700", fontSize: "15px", flexShrink: 0,
-                }}>
-                  {cliente.iniciales}
-                </div>
-                <div>
-                  <div style={{ fontWeight: "700", fontSize: "15px", color: "#111827" }}>{cliente.nombre}</div>
-                  <div style={{ fontSize: "12px", color: "#374151", marginTop: "2px" }}>
-                    {cliente.tipoDocumento} — {cliente.numeroDocumento}
+      {!cargando && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          {clientesFiltrados.length === 0 && (
+            <div className="card rounded-4" style={{ textAlign: "center", padding: "40px", color: "#9ca3af", border: "1.5px solid #e5e7eb" }}>
+              No se encontraron clientes.
+            </div>
+          )}
+          {clientesFiltrados.map((cliente) => (
+            <div key={cliente.id} className="card shadow-sm rounded-4" style={{ border: "1.5px solid #e5e7eb", overflow: "hidden" }}>
+
+              {/* Header cliente */}
+              <div style={{
+                padding: "18px 24px", borderBottom: "1px solid #f3f4f6",
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                background: "#fafafa", flexWrap: "wrap", gap: "12px",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                  <div style={{
+                    width: "48px", height: "48px", borderRadius: "50%",
+                    background: cliente.color, color: cliente.colorTexto,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontWeight: "700", fontSize: "15px", flexShrink: 0,
+                  }}>
+                    {cliente.iniciales}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: "700", fontSize: "15px", color: "#111827" }}>{cliente.nombre}</div>
+                    <div style={{ fontSize: "12px", color: "#374151", marginTop: "2px" }}>
+                      {cliente.tipoDocumento} — {cliente.numeroDocumento}
+                    </div>
                   </div>
                 </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                  <span style={{ fontSize: "13px", color: "#374151", display: "flex", alignItems: "center", gap: "5px" }}>
+                    <IconPhone /> {cliente.telefono}
+                  </span>
+                  <span style={{ fontSize: "13px", color: "#374151", display: "flex", alignItems: "center", gap: "5px", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={cliente.correo}>
+                    <IconMail /> {cliente.correo}
+                  </span>
+                  <span style={{ fontSize: "12px", color: "#374151", display: "flex", alignItems: "center", gap: "5px" }}>
+                    <IconCalendar /> {cliente.fechaRegistro}
+                  </span>
+                  <span style={S.badgeGold}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#1a1a1a", display: "inline-block" }} />
+                    {cliente.estado}
+                  </span>
+                  <span style={S.badgeDark}>
+                    {cliente.direcciones.length} direcci{cliente.direcciones.length === 1 ? "ón" : "ones"}
+                  </span>
+                </div>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap", justifyContent: "flex-end" }}>
-                <span style={{ fontSize: "13px", color: "#374151", display: "flex", alignItems: "center", gap: "5px" }}>
-                  <IconPhone /> {cliente.telefono}
-                </span>
-                <span style={{ fontSize: "13px", color: "#374151", display: "flex", alignItems: "center", gap: "5px", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={cliente.correo}>
-                  <IconMail /> {cliente.correo}
-                </span>
-                <span style={{ fontSize: "12px", color: "#374151", display: "flex", alignItems: "center", gap: "5px" }}>
-                  <IconCalendar /> {cliente.fechaRegistro}
-                </span>
-                <span style={S.badgeGold}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#1a1a1a", display: "inline-block" }} />
-                  {cliente.estado}
-                </span>
-                <span style={S.badgeDark}>
-                  {cliente.direcciones.length} direcci{cliente.direcciones.length === 1 ? "ón" : "ones"}
-                </span>
-              </div>
-            </div>
-
-            {/* Tabla de direcciones */}
-            <div style={{ overflowX: "auto" }}>
-              <table className="table align-middle" style={{ marginBottom: 0 }}>
-                <thead>
-                  <tr>
-                    {["ID", "Dirección", "Ciudad", "Barrio", "Indicaciones", "Principal", "Estado", "Acciones"].map((h) => (
-                      <th key={h} style={{ fontSize: "12px", whiteSpace: "nowrap" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {cliente.direcciones.map((dir) => (
-                    <tr key={dir.id}>
-                      <td style={{ fontSize: "12px", color: "#374151", fontFamily: "monospace" }}>{dir.id}</td>
-                      <td style={{ fontSize: "13px", color: "#111827", fontWeight: "600", maxWidth: "200px" }}>{dir.direccion}</td>
-                      <td style={{ fontSize: "13px" }}>{dir.ciudad}</td>
-                      <td style={{ fontSize: "13px" }}>{dir.barrio}</td>
-                      <td style={{ fontSize: "12px", color: "#374151", maxWidth: "180px" }}>{dir.indicaciones}</td>
-                      <td>
-                        {dir.esPrincipal
-                          ? <span style={S.badgePrincipal}><IconStar /> Principal</span>
-                          : <span style={{ fontSize: "13px", color: "#9ca3af" }}>—</span>
-                        }
-                      </td>
-                      <td>
-                        <span style={S.badgeGold}>{dir.estado}</span>
-                      </td>
-                      <td>
-                        <div style={{ display: "flex", gap: "8px" }}>
-                          <button
-                            style={S.btnSmEdit}
-                            title="Editar dirección"
-                            onClick={() => setModal({ tipo: "editarDir", clienteId: cliente.id, dirId: dir.id })}
-                          >
-                            <IconPencil />
-                          </button>
-                          <button
-                            style={S.btnSmDelete}
-                            title="Eliminar dirección"
-                            onClick={() => eliminarDireccion(cliente.id, dir.id)}
-                          >
-                            <IconTrash />
-                          </button>
-                        </div>
-                      </td>
+              {/* Tabla de direcciones */}
+              <div style={{ overflowX: "auto" }}>
+                <table className="table align-middle" style={{ marginBottom: 0 }}>
+                  <thead>
+                    <tr>
+                      {["ID", "Dirección", "Ciudad", "Barrio", "Indicaciones", "Principal", "Estado", "Acciones"].map((h) => (
+                        <th key={h} style={{ fontSize: "12px", whiteSpace: "nowrap" }}>{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {cliente.direcciones.map((dir) => (
+                      <tr key={dir.id}>
+                        <td style={{ fontSize: "12px", color: "#374151", fontFamily: "monospace" }}>{dir.id}</td>
+                        <td style={{ fontSize: "13px", color: "#111827", fontWeight: "600", maxWidth: "200px" }}>{dir.direccion}</td>
+                        <td style={{ fontSize: "13px" }}>{dir.ciudad}</td>
+                        <td style={{ fontSize: "13px" }}>{dir.barrio}</td>
+                        <td style={{ fontSize: "12px", color: "#374151", maxWidth: "180px" }}>{dir.indicaciones}</td>
+                        <td>
+                          {dir.esPrincipal
+                            ? <span style={S.badgePrincipal}><IconStar /> Principal</span>
+                            : <span style={{ fontSize: "13px", color: "#9ca3af" }}>—</span>
+                          }
+                        </td>
+                        <td>
+                          <span style={S.badgeGold}>{dir.estado}</span>
+                        </td>
+                        <td>
+                          <div style={{ display: "flex", gap: "8px" }}>
+                            <button
+                              style={S.btnSmEdit}
+                              title="Editar dirección"
+                              onClick={() => setModal({ tipo: "editarDir", clienteId: cliente.id, dirId: dir.id })}
+                            >
+                              <IconPencil />
+                            </button>
+                            <button
+                              style={S.btnSmDelete}
+                              title="Eliminar dirección"
+                              onClick={() => eliminarDireccion(cliente.id, dir.id)}
+                            >
+                              <IconTrash />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-            {/* Footer cliente */}
-            <div style={{
-              padding: "12px 24px", borderTop: "1px solid #f3f4f6",
-              display: "flex", gap: "10px", justifyContent: "flex-end",
-              background: "#fafafa",
-            }}>
-              <button
-                className="btn rounded-pill btn-sm"
-                style={{ backgroundColor: "#B89B6A", color: "#000", border: "none", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
-                onClick={() => setModal({ tipo: "agregar", clienteId: cliente.id })}
-              >
-                <IconPlus /> Agregar dirección
-              </button>
-              <button
-                style={{ ...S.btnGhost, fontSize: "12px", padding: "7px 16px" }}
-                onClick={() => setModal({ tipo: "editarCliente", clienteId: cliente.id })}
-              >
-                <IconPencil /> Editar cliente
-              </button>
-              <button
-                style={{ ...S.btnGhost, fontSize: "12px", padding: "7px 16px" }}
-                onClick={() => showToast("Datos sincronizados correctamente.")}
-              >
-                <IconRefresh /> Actualizar
-              </button>
+              {/* Footer cliente */}
+              <div style={{
+                padding: "12px 24px", borderTop: "1px solid #f3f4f6",
+                display: "flex", gap: "10px", justifyContent: "flex-end",
+                background: "#fafafa",
+              }}>
+                <button
+                  className="btn rounded-pill btn-sm"
+                  style={{ backgroundColor: "#B89B6A", color: "#000", border: "none", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  onClick={() => setModal({ tipo: "agregar", clienteId: cliente.id })}
+                >
+                  <IconPlus /> Agregar dirección
+                </button>
+                <button
+                  style={{ ...S.btnGhost, fontSize: "12px", padding: "7px 16px" }}
+                  onClick={() => setModal({ tipo: "editarCliente", clienteId: cliente.id })}
+                >
+                  <IconPencil /> Editar cliente
+                </button>
+                <button
+                  style={{ ...S.btnGhost, fontSize: "12px", padding: "7px 16px" }}
+                  onClick={() => cargarClientes().then(() => showToast("Datos sincronizados correctamente."))}
+                >
+                  <IconRefresh /> Actualizar
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* MODALES */}
       {modal?.tipo === "agregar" && clienteDelModal && (

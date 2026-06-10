@@ -346,5 +346,4 @@ export default function Proveedores() {
         </div>
       )}
     </div>
-  );
-}
+  )};

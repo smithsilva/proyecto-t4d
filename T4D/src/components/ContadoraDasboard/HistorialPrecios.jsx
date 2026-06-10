@@ -1,77 +1,17 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { supabase } from "../../Supabase/SupabaseClient";
 
-const HISTORIAL_INICIAL = [
-  {
-    id: "HIST-081",
-    producto: "Placa Balística Nivel IV",
-    prod_id: "PROD-081",
-    precio_anterior: 2500000,
-    precio_nuevo: 2750000,
-    variacion: 10.0,
-    fecha_cambio: "2026-05-08",
-    motivo: "Ajuste por inflación y aumento en costo de mate",
-    usuario: "Patricia Ramírez",
-  },
-  {
-    id: "HIST-082",
-    producto: "Blindaje Frontal Reforzado",
-    prod_id: "PROD-082",
-    precio_anterior: 3200000,
-    precio_nuevo: 2900000,
-    variacion: -9.38,
-    fecha_cambio: "2026-05-07",
-    motivo: "Promoción especial para clientes corporativos",
-    usuario: "Patricia Ramírez",
-  },
-  {
-    id: "HIST-083",
-    producto: "Sistema de Blindaje Lateral",
-    prod_id: "PROD-083",
-    precio_anterior: 4500000,
-    precio_nuevo: 4500000,
-    variacion: 0,
-    fecha_cambio: "2026-05-06",
-    motivo: "Corrección de precio por error en el sistema",
-    usuario: "Patricia Ramírez",
-  },
-  {
-    id: "HIST-084",
-    producto: "Vidrio Antibalas",
-    prod_id: "PROD-084",
-    precio_anterior: 1800000,
-    precio_nuevo: 2100000,
-    variacion: 16.67,
-    fecha_cambio: "2026-05-05",
-    motivo: "Incremento por nueva tecnología mejorada",
-    usuario: "Patricia Ramírez",
-  },
-  {
-    id: "HIST-085",
-    producto: "Placa Balística Nivel IV",
-    prod_id: "PROD-085",
-    precio_anterior: 2400000,
-    precio_nuevo: 2500000,
-    variacion: 4.17,
-    fecha_cambio: "2026-05-03",
-    motivo: "Ajuste trimestral de precios",
-    usuario: "Patricia Ramírez",
-  },
-  {
-    id: "HIST-086",
-    producto: "Kit de Blindaje Completo",
-    prod_id: "PROD-086",
-    precio_anterior: 15000000,
-    precio_nuevo: 13500000,
-    variacion: -10.0,
-    fecha_cambio: "2026-05-01",
-    motivo: "Descuento por volumen en temporada baja",
-    usuario: "Patricia Ramírez",
-  },
-];
-
+// Formateador de moneda colombiana (COP)
 const fmt = (n) =>
-  "$ " + n.toLocaleString("es-CO", { minimumFractionDigits: 0 });
+  "$ " + Number(n).toLocaleString("es-CO", { minimumFractionDigits: 0 });
 
+// Función para calcular el porcentaje de variación de forma dinámica
+function getVariacion(anterior, nuevo) {
+  if (anterior === 0) return 0;
+  return ((nuevo - anterior) / anterior) * 100;
+}
+
+// Función para calcular la diferencia absoluta con signo
 function calcDiff(anterior, nuevo) {
   const diff = nuevo - anterior;
   if (diff === 0) return null;
@@ -79,9 +19,10 @@ function calcDiff(anterior, nuevo) {
   return `${sign}$ ${Math.abs(diff).toLocaleString("es-CO")}`;
 }
 
-function VariacionCell({ item }) {
-  const { variacion, precio_anterior, precio_nuevo } = item;
-  const diff = calcDiff(precio_anterior, precio_nuevo);
+// Componente para renderizar la celda de variación con sus estilos visuales
+function VariacionCell({ anterior, nuevo }) {
+  const variacion = getVariacion(anterior, nuevo);
+  const diff = calcDiff(anterior, nuevo);
 
   if (variacion > 0) {
     return (
@@ -110,39 +51,62 @@ function VariacionCell({ item }) {
   );
 }
 
-function formatFecha(iso) {
-  const [y, m, d] = iso.split("-");
+// Formateador de fechas a un formato legible (ej: 8 de mayo de 2026)
+function formatFecha(datetime) {
+  if (!datetime) return "—";
+  const fecha = new Date(datetime);
   const meses = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
-  return `${parseInt(d)} de ${meses[parseInt(m) - 1]} de ${y}`;
+  return `${fecha.getDate()} de ${meses[fecha.getMonth()]} de ${fecha.getFullYear()}`;
 }
 
 export default function HistorialPrecios() {
-  const [historial] = useState(HISTORIAL_INICIAL);
+  const [historial, setHistorial] = useState([]);
   const [busqueda, setBusqueda] = useState("");
   const [fecha, setFecha] = useState("");
-  const [productoFiltro, setProductoFiltro] = useState("");
+  const [cargando, setCargando] = useState(true);
 
+  // Carga inicial de datos desde Supabase
+  useEffect(() => {
+    cargarHistorial();
+  }, []);
+
+  const cargarHistorial = async () => {
+    setCargando(true);
+    try {
+      const { data, error } = await supabase
+        .from("historial_precios")
+        .select("*")
+        .order("id_historial", { ascending: false });
+      if (error) throw error;
+      setHistorial(data || []);
+    } catch (err) {
+      console.error("Error al cargar historial:", err.message);
+    }
+    setCargando(false);
+  };
+
+  // Filtrado de registros en base a la búsqueda (ID o motivo) y fecha
   const filtrado = useMemo(() => {
     const q = busqueda.toLowerCase();
     return historial.filter((h) => {
-      const matchQ = !q || h.id.toLowerCase().includes(q) || h.producto.toLowerCase().includes(q) || h.motivo.toLowerCase().includes(q);
-      const matchFecha = !fecha || h.fecha_cambio === fecha;
-      const matchProd = !productoFiltro || h.producto === productoFiltro;
-      return matchQ && matchFecha && matchProd;
+      const matchQ = !q ||
+        String(h.id_historial).toLowerCase().includes(q) ||
+        h.motivo?.toLowerCase().includes(q);
+      const matchFecha = !fecha || h.fecha_cambio?.startsWith(fecha);
+      return matchQ && matchFecha;
     });
-  }, [historial, busqueda, fecha, productoFiltro]);
+  }, [historial, busqueda, fecha]);
 
-  const aumentos = historial.filter((h) => h.variacion > 0).length;
-  const reducciones = historial.filter((h) => h.variacion < 0).length;
-  const sinCambio = historial.filter((h) => h.variacion === 0).length;
-
-  const productosUnicos = [...new Set(historial.map((h) => h.producto))];
+  // Contadores dinámicos para las tarjetas de estadísticas
+  const aumentos   = historial.filter((h) => getVariacion(h.precio_anterior, h.precio_nuevo) > 0).length;
+  const reducciones = historial.filter((h) => getVariacion(h.precio_anterior, h.precio_nuevo) < 0).length;
+  const sinCambio  = historial.filter((h) => getVariacion(h.precio_anterior, h.precio_nuevo) === 0).length;
 
   const statCards = [
-    { label: "Total Registros", valor: historial.length, sublabel: "cambios registrados", color: "#B89B6A", border: "#B89B6A" },
-    { label: "Aumentos", valor: aumentos, sublabel: "precios incrementados", color: "#1f2937", border: "#9ca3af" },
-    { label: "Reducciones", valor: reducciones, sublabel: "precios reducidos", color: "#374151", border: "#ddd0b0" },
-    { label: "Sin Cambio", valor: sinCambio, sublabel: "correcciones", color: "#6b7280", border: "#e5e7eb" },
+    { label: "Total Registros", valor: historial.length, sublabel: "cambios registrados",   color: "#B89B6A", border: "#B89B6A" },
+    { label: "Aumentos",        valor: aumentos,          sublabel: "precios incrementados", color: "#1f2937", border: "#9ca3af" },
+    { label: "Reducciones",     valor: reducciones,       sublabel: "precios reducidos",     color: "#374151", border: "#ddd0b0" },
+    { label: "Sin Cambio",      valor: sinCambio,         sublabel: "correcciones",          color: "#6b7280", border: "#e5e7eb" },
   ];
 
   return (
@@ -175,7 +139,7 @@ export default function HistorialPrecios() {
           <input
             type="text"
             className="form-control rounded-pill"
-            placeholder="Buscar por ID, producto, motivo..."
+            placeholder="Buscar por ID o motivo..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
@@ -186,15 +150,6 @@ export default function HistorialPrecios() {
             value={fecha}
             onChange={(e) => setFecha(e.target.value)}
           />
-          <select
-            className="form-select rounded-pill"
-            style={{ maxWidth: 220 }}
-            value={productoFiltro}
-            onChange={(e) => setProductoFiltro(e.target.value)}
-          >
-            <option value="">Todos los productos</option>
-            {productosUnicos.map((p) => <option key={p} value={p}>{p}</option>)}
-          </select>
         </div>
       </div>
 
@@ -202,34 +157,36 @@ export default function HistorialPrecios() {
       <div className="card p-3 rounded-4 shadow-sm">
         <div className="d-flex justify-content-between align-items-center mb-2">
           <h6 className="fw-bold mb-0" style={{ color: "#B89B6A" }}>Registro Histórico de Precios</h6>
-          <small style={{ color: "#6b7280" }}>{filtrado.length} registro{filtrado.length !== 1 ? "s" : ""} encontrado{filtrado.length !== 1 ? "s" : ""}</small>
+          <small style={{ color: "#6b7280" }}>
+            {filtrado.length} registro{filtrado.length !== 1 ? "s" : ""} encontrado{filtrado.length !== 1 ? "s" : ""}
+          </small>
         </div>
-        <table className="table align-middle">
-          <thead>
-            <tr>
-              {["ID Historial", "Producto", "Precio Anterior", "Precio Nuevo", "Variación", "Fecha Cambio", "Motivo", "Usuario"].map((col) => (
-                <th key={col} style={{ fontSize: 12, whiteSpace: "nowrap" }}>{col}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtrado.map((h) => (
-              <tr key={h.id}>
-                <td style={{ fontSize: 13, fontWeight: 500, color: "#374151" }}>{h.id}</td>
-                <td>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{h.producto}</div>
-                  <div style={{ fontSize: 11, color: "#9ca3af" }}>{h.prod_id}</div>
-                </td>
-                <td style={{ fontSize: 13, color: "#374151", whiteSpace: "nowrap" }}>{fmt(h.precio_anterior)}</td>
-                <td style={{ fontSize: 13, fontWeight: 600, color: "#111827", whiteSpace: "nowrap" }}>{fmt(h.precio_nuevo)}</td>
-                <td><VariacionCell item={h} /></td>
-                <td style={{ fontSize: 13, color: "#374151", whiteSpace: "nowrap" }}>{formatFecha(h.fecha_cambio)}</td>
-                <td style={{ fontSize: 13, color: "#6b7280", maxWidth: 220 }}>{h.motivo}</td>
-                <td style={{ fontSize: 13, color: "#374151", whiteSpace: "nowrap" }}>{h.usuario}</td>
+
+        {cargando ? (
+          <div className="text-center py-4" style={{ color: "#6b7280", fontSize: 13 }}>Cargando historial...</div>
+        ) : (
+          <table className="table align-middle">
+            <thead>
+              <tr>
+                {["ID Historial", "Precio Anterior", "Precio Nuevo", "Variación", "Fecha Cambio", "Motivo"].map((col) => (
+                  <th key={col} style={{ fontSize: 12, whiteSpace: "nowrap" }}>{col}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtrado.map((h) => (
+                <tr key={h.id_historial}>
+                  <td style={{ fontSize: 13, fontWeight: 500, color: "#374151" }}>{h.id_historial}</td>
+                  <td style={{ fontSize: 13, color: "#374151", whiteSpace: "nowrap" }}>{fmt(h.precio_anterior)}</td>
+                  <td style={{ fontSize: 13, fontWeight: 600, color: "#111827", whiteSpace: "nowrap" }}>{fmt(h.precio_nuevo)}</td>
+                  <td><VariacionCell anterior={h.precio_anterior} nuevo={h.precio_nuevo} /></td>
+                  <td style={{ fontSize: 13, color: "#374151", whiteSpace: "nowrap" }}>{formatFecha(h.fecha_cambio)}</td>
+                  <td style={{ fontSize: 13, color: "#6b7280", maxWidth: 220 }}>{h.motivo}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

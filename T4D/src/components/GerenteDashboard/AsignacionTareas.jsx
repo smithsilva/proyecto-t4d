@@ -1,6 +1,4 @@
-import { useState, useEffect } from "react";
-import { supabase } from "../../supabase/supabaseClient";
-import { obtenerAsignaciones } from "../../api/asignacionesApi";
+import { useState } from "react";
 
 const TruckIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -74,71 +72,91 @@ const FORM_EMPTY = {
 };
 
 export default function AsignacionTareas() {
+  const [busqueda, setBusqueda] =
+    useState("");
 
-  const [busqueda,     setBusqueda]     = useState("");
-  const [asignaciones, setAsignaciones] = useState([]);
-  const [cargando,     setCargando]     = useState(true);
-  const [error,        setError]        = useState(null);
-  const [guardando,    setGuardando]    = useState(false);
-  const [modalNueva,   setModalNueva]   = useState(false);
-  const [form,         setForm]         = useState(FORM_EMPTY);
-  const [mecanicos,    setMecanicos]    = useState([]);
-  const [cargandoMec,  setCargandoMec]  = useState(false);
-useEffect(() => {
-  cargarAsignaciones();
-}, []);
+  const [asignaciones, setAsignaciones] =
+    useState(initialAsignaciones);
 
-const cargarAsignaciones = async () => {
-  setCargando(true);
-  setError(null);
+  const [modalNueva, setModalNueva] =
+    useState(false);
 
-  try {
-    const data = await obtenerAsignaciones();
+  const [nuevaAsignacion, setNuevaAsignacion] =
+    useState({
+      vehiculo: "",
+      tipoTrabajo: "Mantenimiento",
+      descripcion: "",
+      prioridad: "Alta",
+      fechaLimite: "",
+    });
 
-    console.log("DATOS RECIBIDOS:", data);
-
-    setAsignaciones(
-      (data || []).map((a) => ({
-        ...a,
-        mecanico_nombre:
-          a.usuarios?.username || "Sin asignar",
-      }))
+  const filtradas =
+    asignaciones.filter((a) =>
+      a.vehiculo
+        .toLowerCase()
+        .includes(
+          busqueda.toLowerCase()
+        )
     );
-  } catch (error) {
-    console.error(error);
-    setError(error.message);
-  }
 
-  setCargando(false);
-};
+  // ======================================
+  // CREAR ASIGNACION
+  // ======================================
 
-const abrirModal = async () => {
-    setModalNueva(true);
-    setCargandoMec(true);
+  const crearAsignacion = () => {
+    const nueva = {
+      id: Date.now(),
 
-    const { data: rolData, error: rolError } = await supabase
-      .from("roles")
-      .select("id_rol")
-      .ilike("nombre_rol", "Mecanico")
-      .single();
+      ...nuevaAsignacion,
 
-    if (rolError || !rolData) {
-      setMecanicos([]);
-      setCargandoMec(false);
-      return;
-    }
+      mecanico:
+        "Todos los mecánicos",
 
-    const { data, error: err } = await supabase
-      .from("usuarios")
-      .select("id_usuario, username, email")
-      .eq("activo", true)
-      .eq("id_rol", rolData.id_rol);
+      estado: "Pendiente",
+    };
 
-    setMecanicos(err ? [] : data || []);
-    setCargandoMec(false);
-  };
+    setAsignaciones((prev) => [
+      nueva,
+      ...prev,
+    ]);
 
-  const cerrarModal = () => {
+    // ======================================
+    // NOTIFICACION POR ROL
+    // ======================================
+
+    const notificaciones =
+      JSON.parse(
+        localStorage.getItem(
+          "notificaciones"
+        )
+      ) || [];
+
+    const nuevaNotificacion = {
+      id: Date.now(),
+
+      rol: "Mecanico",
+
+      titulo: "Nueva asignación",
+
+      descripcion:
+        `Nuevo trabajo de ${nueva.tipoTrabajo}`,
+
+      vehiculo: nueva.vehiculo,
+
+      fecha:
+        new Date().toLocaleString(),
+
+      leido: false,
+    };
+
+    localStorage.setItem(
+      "notificaciones",
+      JSON.stringify([
+        nuevaNotificacion,
+        ...notificaciones,
+      ])
+    );
+
     setModalNueva(false);
     setForm(FORM_EMPTY);
     setMecanicos([]);

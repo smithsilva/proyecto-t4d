@@ -29,27 +29,7 @@ const obtenerMovimientos = async (
 
   }
 
-};
-
-// =====================================
-// POST
-// =====================================
-
-const crearMovimiento = async (
-  req,
-  res
-) => {
-
-  try {
-
-    const movimiento =
-      await crearMovimientoService(
-        req.body
-      );
-
-    res.status(201).json(
-      movimiento
-    );
+    res.json(data);
 
   } catch (error) {
 
