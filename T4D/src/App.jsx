@@ -126,15 +126,23 @@ function App() {
           setUsuario={setUsuario}
         />
       );
+case "mecanico":
 
-    case "mecanico":
-      return (
-        <MecanicoDashboard
-          usuario={usuario}
-          setVista={setVista}
-          setUsuario={setUsuario}
-        />
-      );
+  if (!usuario) {
+    return (
+      <div className="d-flex justify-content-center align-items-center vh-100">
+        <h4>Cargando usuario...</h4>
+      </div>
+    );
+  }
+
+  return (
+    <MecanicoDashboard
+      usuario={usuario}
+      setVista={setVista}
+      setUsuario={setUsuario}
+    />
+  );
 
     case "home":
       return (

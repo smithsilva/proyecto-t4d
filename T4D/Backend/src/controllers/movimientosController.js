@@ -1,5 +1,11 @@
-const supabase =
-  require("../config/supabase");
+const {
+  obtenerMovimientosService,
+  crearMovimientoService,
+} = require("../services/movimientosService");
+
+// =====================================
+// GET
+// =====================================
 
 const obtenerMovimientos = async (
   req,
@@ -8,51 +14,56 @@ const obtenerMovimientos = async (
 
   try {
 
-    const { data, error } =
-      await supabase
-        .from("movimientos_inventario")
-        .select(`
-          id_movimiento,
-          fecha_movimiento,
-          tipo_movimiento,
-          cantidad,
+    const movimientos =
+      await obtenerMovimientosService();
 
-          productos:productos!movimientos_inventario_id_producto_fkey (
-            id_producto,
-            nombre_producto
-          ),
-
-          usuarios:usuarios!movimientos_inventario_id_usuario_fkey (
-            id_usuario,
-            username
-          )
-        `)
-        .order(
-          "fecha_movimiento",
-          {
-            ascending: false,
-          }
-        );
-
-    if (error) {
-
-      return res.status(500).json({
-        error: error.message,
-      });
-
-    }
-
-    res.json(data);
+    res.json(movimientos);
 
   } catch (error) {
+
+    console.log(error);
 
     res.status(500).json({
       error: error.message,
     });
 
   }
+
+};
+
+// =====================================
+// POST
+// =====================================
+
+const crearMovimiento = async (
+  req,
+  res
+) => {
+
+  try {
+
+    const movimiento =
+      await crearMovimientoService(
+        req.body
+      );
+
+    res.status(201).json(
+      movimiento
+    );
+
+  } catch (error) {
+
+    console.log(error);
+
+    res.status(500).json({
+      error: error.message,
+    });
+
+  }
+
 };
 
 module.exports = {
   obtenerMovimientos,
+  crearMovimiento,
 };

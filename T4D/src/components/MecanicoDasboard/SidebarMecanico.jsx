@@ -66,7 +66,7 @@ function SidebarMecanico({ setVistaMecanico, vistaMecanico }) {
         {[
           { key: "inventario",   icon: "bi-box-seam",          label: "Inventario"  },
           { key: "categoriasbrindaje",   icon: "bi-shield-fill",       label: "Categorías"  },
-          { key: "mismantenimientos", icon: "bi-tools",          label: "Mantenimientos" }
+        { key: "mantenimientos", icon: "bi-tools", label: "Mantenimientos" }
         ].map((item) => (
           <button
             key={item.key}
