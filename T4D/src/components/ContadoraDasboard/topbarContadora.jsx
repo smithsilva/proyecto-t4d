@@ -1,36 +1,53 @@
 import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import { Bell, User } from "lucide-react";
+import { supabase } from "../../supabase/supabaseClient"; // ajusta la ruta
 
-function TopbarContadora({ setVista, setVistaContadora }) {
+function TopbarContadora({ setVista, setVistaContadora, usuario }) {
   const [mostrarMenu, setMostrarMenu] = useState(false);
   const [openNotif, setOpenNotif] = useState(false);
+  const [notificaciones, setNotificaciones] = useState([]);
 
-  const [notificaciones, setNotificaciones] = useState([
-    {
-      id: 1,
-      titulo: "Nuevo reporte disponible",
-      descripcion: "El gerente subió un nuevo reporte",
-      tiempo: "Hace 2 min",
-      leido: false,
-    },
-  ]);
+  // =====================================
+  // CARGAR NOTIFICACIONES
+  // =====================================
+
+  const cargarNotificaciones = async () => {
+    const { data, error } = await supabase
+      .from("notificaciones")
+      .select("*")
+      .eq("rol_destino", "Contadora")
+      .order("fecha", { ascending: false });
+
+    if (!error) setNotificaciones(data || []);
+  };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const nueva = {
-        id: Date.now(),
-        titulo: "Nueva solicitud",
-        descripcion: "Se registró un nuevo movimiento contable",
-        tiempo: "Ahora",
-        leido: false,
-      };
-
-      setNotificaciones((prev) => [nueva, ...prev]);
-    }, 5000);
-
-    return () => clearTimeout(timer);
+    cargarNotificaciones();
+    const intervalo = setInterval(cargarNotificaciones, 15000);
+    return () => clearInterval(intervalo);
   }, []);
+
+  // =====================================
+  // MARCAR COMO LEÍDA
+  // =====================================
+
+  const marcarLeida = async (id) => {
+    await supabase
+      .from("notificaciones")
+      .update({ leido: true })
+      .eq("id_notificacion", id);
+
+    setNotificaciones((prev) =>
+      prev.map((n) =>
+        n.id_notificacion === id ? { ...n, leido: true } : n
+      )
+    );
+  };
+
+  // =====================================
+  // CERRAR SESIÓN
+  // =====================================
 
   const cerrarSesion = () => {
     localStorage.removeItem("usuario");
@@ -47,6 +64,16 @@ function TopbarContadora({ setVista, setVistaContadora }) {
 
   const noLeidas = notificaciones.filter((n) => !n.leido).length;
 
+  const fmtFecha = (f) => {
+    if (!f) return "";
+    return new Date(f).toLocaleDateString("es-CO", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   return (
     <header
       className="d-flex justify-content-between align-items-center p-3 position-relative"
@@ -56,17 +83,17 @@ function TopbarContadora({ setVista, setVistaContadora }) {
         color: "#fff",
       }}
     >
-      {/* TÍTULO */}
       <h6 className="mb-0 fw-bold">Panel Contadora</h6>
 
-      {/* DERECHA */}
       <div className="d-flex align-items-center gap-3">
 
         {/* 🔔 NOTIFICACIONES */}
         <div className="position-relative">
-
           <button
-            onClick={() => setOpenNotif(!openNotif)}
+            onClick={() => {
+              setOpenNotif(!openNotif);
+              if (!openNotif) cargarNotificaciones();
+            }}
             style={{
               background: "#1a1a1a",
               border: "1px solid #8c6b3f",
@@ -90,6 +117,8 @@ function TopbarContadora({ setVista, setVistaContadora }) {
                   borderRadius: "50%",
                   fontSize: "10px",
                   padding: "2px 6px",
+                  minWidth: 18,
+                  textAlign: "center",
                 }}
               >
                 {noLeidas}
@@ -101,59 +130,143 @@ function TopbarContadora({ setVista, setVistaContadora }) {
             <div
               className="position-absolute end-0 mt-2 p-3 rounded-4"
               style={{
-                width: "300px",
+                width: "320px",
                 zIndex: 1000,
                 background: "#1a1a1a",
                 border: "1px solid #8c6b3f",
                 color: "#fff",
+                maxHeight: "460px",
+                overflowY: "auto",
               }}
             >
-              <strong>Notificaciones</strong>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 12,
+                }}
+              >
+                <strong style={{ fontSize: 14 }}>Notificaciones</strong>
+                {noLeidas > 0 && (
+                  <span style={{ fontSize: 11, color: "#8c6b3f" }}>
+                    {noLeidas} sin leer
+                  </span>
+                )}
+              </div>
 
-              {notificaciones.slice(0, 3).map((n) => (
+              {notificaciones.length === 0 ? (
                 <div
-                  key={n.id}
                   style={{
-                    background: "#0b0b0b",
-                    padding: "10px",
-                    borderRadius: "10px",
-                    marginTop: "10px",
-                    border: "1px solid #333",
-                    opacity: n.leido ? 0.6 : 1,
+                    textAlign: "center",
+                    color: "#aaa",
+                    fontSize: 13,
+                    padding: "20px 0",
                   }}
                 >
-                  <strong style={{ color: "#b89b6a" }}>
-                    {n.titulo}
-                  </strong>
-                  <p style={{ fontSize: "12px", margin: 0 }}>
-                    {n.descripcion}
-                  </p>
-                  <small style={{ color: "#aaa" }}>{n.tiempo}</small>
+                  No hay notificaciones
                 </div>
-              ))}
+              ) : (
+                notificaciones.slice(0, 5).map((n) => (
+                  <div
+                    key={n.id_notificacion}
+                    style={{
+                      background: "#0b0b0b",
+                      padding: "10px",
+                      borderRadius: "10px",
+                      marginBottom: 10,
+                      border: `1px solid ${n.leido ? "#222" : "#8c6b3f"}`,
+                      opacity: n.leido ? 0.6 : 1,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        marginBottom: 4,
+                      }}
+                    >
+                      <strong style={{ color: "#b89b6a", fontSize: 13 }}>
+                        {n.titulo}
+                      </strong>
+                      {!n.leido && (
+                        <span
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: "50%",
+                            background: "#b89b6a",
+                            display: "inline-block",
+                            flexShrink: 0,
+                            marginTop: 3,
+                          }}
+                        />
+                      )}
+                    </div>
+
+                    <p style={{ fontSize: 12, margin: "4px 0", color: "#ccc" }}>
+                      {n.descripcion}
+                    </p>
+
+                    <small style={{ color: "#666", fontSize: 11 }}>
+                      {fmtFecha(n.fecha)}
+                    </small>
+
+                    {!n.leido && (
+                      <button
+                        onClick={() => marcarLeida(n.id_notificacion)}
+                        style={{
+                          marginTop: 8,
+                          width: "100%",
+                          background: "#1a1a1a",
+                          border: "1px solid #8c6b3f",
+                          padding: "6px",
+                          borderRadius: "8px",
+                          fontSize: 11,
+                          cursor: "pointer",
+                          color: "#b89b6a",
+                        }}
+                      >
+                        Marcar como leída
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>
 
         {/* 👤 PERFIL */}
         <div className="position-relative">
-
           <div
             onClick={() => setMostrarMenu(!mostrarMenu)}
             style={{
-              width: "35px",
-              height: "35px",
+              width: "40px",
+              height: "40px",
               borderRadius: "50%",
-              backgroundColor: "#8c6b3f",
+              overflow: "hidden",
               cursor: "pointer",
+              background: "#8c6b3f",
+              color: "#fff",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "#fff",
               fontWeight: "bold",
+              fontSize: "14px",
+              border: "2px solid #B89B6A",
             }}
           >
-            <User size={18} />
+            {usuario?.foto ? (
+              <img
+                src={usuario.foto}
+                alt="perfil"
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            ) : (
+              (usuario?.nombre || "CO").slice(0, 2).toUpperCase()
+            )}
           </div>
 
           {mostrarMenu && (
@@ -168,13 +281,13 @@ function TopbarContadora({ setVista, setVistaContadora }) {
               }}
             >
               <div className="text-center mb-2">
-                <div className="fw-bold">Nicol Zuñiga</div>
-                <small style={{ color: "#cfcfcf" }}>Contadora</small>
+                <div className="fw-bold">{usuario?.nombre || "Contadora"}</div>
+                <small style={{ color: "#cfcfcf" }}>{usuario?.rol || "Contadora"}</small>
               </div>
 
               <hr style={{ borderColor: "#333" }} />
 
-               <button
+              <button
                 onClick={() => {
                   setVistaContadora("perfil");
                   setMostrarMenu(false);
@@ -186,6 +299,7 @@ function TopbarContadora({ setVista, setVistaContadora }) {
                   border: "1px solid #333",
                   padding: "6px",
                   borderRadius: "10px",
+                  cursor: "pointer",
                 }}
               >
                 <User size={16} />
@@ -200,6 +314,7 @@ function TopbarContadora({ setVista, setVistaContadora }) {
                   color: "#fff",
                   border: "none",
                   padding: "6px",
+                  cursor: "pointer",
                 }}
               >
                 Cerrar sesión
@@ -207,7 +322,6 @@ function TopbarContadora({ setVista, setVistaContadora }) {
             </div>
           )}
         </div>
-
       </div>
     </header>
   );

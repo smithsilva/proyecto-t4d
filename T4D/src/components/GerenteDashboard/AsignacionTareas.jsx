@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "../../Supabase/SupabaseClient"; // ajusta la ruta según tu proyecto
+import { supabase } from "../../Supabase/SupabaseClient";
 
 // ─── Iconos ───────────────────────────────────────────────────────────────────
 
@@ -89,15 +89,15 @@ const inputStyle = {
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function AsignacionTareas() {
-  const [busqueda,      setBusqueda]      = useState("");
-  const [asignaciones,  setAsignaciones]  = useState([]);
-  const [mecanicos,     setMecanicos]     = useState([]);
-  const [cargando,      setCargando]      = useState(true);
-  const [cargandoMec,   setCargandoMec]   = useState(false);
-  const [guardando,     setGuardando]     = useState(false);
-  const [error,         setError]         = useState(null);
-  const [modalNueva,    setModalNueva]    = useState(false);
-  const [form,          setForm]          = useState(FORM_EMPTY);
+  const [busqueda,     setBusqueda]     = useState("");
+  const [asignaciones, setAsignaciones] = useState([]);
+  const [mecanicos,    setMecanicos]    = useState([]);
+  const [cargando,     setCargando]     = useState(true);
+  const [cargandoMec,  setCargandoMec]  = useState(false);
+  const [guardando,    setGuardando]    = useState(false);
+  const [error,        setError]        = useState(null);
+  const [modalNueva,   setModalNueva]   = useState(false);
+  const [form,         setForm]         = useState(FORM_EMPTY);
 
   // ── Carga inicial ──────────────────────────────────────────────────────────
 
@@ -105,23 +105,38 @@ export default function AsignacionTareas() {
     cargarAsignaciones();
   }, []);
 
-  const cargarAsignaciones = async () => {
-    setCargando(true);
-    setError(null);
+const cargarAsignaciones = async () => {
+  setCargando(true);
+  setError(null);
 
-    const { data, error: err } = await supabase
-      .from("asignaciones_tareas")
-      .select("id_asignacion, vehiculo, tipo_trabajo, descripcion, prioridad, fecha_limite, estado, mecanico_nombre")
-      .order("id_asignacion", { ascending: false });
+  const { data, error } = await supabase
+    .from("asignaciones_tareas")
+    .select(`
+      id_asignacion,
+      vehiculo,
+      tipo_trabajo,
+      descripcion,
+      prioridad,
+      fecha_limite,
+      estado,
+      usuarios!fk_mecanico(
+        id_usuario,
+        username
+      )
+    `)
+    .order("id_asignacion", { ascending: false });
 
-    if (err) {
-      setError("No se pudieron cargar las asignaciones: " + err.message);
-    } else {
-      setAsignaciones(data || []);
-    }
+  if (error) {
+    setError(
+      "No se pudieron cargar las asignaciones: " +
+      error.message
+    );
+  } else {
+    setAsignaciones(data || []);
+  }
 
-    setCargando(false);
-  };
+  setCargando(false);
+};
 
   // ── Modal ─────────────────────────────────────────────────────────────────
 
@@ -160,8 +175,8 @@ export default function AsignacionTareas() {
   // ── Crear asignación ──────────────────────────────────────────────────────
 
   const crearAsignacion = async () => {
-    if (!form.vehiculo.trim())   return alert("El vehículo es obligatorio.");
-    if (mecanicos.length === 0)  return alert("No se encontraron mecánicos activos.");
+    if (!form.vehiculo.trim())  return alert("El vehículo es obligatorio.");
+    if (mecanicos.length === 0) return alert("No se encontraron mecánicos activos.");
 
     setGuardando(true);
 
@@ -169,14 +184,13 @@ export default function AsignacionTareas() {
       .from("asignaciones_tareas")
       .insert(
         mecanicos.map((m) => ({
-          vehiculo:       form.vehiculo.trim(),
-          tipo_trabajo:   form.tipo_trabajo,
-          descripcion:    form.descripcion.trim() || null,
-          id_mecanico:    m.id_usuario,
-          mecanico_nombre: m.username,
-          prioridad:      form.prioridad,
-          fecha_limite:   form.fecha_limite || null,
-          estado:         "Pendiente",
+          vehiculo:     form.vehiculo.trim(),
+          tipo_trabajo: form.tipo_trabajo,
+          descripcion:  form.descripcion.trim() || null,
+          id_mecanico:  m.id_usuario,
+          prioridad:    form.prioridad,
+          fecha_limite: form.fecha_limite || null,
+          estado:       "Pendiente",
         }))
       )
       .select("id_asignacion, id_mecanico");
@@ -187,7 +201,7 @@ export default function AsignacionTareas() {
       return;
     }
 
-    // Notificaciones en Supabase (sin localStorage)
+    // Notificaciones para cada mecánico
     await supabase.from("notificaciones").insert(
       asignadas.map((a) => ({
         titulo:        "Nueva asignación",
@@ -206,10 +220,13 @@ export default function AsignacionTareas() {
 
   // ── Filtrado ──────────────────────────────────────────────────────────────
 
-  const filtradas = asignaciones.filter((a) =>
-    (a.vehiculo        || "").toLowerCase().includes(busqueda.toLowerCase()) ||
-    (a.mecanico_nombre || "").toLowerCase().includes(busqueda.toLowerCase())
-  );
+  const filtradas = asignaciones.filter((a) => {
+    const nombreMecanico = a.usuarios?.username || "";
+    return (
+      (a.vehiculo || "").toLowerCase().includes(busqueda.toLowerCase()) ||
+      nombreMecanico.toLowerCase().includes(busqueda.toLowerCase())
+    );
+  });
 
   // ── Stats ─────────────────────────────────────────────────────────────────
 
@@ -311,7 +328,8 @@ export default function AsignacionTareas() {
                     <td style={{ padding: "12px", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={a.descripcion}>
                       {a.descripcion || "—"}
                     </td>
-                    <td style={{ padding: "12px" }}>{a.mecanico_nombre}</td>
+                    {/* Nombre del mecánico viene del JOIN con usuarios */}
+                    <td style={{ padding: "12px" }}>{a.usuarios?.username || "—"}</td>
                     <td style={{ padding: "12px" }}>
                       <span style={{ ...(prioridadStyle[a.prioridad] || prioridadStyle.Baja), padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 500 }}>
                         {a.prioridad}
