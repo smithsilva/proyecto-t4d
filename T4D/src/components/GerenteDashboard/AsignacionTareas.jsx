@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "../../Supabase/SupabaseClient"; // ajusta la ruta según tu proyecto
+
+// ─── Iconos ───────────────────────────────────────────────────────────────────
 
 const TruckIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -45,6 +48,8 @@ const UsersIcon = () => (
   </svg>
 );
 
+// ─── Estilos de estado / prioridad ────────────────────────────────────────────
+
 const estadoStyle = {
   Pendiente:    { background: "#f3f4f6", color: "#374151", border: "1px solid #d1d5db" },
   "En proceso": { background: "#e6f1fb", color: "#185FA5", border: "1px solid #85B7EB" },
@@ -57,113 +62,105 @@ const prioridadStyle = {
   Baja:  { background: "#e5e7eb", color: "#374151" },
 };
 
+const FORM_EMPTY = {
+  vehiculo:     "",
+  tipo_trabajo: "Mantenimiento",
+  descripcion:  "",
+  prioridad:    "Alta",
+  fecha_limite: "",
+};
+
 const fmtFecha = (f) => {
   if (!f) return "—";
   const [y, m, d] = f.split("-");
   return `${d}/${m}/${y}`;
 };
 
-const FORM_EMPTY = {
-  vehiculo: "",
-  tipo_trabajo: "Mantenimiento",
-  descripcion: "",
-  prioridad: "Alta",
-  fecha_limite: "",
+const labelStyle = {
+  display: "block", fontSize: 12, color: "#6b7280", marginBottom: 4, marginTop: 2,
 };
 
+const inputStyle = {
+  width: "100%", padding: "9px 10px", marginBottom: 12, borderRadius: 8,
+  border: "1px solid #ddd", fontSize: 13, outline: "none", background: "#fff",
+  color: "#111", fontFamily: "inherit", boxSizing: "border-box",
+};
+
+// ─── Componente principal ─────────────────────────────────────────────────────
+
 export default function AsignacionTareas() {
-  const [busqueda, setBusqueda] =
-    useState("");
+  const [busqueda,      setBusqueda]      = useState("");
+  const [asignaciones,  setAsignaciones]  = useState([]);
+  const [mecanicos,     setMecanicos]     = useState([]);
+  const [cargando,      setCargando]      = useState(true);
+  const [cargandoMec,   setCargandoMec]   = useState(false);
+  const [guardando,     setGuardando]     = useState(false);
+  const [error,         setError]         = useState(null);
+  const [modalNueva,    setModalNueva]    = useState(false);
+  const [form,          setForm]          = useState(FORM_EMPTY);
 
-  const [asignaciones, setAsignaciones] =
-    useState(initialAsignaciones);
+  // ── Carga inicial ──────────────────────────────────────────────────────────
 
-  const [modalNueva, setModalNueva] =
-    useState(false);
+  useEffect(() => {
+    cargarAsignaciones();
+  }, []);
 
-  const [nuevaAsignacion, setNuevaAsignacion] =
-    useState({
-      vehiculo: "",
-      tipoTrabajo: "Mantenimiento",
-      descripcion: "",
-      prioridad: "Alta",
-      fechaLimite: "",
-    });
+  const cargarAsignaciones = async () => {
+    setCargando(true);
+    setError(null);
 
-  const filtradas =
-    asignaciones.filter((a) =>
-      a.vehiculo
-        .toLowerCase()
-        .includes(
-          busqueda.toLowerCase()
-        )
-    );
+    const { data, error: err } = await supabase
+      .from("asignaciones_tareas")
+      .select("id_asignacion, vehiculo, tipo_trabajo, descripcion, prioridad, fecha_limite, estado, mecanico_nombre")
+      .order("id_asignacion", { ascending: false });
 
-  // ======================================
-  // CREAR ASIGNACION
-  // ======================================
+    if (err) {
+      setError("No se pudieron cargar las asignaciones: " + err.message);
+    } else {
+      setAsignaciones(data || []);
+    }
 
-  const crearAsignacion = () => {
-    const nueva = {
-      id: Date.now(),
+    setCargando(false);
+  };
 
-      ...nuevaAsignacion,
+  // ── Modal ─────────────────────────────────────────────────────────────────
 
-      mecanico:
-        "Todos los mecánicos",
+  const abrirModal = async () => {
+    setForm(FORM_EMPTY);
+    setMecanicos([]);
+    setModalNueva(true);
+    await cargarMecanicos();
+  };
 
-      estado: "Pendiente",
-    };
-
-    setAsignaciones((prev) => [
-      nueva,
-      ...prev,
-    ]);
-
-    // ======================================
-    // NOTIFICACION POR ROL
-    // ======================================
-
-    const notificaciones =
-      JSON.parse(
-        localStorage.getItem(
-          "notificaciones"
-        )
-      ) || [];
-
-    const nuevaNotificacion = {
-      id: Date.now(),
-
-      rol: "Mecanico",
-
-      titulo: "Nueva asignación",
-
-      descripcion:
-        `Nuevo trabajo de ${nueva.tipoTrabajo}`,
-
-      vehiculo: nueva.vehiculo,
-
-      fecha:
-        new Date().toLocaleString(),
-
-      leido: false,
-    };
-
-    localStorage.setItem(
-      "notificaciones",
-      JSON.stringify([
-        nuevaNotificacion,
-        ...notificaciones,
-      ])
-    );
-
+  const cerrarModal = () => {
     setModalNueva(false);
     setForm(FORM_EMPTY);
     setMecanicos([]);
   };
 
+  const cargarMecanicos = async () => {
+    setCargandoMec(true);
+
+    const { data, error: err } = await supabase
+      .from("usuarios")
+      .select("id_usuario, username")
+      .eq("rol", "Mecanico")
+      .eq("activo", true);
+
+    if (err) {
+      console.error("Error cargando mecánicos:", err.message);
+      setMecanicos([]);
+    } else {
+      setMecanicos(data || []);
+    }
+
+    setCargandoMec(false);
+  };
+
+  // ── Crear asignación ──────────────────────────────────────────────────────
+
   const crearAsignacion = async () => {
-    if (!form.vehiculo.trim()) return alert("El vehículo es obligatorio.");
+    if (!form.vehiculo.trim())   return alert("El vehículo es obligatorio.");
     if (mecanicos.length === 0)  return alert("No se encontraron mecánicos activos.");
 
     setGuardando(true);
@@ -172,13 +169,14 @@ export default function AsignacionTareas() {
       .from("asignaciones_tareas")
       .insert(
         mecanicos.map((m) => ({
-          vehiculo:     form.vehiculo.trim(),
-          tipo_trabajo: form.tipo_trabajo,
-          descripcion:  form.descripcion.trim() || null,
-          id_mecanico:  m.id_usuario,
-          prioridad:    form.prioridad,
-          fecha_limite: form.fecha_limite || null,
-          estado:       "Pendiente",
+          vehiculo:       form.vehiculo.trim(),
+          tipo_trabajo:   form.tipo_trabajo,
+          descripcion:    form.descripcion.trim() || null,
+          id_mecanico:    m.id_usuario,
+          mecanico_nombre: m.username,
+          prioridad:      form.prioridad,
+          fecha_limite:   form.fecha_limite || null,
+          estado:         "Pendiente",
         }))
       )
       .select("id_asignacion, id_mecanico");
@@ -189,6 +187,7 @@ export default function AsignacionTareas() {
       return;
     }
 
+    // Notificaciones en Supabase (sin localStorage)
     await supabase.from("notificaciones").insert(
       asignadas.map((a) => ({
         titulo:        "Nueva asignación",
@@ -205,10 +204,14 @@ export default function AsignacionTareas() {
     setGuardando(false);
   };
 
+  // ── Filtrado ──────────────────────────────────────────────────────────────
+
   const filtradas = asignaciones.filter((a) =>
     (a.vehiculo        || "").toLowerCase().includes(busqueda.toLowerCase()) ||
     (a.mecanico_nombre || "").toLowerCase().includes(busqueda.toLowerCase())
   );
+
+  // ── Stats ─────────────────────────────────────────────────────────────────
 
   const stats = [
     { label: "Pendientes",     value: asignaciones.filter((a) => a.estado === "Pendiente").length,  icon: <ClockIcon />    },
@@ -217,9 +220,12 @@ export default function AsignacionTareas() {
     { label: "Alta prioridad", value: asignaciones.filter((a) => a.prioridad === "Alta").length,    icon: <TriangleIcon /> },
   ];
 
+  // ─── Render ───────────────────────────────────────────────────────────────
+
   return (
     <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", background: "#fff", minHeight: "100vh", padding: "28px 32px", color: "#1a1a2e" }}>
 
+      {/* Encabezado */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111", margin: 0 }}>Asignación de Tareas</h1>
@@ -232,6 +238,7 @@ export default function AsignacionTareas() {
         </button>
       </div>
 
+      {/* Tarjetas de estadísticas */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
         {stats.map((s) => (
           <div key={s.label} style={{ background: "#fff", border: "1.5px solid #B89B6A", borderRadius: 16, padding: "20px 22px", boxShadow: "0 4px 12px rgba(0,0,0,0.06)" }}>
@@ -244,6 +251,7 @@ export default function AsignacionTareas() {
         ))}
       </div>
 
+      {/* Buscador */}
       <div style={{ background: "#fff", borderRadius: 16, padding: "20px 22px", marginBottom: 24, border: "1px solid #e5e7eb" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid #e5e7eb", borderRadius: 20, padding: "8px 14px" }}>
           <SearchIcon />
@@ -253,7 +261,9 @@ export default function AsignacionTareas() {
         </div>
       </div>
 
+      {/* Tabla */}
       <div style={{ background: "#fff", borderRadius: 16, padding: "20px 22px", border: "1px solid #e5e7eb", overflowX: "auto" }}>
+
         {cargando && (
           <div style={{ textAlign: "center", padding: "40px 0" }}>
             <div style={{ display: "inline-block", width: 28, height: 28, border: "3px solid #e5e7eb", borderTop: "3px solid #B89B6A", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
@@ -303,7 +313,7 @@ export default function AsignacionTareas() {
                     </td>
                     <td style={{ padding: "12px" }}>{a.mecanico_nombre}</td>
                     <td style={{ padding: "12px" }}>
-                      <span style={{ ...prioridadStyle[a.prioridad], padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 500 }}>
+                      <span style={{ ...(prioridadStyle[a.prioridad] || prioridadStyle.Baja), padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 500 }}>
                         {a.prioridad}
                       </span>
                     </td>
@@ -321,11 +331,13 @@ export default function AsignacionTareas() {
         )}
       </div>
 
+      {/* Modal nueva asignación */}
       {modalNueva && (
         <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.45)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
           <div style={{ background: "#fff", borderRadius: 16, padding: 28, width: 440, maxHeight: "90vh", overflowY: "auto" }}>
             <h5 style={{ fontWeight: 700, marginBottom: 16, fontSize: 16 }}>Nueva Asignación</h5>
 
+            {/* Info mecánicos */}
             <div style={{ marginBottom: 16, padding: "10px 14px", borderRadius: 10, background: "#faf7f2", border: "1px solid #e8dcc8", display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ color: "#B89B6A" }}><UsersIcon /></span>
               {cargandoMec ? (
@@ -373,8 +385,16 @@ export default function AsignacionTareas() {
                 style={{ padding: "8px 18px", borderRadius: 8, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 13 }}>
                 Cancelar
               </button>
-              <button onClick={crearAsignacion} disabled={guardando || cargandoMec || mecanicos.length === 0}
-                style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: (guardando || mecanicos.length === 0) ? "#d4b896" : "#B89B6A", color: "#2a1f0e", fontWeight: 600, cursor: (guardando || mecanicos.length === 0) ? "not-allowed" : "pointer", fontSize: 13 }}>
+              <button
+                onClick={crearAsignacion}
+                disabled={guardando || cargandoMec || mecanicos.length === 0}
+                style={{
+                  padding: "8px 18px", borderRadius: 8, border: "none",
+                  background: (guardando || mecanicos.length === 0) ? "#d4b896" : "#B89B6A",
+                  color: "#2a1f0e", fontWeight: 600,
+                  cursor: (guardando || mecanicos.length === 0) ? "not-allowed" : "pointer",
+                  fontSize: 13,
+                }}>
                 {guardando ? "Guardando..." : `Asignar a ${mecanicos.length} mecánico${mecanicos.length !== 1 ? "s" : ""}`}
               </button>
             </div>
@@ -384,13 +404,3 @@ export default function AsignacionTareas() {
     </div>
   );
 }
-
-const labelStyle = {
-  display: "block", fontSize: 12, color: "#6b7280", marginBottom: 4, marginTop: 2,
-};
-
-const inputStyle = {
-  width: "100%", padding: "9px 10px", marginBottom: 12, borderRadius: 8,
-  border: "1px solid #ddd", fontSize: 13, outline: "none", background: "#fff",
-  color: "#111", fontFamily: "inherit", boxSizing: "border-box",
-};
