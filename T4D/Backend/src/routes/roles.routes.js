@@ -1,35 +1,10 @@
 const express = require("express");
-
 const router = express.Router();
+const { obtenerRoles } = require("../controllers/roles.controller");
 
 // ======================================
 // GET ROLES
 // ======================================
-
-router.get("/", async (req, res) => {
-
-  res.json([
-    {
-      id_rol: 1,
-      nombre_rol: "Admin",
-    },
-
-    {
-      id_rol: 2,
-      nombre_rol: "Gerente",
-    },
-
-    {
-      id_rol: 3,
-      nombre_rol: "Contadora",
-    },
-
-    {
-      id_rol: 4,
-      nombre_rol: "Mecanico",
-    },
-  ]);
-
-});
+router.get("/", obtenerRoles);
 
 module.exports = router;
