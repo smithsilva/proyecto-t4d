@@ -1,6 +1,6 @@
 const supabase = require('../config/supabase');
 
-// ─── MANTENIMIENTO (reemplaza "ventas") ────────────────────────────────────
+// ─── MANTENIMIENTO ────────────────────────────────────────────────────────
 
 exports.getResumenVentas = async () => {
   const { data, error } = await supabase
@@ -20,14 +20,19 @@ exports.getResumenVentas = async () => {
 };
 
 exports.getVentasPorSucursal = async () => {
+  // Trae el id de sucursal y luego hace join — ajusta el campo según tu esquema
   const { data, error } = await supabase
     .from('mantenimiento')
-    .select('total, sucursales(nombre)');
+    .select('total, id_sucursal, sucursales(nombre_sucursal, nombre)');
   if (error) throw new Error(error.message);
 
   const mapa = {};
   data.forEach(v => {
-    const nombre = v.sucursales?.nombre || 'Sin sucursal';
+    // Soporta tanto "nombre_sucursal" como "nombre" por si cambia el esquema
+    const nombre =
+      v.sucursales?.nombre_sucursal ||
+      v.sucursales?.nombre ||
+      'Sin sucursal';
     if (!mapa[nombre]) mapa[nombre] = { sucursal: nombre, total_servicios: 0, ingresos: 0 };
     mapa[nombre].total_servicios += 1;
     mapa[nombre].ingresos += parseFloat(v.total) || 0;
@@ -172,7 +177,8 @@ exports.getBalancePeriodo = async () => {
     .slice(0, 12);
 };
 
-// ─── PRODUCTOS MÁS USADOS EN MANTENIMIENTO ────────────────────────────────
+// ─── PRODUCTOS MÁS USADOS ─────────────────────────────────────────────────
+
 exports.getMasVendidos = async () => {
   const { data, error } = await supabase
     .from('detalle_mantenimiento')
@@ -192,4 +198,3 @@ exports.getMasVendidos = async () => {
     .sort((a, b) => b.unidades_usadas - a.unidades_usadas)
     .slice(0, 10);
 };
-

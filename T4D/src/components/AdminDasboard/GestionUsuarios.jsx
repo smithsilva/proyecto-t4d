@@ -1,7 +1,11 @@
 import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import { Eye, Pencil, Trash2, RefreshCcw, Users, Shield, Wrench, UserCheck, Search, X } from "lucide-react";
-import { supabase } from "../../supabase/supabaseClient";
+import {
+  obtenerUsuarios as obtenerUsuariosApi,
+  editarUsuario as editarUsuarioApi,
+  eliminarUsuario as eliminarUsuarioApi,
+} from "../../api/usuariosApi";
 
 // Inyección dinámica de estilos premium
 const injectStyles = () => {
@@ -65,7 +69,6 @@ const Avatar = ({ iniciales }) => (
   }}>{iniciales}</div>
 );
 
-// Modal de detalle de usuario
 const ModalVer = ({ usuario, onClose }) => {
   if (!usuario) return null;
   const m = ROL_META[usuario.rol] || { label: usuario.rol || "Sin rol", bg: "#6b7280", fg: "#fff" };
@@ -74,7 +77,6 @@ const ModalVer = ({ usuario, onClose }) => {
       onClick={onClose}>
       <div style={{ background: "#fff", borderRadius: 20, padding: 32, width: 360, boxShadow: "0 20px 60px rgba(0,0,0,0.2)", animation: "fadeUp .25s ease" }}
         onClick={e => e.stopPropagation()}>
-        {/* Cabecera */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24 }}>
           <div style={{
             width: 64, height: 64, borderRadius: "50%",
@@ -86,7 +88,6 @@ const ModalVer = ({ usuario, onClose }) => {
           <h6 style={{ margin: 0, fontWeight: 700, fontSize: 17 }}>{usuario.nombre}</h6>
           <span style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>{usuario.correo}</span>
         </div>
-        {/* Info */}
         {[
           { label: "Rol", value: <span style={{ background: m.bg, color: m.fg, padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{m.label}</span> },
           { label: "Estado", value: <EstadoBadge activo={usuario.activo} /> },
@@ -114,54 +115,38 @@ export default function GestionUsuarios() {
   const [usuarioVer, setUsuarioVer] = useState(null);
 
   useEffect(() => {
-    obtenerUsuarios();
+    cargarUsuarios();
   }, []);
 
   // =========================================
-  // OBTENER USUARIOS
+  // OBTENER USUARIOS — ahora usa el API
   // =========================================
-  const obtenerUsuarios = async () => {
+  const cargarUsuarios = async () => {
     setCargando(true);
-    const { data, error } = await supabase
-      .from("usuarios")
-      .select(`
-        id_usuario,
-        username,
-        email,
-        activo,
-        roles (
-          nombre_rol
-        )
-      `);
+    try {
+      const data = await obtenerUsuariosApi();
 
-    if (error) {
-      console.error(error);
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "No se pudieron cargar los usuarios",
-      });
-      setCargando(false);
-      return;
+      const usuariosFormateados = (data || []).map((u) => ({
+        id: u.id_usuario,
+        nombre: u.username || "Usuario sin nombre",
+        correo: u.email || "Sin correo",
+        rol: u.roles?.nombre_rol || "Sin rol",
+        activo: !!u.activo,
+        iniciales: u.username
+          ? u.username.split(" ").map((p) => p[0]).join("").toUpperCase().slice(0, 2)
+          : "?",
+      }));
+
+      setUsuarios(usuariosFormateados);
+    } catch (err) {
+      console.error(err);
+      Swal.fire({ icon: "error", title: "Error", text: "No se pudieron cargar los usuarios" });
     }
-
-    const usuariosFormateados = (data || []).map((u) => ({
-      id: u.id_usuario,
-      nombre: u.username || "Usuario sin nombre",
-      correo: u.email || "Sin correo",
-      rol: u.roles?.nombre_rol || "Sin rol",
-      activo: !!u.activo,
-      iniciales: u.username
-        ? u.username.split(" ").map((p) => p[0]).join("").toUpperCase().slice(0, 2)
-        : "?",
-    }));
-
-    setUsuarios(usuariosFormateados);
     setCargando(false);
   };
 
   // =========================================
-  // EDITAR USUARIO
+  // EDITAR USUARIO — ahora usa el API
   // =========================================
   const editarUsuario = async (u) => {
     const { value } = await Swal.fire({
@@ -173,47 +158,41 @@ export default function GestionUsuarios() {
       confirmButtonColor: "#B89B6A",
       focusConfirm: false,
       preConfirm: () => ({
-        nombre: document.getElementById("swal-nombre").value,
-        correo: document.getElementById("swal-correo").value,
+        username: document.getElementById("swal-nombre").value,
+        email: document.getElementById("swal-correo").value,
       }),
     });
     if (!value) return;
 
-    const { error } = await supabase
-      .from("usuarios")
-      .update({ username: value.nombre, email: value.correo })
-      .eq("id_usuario", u.id);
-
-    if (error) {
-      return Swal.fire({ icon: "error", title: "Error", text: "No se pudo actualizar" });
+    try {
+      await editarUsuarioApi(u.id, value);
+      Swal.fire({ icon: "success", title: "Actualizado", timer: 1400, showConfirmButton: false });
+      cargarUsuarios();
+    } catch (err) {
+      Swal.fire({ icon: "error", title: "Error", text: "No se pudo actualizar" });
     }
-    Swal.fire({ icon: "success", title: "Actualizado", timer: 1400, showConfirmButton: false });
-    obtenerUsuarios();
   };
 
   // =========================================
-  // ACTIVAR / DESACTIVAR
+  // ACTIVAR / DESACTIVAR — ahora usa el API
   // =========================================
   const cambiarEstado = async (u) => {
-    const { error } = await supabase
-      .from("usuarios")
-      .update({ activo: !u.activo })
-      .eq("id_usuario", u.id);
-
-    if (error) {
-      return Swal.fire({ icon: "error", title: "Error", text: "No se pudo cambiar el estado" });
+    try {
+      await editarUsuarioApi(u.id, { activo: !u.activo });
+      Swal.fire({
+        icon: "success",
+        title: u.activo ? "Usuario desactivado" : "Usuario activado",
+        timer: 1400,
+        showConfirmButton: false,
+      });
+      cargarUsuarios();
+    } catch (err) {
+      Swal.fire({ icon: "error", title: "Error", text: "No se pudo cambiar el estado" });
     }
-    Swal.fire({ 
-      icon: "success", 
-      title: u.activo ? "Usuario desactivado" : "Usuario activado", 
-      timer: 1400, 
-      showConfirmButton: false 
-    });
-    obtenerUsuarios();
   };
 
   // =========================================
-  // ELIMINAR USUARIO
+  // ELIMINAR USUARIO — ahora usa el API
   // =========================================
   const eliminarUsuario = async (id) => {
     const r = await Swal.fire({
@@ -228,16 +207,13 @@ export default function GestionUsuarios() {
     });
     if (!r.isConfirmed) return;
 
-    const { error } = await supabase
-      .from("usuarios")
-      .delete()
-      .eq("id_usuario", id);
-
-    if (error) {
-      return Swal.fire({ icon: "error", title: "Error", text: "No se pudo eliminar el usuario" });
+    try {
+      await eliminarUsuarioApi(id);
+      Swal.fire({ icon: "success", title: "Eliminado", timer: 1400, showConfirmButton: false });
+      cargarUsuarios();
+    } catch (err) {
+      Swal.fire({ icon: "error", title: "Error", text: "No se pudo eliminar el usuario" });
     }
-    Swal.fire({ icon: "success", title: "Eliminado", timer: 1400, showConfirmButton: false });
-    obtenerUsuarios();
   };
 
   // =========================================
@@ -254,8 +230,7 @@ export default function GestionUsuarios() {
   // =========================================
   return (
     <div style={{ padding: "24px", width: "100%", minHeight: "100vh", boxSizing: "border-box", background: "#f8f9fa" }}>
-      
-      {/* MODAL VER */}
+
       <ModalVer usuario={usuarioVer} onClose={() => setUsuarioVer(null)} />
 
       {/* HEADER */}
@@ -304,13 +279,11 @@ export default function GestionUsuarios() {
 
       {/* TABLA */}
       <div className="card rounded-4 shadow-sm mb-3" style={{ background: "#fff", border: "1px solid #e5e7eb", overflow: "hidden" }}>
-        
-        {/* Barra de Conteo e Interacciones */}
         <div style={{ padding: "10px 18px", borderBottom: "1px solid #f3f4f6", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 12, color: "#9ca3af" }}>
             {cargando ? "Cargando..." : `${filtrados.length} usuario${filtrados.length !== 1 ? "s" : ""}`}
           </span>
-          <button onClick={obtenerUsuarios} style={{ background: "transparent", border: "none", color: "#B89B6A", cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", gap: 4, fontWeight: 500 }}>
+          <button onClick={cargarUsuarios} style={{ background: "transparent", border: "none", color: "#B89B6A", cursor: "pointer", fontSize: 12, display: "flex", alignItems: "center", gap: 4, fontWeight: 500 }}>
             <RefreshCcw size={12} /> Actualizar
           </button>
         </div>
@@ -346,8 +319,6 @@ export default function GestionUsuarios() {
               ) : (
                 filtrados.map((u, i) => (
                   <tr key={u.id} className="gu-row" style={{ borderBottom: "1px solid #f9fafb", animationDelay: `${i * 0.04}s` }}>
-                    
-                    {/* Usuario (Avatar + Nombre) */}
                     <td style={{ padding: "12px 16px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <Avatar iniciales={u.iniciales} />
@@ -356,49 +327,26 @@ export default function GestionUsuarios() {
                         </div>
                       </div>
                     </td>
-
-                    {/* Correo */}
                     <td style={{ padding: "12px 16px", color: "#6b7280" }}>{u.correo}</td>
-
-                    {/* Rol */}
-                    <td style={{ padding: "12px 16px" }}>
-                      <RolBadge rol={u.rol} />
-                    </td>
-
-                    {/* Estado */}
-                    <td style={{ padding: "12px 16px" }}>
-                      <EstadoBadge activo={u.activo} />
-                    </td>
-
-                    {/* Acciones */}
+                    <td style={{ padding: "12px 16px" }}><RolBadge rol={u.rol} /></td>
+                    <td style={{ padding: "12px 16px" }}><EstadoBadge activo={u.activo} /></td>
                     <td style={{ padding: "12px 16px" }}>
                       <div style={{ display: "flex", gap: 6 }}>
-                        {/* VER */}
-                        <button className="gu-action" onClick={() => setUsuarioVer(u)}
-                          style={{ background: "#f3f4f6", color: "#374151" }}>
+                        <button className="gu-action" onClick={() => setUsuarioVer(u)} style={{ background: "#f3f4f6", color: "#374151" }}>
                           <Eye size={13} /> Ver
                         </button>
-
-                        {/* EDITAR */}
-                        <button className="gu-action" onClick={() => editarUsuario(u)}
-                          style={{ background: "rgba(184,155,106,0.12)", color: "#8C7450" }}>
+                        <button className="gu-action" onClick={() => editarUsuario(u)} style={{ background: "rgba(184,155,106,0.12)", color: "#8C7450" }}>
                           <Pencil size={13} /> Editar
                         </button>
-
-                        {/* ACTIVAR / DESACTIVAR */}
                         <button className="gu-action" onClick={() => cambiarEstado(u)}
                           style={{ background: u.activo ? "rgba(245,158,11,0.1)" : "rgba(34,197,94,0.1)", color: u.activo ? "#d97706" : "#16a34a" }}>
                           <RefreshCcw size={13} /> {u.activo ? "Desactivar" : "Activar"}
                         </button>
-
-                        {/* ELIMINAR */}
-                        <button className="gu-action" onClick={() => eliminarUsuario(u.id)}
-                          style={{ background: "rgba(239,68,68,0.1)", color: "#dc2626" }}>
+                        <button className="gu-action" onClick={() => eliminarUsuario(u.id)} style={{ background: "rgba(239,68,68,0.1)", color: "#dc2626" }}>
                           <Trash2 size={13} /> Eliminar
                         </button>
                       </div>
                     </td>
-
                   </tr>
                 ))
               )}
