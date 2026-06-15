@@ -2,7 +2,7 @@ import { useState } from "react";
 import Swal from "sweetalert2";
 import { supabase } from "../supabase/supabaseClient";
 import imagen3 from "../assets/imagen3.jpg";
-
+import SessionTimeout from "../components/SessionTimeout";
 function Login({ setVista, setUsuario }) {
 
   const [correo, setCorreo] = useState("");

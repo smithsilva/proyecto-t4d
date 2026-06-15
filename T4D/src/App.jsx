@@ -5,7 +5,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import ContadoraDashboard from "./pages/ContadoraDashboard";
 import GerenteDashboard from "./pages/GerenteDashboard";
 import MecanicoDashboard from "./pages/MecanicoDashboard";
-
+import SessionTimeout from "./components/SessionTimeout";
 import "bootstrap-icons/font/bootstrap-icons.css";
 
 function App() {
@@ -100,32 +100,52 @@ function App() {
 
   switch (vista) {
 
-    case "admin":
-      return (
-        <AdminDashboard
-          usuario={usuario}
-          setVista={setVista}
-          setUsuario={setUsuario}
-        />
-      );
+   case "admin":
+  return (
+    <>
+      <SessionTimeout
+        setVista={setVista}
+        setUsuario={setUsuario}
+      />
 
-    case "contadora":
-      return (
-        <ContadoraDashboard
-          usuario={usuario}
-          setVista={setVista}
-          setUsuario={setUsuario}
-        />
-      );
+      <AdminDashboard
+        usuario={usuario}
+        setVista={setVista}
+        setUsuario={setUsuario}
+      />
+    </>
+  );
 
-    case "gerente":
-      return (
-        <GerenteDashboard
-          usuario={usuario}
-          setVista={setVista}
-          setUsuario={setUsuario}
-        />
-      );
+   case "contadora":
+  return (
+    <>
+      <SessionTimeout
+        setVista={setVista}
+        setUsuario={setUsuario}
+      />
+
+      <ContadoraDashboard
+        usuario={usuario}
+        setVista={setVista}
+        setUsuario={setUsuario}
+      />
+    </>
+  );
+case "gerente":
+  return (
+    <>
+      <SessionTimeout
+        setVista={setVista}
+        setUsuario={setUsuario}
+      />
+
+      <GerenteDashboard
+        usuario={usuario}
+        setVista={setVista}
+        setUsuario={setUsuario}
+      />
+    </>
+  );
 case "mecanico":
 
   if (!usuario) {
@@ -137,11 +157,18 @@ case "mecanico":
   }
 
   return (
-    <MecanicoDashboard
-      usuario={usuario}
-      setVista={setVista}
-      setUsuario={setUsuario}
-    />
+    <>
+      <SessionTimeout
+        setVista={setVista}
+        setUsuario={setUsuario}
+      />
+
+      <MecanicoDashboard
+        usuario={usuario}
+        setVista={setVista}
+        setUsuario={setUsuario}
+      />
+    </>
   );
 
     case "home":
