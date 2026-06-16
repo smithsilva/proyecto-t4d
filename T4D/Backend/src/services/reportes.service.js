@@ -20,19 +20,14 @@ exports.getResumenVentas = async () => {
 };
 
 exports.getVentasPorSucursal = async () => {
-  // Trae el id de sucursal y luego hace join — ajusta el campo según tu esquema
   const { data, error } = await supabase
     .from('mantenimiento')
-    .select('total, id_sucursal, sucursales(nombre_sucursal, nombre)');
+    .select('total, sucursales(nombre_sucursal)'); // ← nombre_sucursal correcto
   if (error) throw new Error(error.message);
 
   const mapa = {};
   data.forEach(v => {
-    // Soporta tanto "nombre_sucursal" como "nombre" por si cambia el esquema
-    const nombre =
-      v.sucursales?.nombre_sucursal ||
-      v.sucursales?.nombre ||
-      'Sin sucursal';
+    const nombre = v.sucursales?.nombre_sucursal || 'Sin sucursal';
     if (!mapa[nombre]) mapa[nombre] = { sucursal: nombre, total_servicios: 0, ingresos: 0 };
     mapa[nombre].total_servicios += 1;
     mapa[nombre].ingresos += parseFloat(v.total) || 0;
@@ -43,12 +38,12 @@ exports.getVentasPorSucursal = async () => {
 exports.getVentasPorMetodoPago = async () => {
   const { data, error } = await supabase
     .from('mantenimiento')
-    .select('total, metodos_pago(nombre)');
+    .select('total, metodos_pago(nombre_metodo)'); // ← nombre_metodo correcto
   if (error) throw new Error(error.message);
 
   const mapa = {};
   data.forEach(v => {
-    const metodo = v.metodos_pago?.nombre || 'Sin método';
+    const metodo = v.metodos_pago?.nombre_metodo || 'Sin método';
     if (!mapa[metodo]) mapa[metodo] = { metodo_pago: metodo, cantidad: 0, total: 0 };
     mapa[metodo].cantidad += 1;
     mapa[metodo].total += parseFloat(v.total) || 0;
@@ -166,9 +161,10 @@ exports.getBalancePeriodo = async () => {
     const periodo = v.fecha_movimiento.slice(0, 7);
     if (!mapa[periodo]) mapa[periodo] = { periodo, ingresos: 0, egresos: 0, cantidad_movimientos: 0 };
     mapa[periodo].cantidad_movimientos += 1;
-    if (v.tipo_movimiento === 'ingreso') {
+    // ← Corregido: tu tabla usa 'Ingreso' y 'Egreso' con mayúscula
+    if (v.tipo_movimiento === 'Ingreso') {
       mapa[periodo].ingresos += parseFloat(v.valor) || 0;
-    } else {
+    } else if (v.tipo_movimiento === 'Egreso') {
       mapa[periodo].egresos += parseFloat(v.valor) || 0;
     }
   });

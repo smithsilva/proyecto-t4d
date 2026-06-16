@@ -65,7 +65,8 @@ function SidebarContadora({ setVistaContadora, vistaContadora }) {
       <div className="d-flex flex-column gap-1">
 
         {[
-          
+           
+          { key: "inventario", icon: "bi-box-seam", label: "Inventario"},
           { key: "movimientoscontables", icon: "bi-currency-dollar", label: "Movimientos Contables"},
           { key: "metodospago", icon: "bi-credit-card", label: "MetodosPago"},
           { key: "historialprecios", icon: "bi-graph-up", label: "HistorialPrecios"},
@@ -73,7 +74,7 @@ function SidebarContadora({ setVistaContadora, vistaContadora }) {
           { key: "empleados", icon: "bi-person", label: "Empleados"},
           { key: "sucursales", icon: "bi-building", label: "Sucursales"},
           { key: "reportes", icon: "bi-graph-up", label: "Reportes"},
-          { key: "inventario", icon: "bi-building", label: "Inventario"},
+          
           
           
         ].map((item) => (
