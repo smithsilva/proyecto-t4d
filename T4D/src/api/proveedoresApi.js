@@ -6,7 +6,11 @@ export const obtenerProveedores =
   async () => {
 
     const response =
-      await fetch(URL);
+      await fetch(URL, {
+        headers: {
+          "x-api-key": "pollo",
+        },
+      });
 
     return await response.json();
 };
@@ -22,6 +26,8 @@ export const crearProveedor = async (proveedor) => {
         headers: {
           "Content-Type":
             "application/json",
+          "x-api-key":
+            "pollo",
         },
 
         body: JSON.stringify(
@@ -48,6 +54,8 @@ export const editarProveedorApi =
           headers: {
             "Content-Type":
               "application/json",
+            "x-api-key":
+              "pollo",
           },
 
           body: JSON.stringify(
@@ -68,6 +76,10 @@ export const eliminarProveedorApi =
         `${URL}/${id}`,
         {
           method: "DELETE",
+          headers: {
+            "x-api-key":
+              "pollo",
+          },
         }
       );
 

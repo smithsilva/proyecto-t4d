@@ -3,7 +3,12 @@ export const obtenerMovimientosApi =
 
     const response =
       await fetch(
-        "http://localhost:5000/movimientos"
+        "http://localhost:5000/movimientos",
+        {
+          headers: {
+            "x-api-key": "pollo",
+          },
+        }
       );
 
     const data =

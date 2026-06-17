@@ -8,10 +8,21 @@ const API_URL = "http://localhost:5000/roles";
 
 export const obtenerRoles = async () => {
   try {
-    const response = await axios.get(API_URL);
+    const response = await axios.get(
+      API_URL,
+      {
+        headers: {
+          "x-api-key": "pollo",
+        },
+      }
+    );
+
     return response.data;
   } catch (error) {
-    console.log("Error obteniendo roles:", error);
+    console.log(
+      "Error obteniendo roles:",
+      error
+    );
     throw error;
   }
 };

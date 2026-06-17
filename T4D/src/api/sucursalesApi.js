@@ -2,7 +2,12 @@ const URL = "http://localhost:5000/sucursales";
 
 // GET
 export const obtenerSucursalesApi = async () => {
-  const response = await fetch(URL);
+  const response = await fetch(URL, {
+    headers: {
+      "x-api-key": "pollo",
+    },
+  });
+
   return await response.json();
 };
 
@@ -12,6 +17,7 @@ export const agregarSucursalApi = async (sucursal) => {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "x-api-key": "pollo",
     },
     body: JSON.stringify(sucursal),
   });
@@ -31,6 +37,8 @@ export const actualizarSucursalApi = async (
       headers: {
         "Content-Type":
           "application/json",
+        "x-api-key":
+          "pollo",
       },
       body: JSON.stringify(sucursal),
     }
@@ -47,6 +55,9 @@ export const eliminarSucursalApi = async (
     `${URL}/${id}`,
     {
       method: "DELETE",
+      headers: {
+        "x-api-key": "pollo",
+      },
     }
   );
 

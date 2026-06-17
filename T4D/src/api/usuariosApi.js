@@ -2,6 +2,10 @@ import axios from "axios";
 
 const API_URL = "http://localhost:5000/usuarios";
 
+const headers = {
+  "x-api-key": "pollo",
+};
+
 // ==========================================
 // OBTENER USUARIOS
 // ==========================================
@@ -10,7 +14,10 @@ export const obtenerUsuarios = async () => {
 
   try {
 
-    const response = await axios.get(API_URL);
+    const response = await axios.get(
+      API_URL,
+      { headers }
+    );
 
     return response.data;
 
@@ -32,7 +39,11 @@ export const crearUsuario = async (usuario) => {
 
   try {
 
-    const response = await axios.post(API_URL, usuario);
+    const response = await axios.post(
+      API_URL,
+      usuario,
+      { headers }
+    );
 
     return response.data;
 
@@ -56,7 +67,8 @@ export const editarUsuario = async (id, usuario) => {
 
     const response = await axios.put(
       `${API_URL}/${id}`,
-      usuario
+      usuario,
+      { headers }
     );
 
     return response.data;
@@ -80,7 +92,8 @@ export const eliminarUsuario = async (id) => {
   try {
 
     const response = await axios.delete(
-      `${API_URL}/${id}`
+      `${API_URL}/${id}`,
+      { headers }
     );
 
     return response.data;

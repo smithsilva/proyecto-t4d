@@ -4,9 +4,23 @@ const API_URL = import.meta.env.VITE_API_URL
 
 // Helper interno
 const fetchReporte = async (endpoint) => {
-  const res = await fetch(`${API_URL}${endpoint}`);
+  const res = await fetch(
+    `${API_URL}${endpoint}`,
+    {
+      headers: {
+        "x-api-key": "pollo",
+      },
+    }
+  );
+
   const data = await res.json();
-  if (!data.ok) throw new Error(data.mensaje || `Error en ${endpoint}`);
+
+  if (!data.ok) {
+    throw new Error(
+      data.mensaje || `Error en ${endpoint}`
+    );
+  }
+
   return data.data;
 };
 
