@@ -17,28 +17,34 @@ function TopbarMecanico({ setVista, usuario }) {
   const cargarNotificaciones = async () => {
     if (!usuario?.id_usuario) return;
 
-    const { data, error } = await supabase
-      .from("notificaciones")
-      .select(`
-        id_notificacion,
-        titulo,
-        descripcion,
-        fecha,
-        leido,
-        id_asignacion,
-        asignaciones_tareas (
-          id_asignacion,
-          vehiculo,
-          tipo_trabajo,
-          descripcion,
-          prioridad,
-          fecha_limite,
-          estado
-        )
-      `)
-      .eq("id_usuario",   usuario.id_usuario)
-      .eq("rol_destino",  "Mecanico")
-      .order("fecha", { ascending: false });
+ // En cargarNotificaciones, actualiza el select:
+const { data, error } = await supabase
+  .from("notificaciones")
+  .select(`
+    id_notificacion,
+    titulo,
+    descripcion,
+    fecha,
+    leido,
+    id_asignacion,
+    asignaciones_tareas (
+      id_asignacion,
+      vehiculo,
+      tipo_trabajo,
+      descripcion,
+      prioridad,
+      fecha_limite,
+      estado,
+      costo,
+      metodos_pago(
+        nombre_metodo,
+        permite_online
+      )
+    )
+  `)
+  .eq("id_usuario", usuario.id_usuario)
+  .eq("rol_destino", "Mecanico")
+  .order("fecha", { ascending: false });
 
     if (!error) setNotificaciones(data || []);
   };
@@ -162,19 +168,38 @@ function TopbarMecanico({ setVista, usuario }) {
                     <p style={{ fontSize: 12, margin: "4px 0", color: "#ccc" }}>{n.descripcion}</p>
 
                     {/* Detalles de la asignación desde el JOIN */}
-                    {n.asignaciones_tareas && (
-                      <div style={{ background: "#111", borderRadius: 8, padding: "8px 10px", marginTop: 6, fontSize: 11, color: "#aaa" }}>
-                        <p style={{ margin: "2px 0" }}>🚗 <strong style={{ color: "#fff" }}>{n.asignaciones_tareas.vehiculo}</strong></p>
-                        <p style={{ margin: "2px 0" }}>🔧 {n.asignaciones_tareas.tipo_trabajo}</p>
-                        {n.asignaciones_tareas.prioridad && (
-                          <p style={{ margin: "2px 0" }}>⚡ Prioridad: {n.asignaciones_tareas.prioridad}</p>
-                        )}
-                        {n.asignaciones_tareas.fecha_limite && (
-                          <p style={{ margin: "2px 0" }}>📅 Límite: {n.asignaciones_tareas.fecha_limite}</p>
-                        )}
-                      </div>
-                    )}
-
+                  {n.asignaciones_tareas && (
+  <div style={{ background: "#111", borderRadius: 8, padding: "8px 10px", marginTop: 6, fontSize: 11, color: "#aaa" }}>
+    <p style={{ margin: "2px 0" }}>🚗 <strong style={{ color: "#fff" }}>{n.asignaciones_tareas.vehiculo}</strong></p>
+    <p style={{ margin: "2px 0" }}>🔧 {n.asignaciones_tareas.tipo_trabajo}</p>
+    {n.asignaciones_tareas.prioridad && (
+      <p style={{ margin: "2px 0" }}>⚡ Prioridad: {n.asignaciones_tareas.prioridad}</p>
+    )}
+    {n.asignaciones_tareas.fecha_limite && (
+      <p style={{ margin: "2px 0" }}>📅 Límite: {n.asignaciones_tareas.fecha_limite}</p>
+    )}
+    {/* ── NUEVO: costo y método de pago ── */}
+    {n.asignaciones_tareas.costo != null && (
+      <p style={{ margin: "2px 0" }}>
+        💰 <strong style={{ color: "#b89b6a" }}>
+          $ {Number(n.asignaciones_tareas.costo).toLocaleString("es-CO")}
+        </strong>
+      </p>
+    )}
+    {n.asignaciones_tareas.metodos_pago && (
+      <p style={{ margin: "2px 0", display: "flex", alignItems: "center", gap: 4 }}>
+        💳 {n.asignaciones_tareas.metodos_pago.nombre_metodo}
+        <span style={{
+          marginLeft: 6, fontSize: 10, padding: "1px 7px", borderRadius: 20, fontWeight: 600,
+          background: n.asignaciones_tareas.metodos_pago.permite_online ? "#1e3a5f" : "#2a2a2a",
+          color: n.asignaciones_tareas.metodos_pago.permite_online ? "#60a5fa" : "#9ca3af",
+        }}>
+          {n.asignaciones_tareas.metodos_pago.permite_online ? "Online" : "Presencial"}
+        </span>
+      </p>
+    )}
+  </div>
+)}
                     <small style={{ color: "#666", fontSize: 11 }}>{fmtFecha(n.fecha)}</small>
 
                     {!n.leido && (

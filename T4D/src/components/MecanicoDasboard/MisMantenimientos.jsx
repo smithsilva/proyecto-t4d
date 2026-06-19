@@ -41,14 +41,34 @@ function MisMantenimientos({ usuario }) {
     if (!usuario) { setCargando(false); return; }
     setCargando(true);
 
-    const { data: rows, error } = await supabase
-      .from("asignaciones_tareas")
-      .select(`
-        id_asignacion, id_mecanico, vehiculo, tipo_trabajo,
-        descripcion, prioridad, fecha_limite, estado, fecha_asignacion
-      `)
-      .eq("id_mecanico", usuario.id_usuario)
-      .order("fecha_asignacion", { ascending: false });
+   // cargarAsignaciones — agrega costo y metodos_pago al select
+const { data: rows, error } = await supabase
+  .from("asignaciones_tareas")
+  .select(`
+    id_asignacion, id_mecanico, vehiculo, tipo_trabajo,
+    descripcion, prioridad, fecha_limite, estado, fecha_asignacion,
+    costo,
+    metodos_pago(
+      nombre_metodo,
+      permite_online
+    )
+  `)
+  .eq("id_mecanico", usuario.id_usuario)
+  .order("fecha_asignacion", { ascending: false });
+
+// Y en el setData, agrega los dos campos nuevos:
+setData((rows || []).map((r) => ({
+  id_mantenimiento:    r.id_asignacion,
+  fecha_hora:          r.fecha_asignacion?.slice(0, 16).replace("T", " ") || "—",
+  tipo_de_mantenimiento: r.tipo_trabajo,
+  id_cliente:          r.vehiculo,
+  descripcion:         r.descripcion,
+  prioridad:           r.prioridad,
+  fecha_limite:        r.fecha_limite,
+  estado:              r.estado,
+  costo:               r.costo,           // ← nuevo
+  metodo_pago:         r.metodos_pago,    // ← nuevo
+})));
 
     if (error) {
       Swal.fire({ icon: "error", title: "Error cargando asignaciones", text: error.message });
