@@ -6,9 +6,6 @@ const headers = {
   "x-api-key": "pollo",
 };
 
-// ==========================================
-// OBTENER USUARIOS
-// ==========================================
 
 export const obtenerUsuarios = async () => {
 
@@ -31,9 +28,6 @@ export const obtenerUsuarios = async () => {
 
 };
 
-// ==========================================
-// CREAR USUARIO
-// ==========================================
 
 export const crearUsuario = async (usuario) => {
 
@@ -57,9 +51,6 @@ export const crearUsuario = async (usuario) => {
 
 };
 
-// ==========================================
-// EDITAR USUARIO
-// ==========================================
 
 export const editarUsuario = async (id, usuario) => {
 
@@ -83,9 +74,6 @@ export const editarUsuario = async (id, usuario) => {
 
 };
 
-// ==========================================
-// ELIMINAR USUARIO
-// ==========================================
 
 export const eliminarUsuario = async (id) => {
 
