@@ -5,9 +5,7 @@ const headers = {
   "x-api-key": "pollo",
 };
 
-// =====================================
-// OBTENER PRODUCTOS
-// =====================================
+
 
 export const obtenerProductosApi = async () => {
   const response = await fetch(URL, {
@@ -17,9 +15,7 @@ export const obtenerProductosApi = async () => {
   return await response.json();
 };
 
-// =====================================
-// AGREGAR PRODUCTO
-// =====================================
+
 
 export const agregarProductoApi = async (producto) => {
   const response = await fetch(URL, {
@@ -31,9 +27,7 @@ export const agregarProductoApi = async (producto) => {
   return await response.json();
 };
 
-// =====================================
-// EDITAR PRODUCTO
-// =====================================
+
 
 export const editarProductoApi = async (
   id,
@@ -51,9 +45,6 @@ export const editarProductoApi = async (
   return await response.json();
 };
 
-// =====================================
-// ELIMINAR PRODUCTO
-// =====================================
 
 export const eliminarProductoApi = async (
   id

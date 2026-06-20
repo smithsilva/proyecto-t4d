@@ -1,7 +1,7 @@
 const URL =
   "http://localhost:5000/proveedores";
 
-// GET
+
 export const obtenerProveedores =
   async () => {
 
@@ -15,7 +15,6 @@ export const obtenerProveedores =
     return await response.json();
 };
 
-// POST
 export const crearProveedor = async (proveedor) => {
 
     const response =
@@ -38,7 +37,7 @@ export const crearProveedor = async (proveedor) => {
     return await response.json();
 };
 
-// PUT
+
 export const editarProveedorApi =
   async (
     id,
@@ -67,7 +66,7 @@ export const editarProveedorApi =
     return await response.json();
 };
 
-// DELETE
+
 export const eliminarProveedorApi =
   async (id) => {
 

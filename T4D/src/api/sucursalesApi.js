@@ -1,6 +1,6 @@
 const URL = "http://localhost:5000/sucursales";
 
-// GET
+
 export const obtenerSucursalesApi = async () => {
   const response = await fetch(URL, {
     headers: {
@@ -25,7 +25,7 @@ export const agregarSucursalApi = async (sucursal) => {
   return await response.json();
 };
 
-// PUT
+
 export const actualizarSucursalApi = async (
   id,
   sucursal
@@ -47,7 +47,7 @@ export const actualizarSucursalApi = async (
   return await response.json();
 };
 
-// DELETE
+
 export const eliminarSucursalApi = async (
   id
 ) => {

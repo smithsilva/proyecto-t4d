@@ -2,9 +2,7 @@ import axios from "axios";
 
 const API_URL = "http://localhost:5000/roles";
 
-// ==========================================
-// OBTENER ROLES
-// ==========================================
+
 
 export const obtenerRoles = async () => {
   try {

@@ -9,7 +9,7 @@ const {
 
 // GET
 router.get("/", obtenerMovimientos);
-
+ 
 // POST 👇 AQUÍ LO PONES
 router.post("/", async (req, res) => {
   try {
