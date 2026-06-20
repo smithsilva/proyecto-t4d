@@ -1,6 +1,5 @@
 import { useState } from "react";
 import escudoLogo from "../../assets/escudo1.png";
-import vehiculoBlindado from "../../assets/imagen11.png";
 
 function SidebarGerente({ setVistaGerente, vistaGerente }) {
   const [abierto, setAbierto] = useState(true);
@@ -45,7 +44,6 @@ function SidebarGerente({ setVistaGerente, vistaGerente }) {
         transition:      "width 0.3s",
         display:         "flex",
         flexDirection:   "column",
-        justifyContent:  "space-between",
         overflow:        "hidden",
       }}
     >
@@ -63,28 +61,24 @@ function SidebarGerente({ setVistaGerente, vistaGerente }) {
 
         {/* ── LOGO + TEXTOS DEBAJO ── */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "24px", paddingLeft: "0" }}>
-          {/* Escudo */}
           <img
             src={escudoLogo}
             alt="Logo T4D"
             style={{
-              width:      abierto ? "72px" : "44px",
-              height:     abierto ? "72px" : "44px",
-              objectFit:  "contain",
-              filter:     "drop-shadow(0 2px 8px rgba(201,162,90,0.45))",
-              transition: "0.3s",
+              width:        abierto ? "72px" : "44px",
+              height:       abierto ? "72px" : "44px",
+              objectFit:    "contain",
+              filter:       "drop-shadow(0 2px 8px rgba(201,162,90,0.45))",
+              transition:   "0.3s",
               marginBottom: abierto ? "10px" : "0",
             }}
           />
 
-          {/* Nombre empresa — debajo del logo, centrado */}
           {abierto && (
             <div style={{ lineHeight: 1.3, textAlign: "center" }}>
-              {/* Título blanco */}
               <div style={{ color: "#ffffff", fontWeight: 800, fontSize: "20px", letterSpacing: "1px" }}>
                 DEFENSA ÉLITE
               </div>
-              {/* Subtítulo dorado debajo, un poco más grande */}
               <div style={{ color: DORADO_SUAVE, fontSize: "14px", fontWeight: 600, letterSpacing: "0.8px", marginTop: "4px" }}>
                 TECNOLOGÍA · PROTECCIÓN · SUPREMACÍA
               </div>
@@ -118,56 +112,6 @@ function SidebarGerente({ setVistaGerente, vistaGerente }) {
             </button>
           ))}
         </div>
-      </div>
-
-      {/* ── IMAGEN VEHÍCULO AL PIE ── */}
-      <div
-        style={{
-          margin:          "12px 10px 12px",
-          borderRadius:    "12px",
-          overflow:        "hidden",
-          border:          `1px solid ${DORADO}33`,
-          backgroundColor: NAVY_OSCURO,
-          position:        "relative",
-          flexShrink:      0,
-        }}
-      >
-        <img
-          src={vehiculoBlindado}
-          alt="Vehículo blindado"
-          style={{
-            width:          "100%",
-            height:         abierto ? "230px" : "90px",
-            objectFit:      "cover",
-            objectPosition: "center 35%",
-            display:        "block",
-            transition:     "height 0.3s",
-            filter:         "brightness(1.05) contrast(1.05) saturate(1.1)",
-          }}
-        />
-        {/* Degradado oscuro solo en la franja inferior, deja el vehículo nítido arriba */}
-        <div style={{ position: "absolute", inset: 0, background: `linear-gradient(to top, ${NAVY_OSCURO}f5 0%, ${NAVY_OSCURO}99 18%, transparent 45%)`, pointerEvents: "none" }} />
-
-        {/* Texto sobre la imagen (solo cuando está abierto) */}
-        {abierto && (
-          <div style={{
-            position:      "absolute",
-            bottom:        0, left: 0, right: 0,
-            display:       "flex",
-            flexDirection: "column",
-            alignItems:    "center",
-            gap:           "4px",
-            color:         DORADO,
-            fontSize:      "12px",
-            fontWeight:    700,
-            letterSpacing: "0.5px",
-            padding:       "0 12px 12px",
-            textAlign:     "center",
-          }}>
-            <i className="bi bi-star-fill" style={{ fontSize: "13px" }}></i>
-            <span>SISTEMA INTEGRADO<br />DE DEFENSA</span>
-          </div>
-        )}
       </div>
     </div>
   );
