@@ -8,8 +8,9 @@ export default defineConfig({
     host: 'localhost',
     port: 5173,
     https: {
-      key: fs.readFileSync('./certs/localhost.key'),
-      cert: fs.readFileSync('./certs/localhost.crt'),
+      
+      key: fs.readFileSync('./Backend/certs/localhost.key'),
+      cert: fs.readFileSync('./Backend/certs/localhost.crt'),
     },
   },
 })
