@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Eye, Package, X, Plus, Filter, Search, Trash2, Pencil } from "lucide-react";
+import { Eye, Package, X, Plus, Filter, Search } from "lucide-react";
 import { supabase } from "../../supabase/supabaseClient";
 
 function Inventario() {
@@ -11,9 +11,6 @@ function Inventario() {
   const [productos, setProductos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [verProducto, setVerProducto] = useState(null);
-  const [editarProducto, setEditarProducto] = useState(null);
-  const [formEdit, setFormEdit] = useState({});
-  const [guardando, setGuardando] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [mostrarCrear, setMostrarCrear] = useState(false);
   const [formNuevo, setFormNuevo] = useState({
@@ -33,7 +30,6 @@ function Inventario() {
   const FONDO = "#f7f1e3";
   const ENCABEZADO = "#13202e";
   const TEXTO_ENCABEZADO = "#e7c98a";
-  const NAVY = "#13202e";
 
   useEffect(() => {
     recargar();
@@ -168,67 +164,6 @@ function Inventario() {
 
   const nombreCategoria = (id) =>
     categorias.find((c) => c.id_categoria == id)?.nombre_categoria || "Sin categoría";
-
-  const abrirEdicion = (p) => {
-    setFormEdit({
-      nombre_producto: p.nombre_producto || "",
-      descripcion: p.descripcion || "",
-      precio_actual: p.precio_actual || "",
-      stock_actual: p.stock_actual || "",
-      unidad_medida: p.unidad_medida || "",
-    });
-    setEditarProducto(p);
-  };
-
-  const guardarEdicion = async () => {
-    if (!editarProducto) return;
-    setGuardando(true);
-    const { error } = await supabase
-      .from("productos")
-      .update({
-        nombre_producto: formEdit.nombre_producto,
-        descripcion: formEdit.descripcion,
-        precio_actual: formEdit.precio_actual,
-        stock_actual: formEdit.stock_actual,
-        unidad_medida: formEdit.unidad_medida,
-      })
-      .eq("id_producto", editarProducto.id_producto);
-
-    setGuardando(false);
-
-    if (error) {
-      console.error("Error al actualizar producto:", error);
-      alert("No se pudo guardar el producto.");
-      return;
-    }
-
-    setProductos((prev) =>
-      prev.map((p) =>
-        p.id_producto === editarProducto.id_producto ? { ...p, ...formEdit } : p
-      )
-    );
-    setEditarProducto(null);
-  };
-
-  const eliminarProducto = async (p) => {
-    const confirmar = window.confirm(
-      `¿Seguro que deseas eliminar "${p.nombre_producto}"? Esta acción no se puede deshacer.`
-    );
-    if (!confirmar) return;
-
-    const { error } = await supabase
-      .from("productos")
-      .delete()
-      .eq("id_producto", p.id_producto);
-
-    if (error) {
-      console.error("Error al eliminar producto:", error);
-      alert("No se pudo eliminar el producto.");
-      return;
-    }
-
-    setProductos((prev) => prev.filter((item) => item.id_producto !== p.id_producto));
-  };
 
   const crearProducto = async () => {
     if (!formNuevo.nombre_producto.trim()) {
@@ -476,7 +411,7 @@ function Inventario() {
           </div>
         ) : (
           <div className="table-responsive">
-            <table className="table align-middle mb-0" style={{ minWidth: "1150px", backgroundColor: "#fffdf8" }}>
+            <table className="table align-middle mb-0" style={{ minWidth: "1100px", backgroundColor: "#fffdf8" }}>
               <thead>
                 <tr style={{ backgroundColor: ENCABEZADO }}>
                   <th className="ps-3" style={{ width: "60px", backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none", padding: "12px 8px" }}>ID</th>
@@ -490,7 +425,7 @@ function Inventario() {
                   <th style={{ width: "75px", backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Stock</th>
                   <th style={{ width: "95px", backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Precio</th>
                   <th style={{ width: "105px", backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Estado</th>
-                  <th className="text-center" style={{ width: "100px", backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Acciones</th>
+                  <th className="text-center" style={{ width: "70px", backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Ver</th>
                 </tr>
               </thead>
               <tbody>
@@ -527,21 +462,11 @@ function Inventario() {
                     <td className="fw-bold" style={{ fontSize: "13px" }}>{p.precio_actual ? `$${p.precio_actual}` : "—"}</td>
                     <td>{getBadgeEstado(p)}</td>
                     <td>
-                      <div className="d-flex justify-content-center gap-3">
+                      <div className="d-flex justify-content-center">
                         <Eye
                           size={19}
                           style={{ cursor: "pointer", color: "#555" }}
                           onClick={() => setVerProducto(p)}
-                        />
-                        <Pencil
-                          size={19}
-                          style={{ cursor: "pointer", color: DORADO_OSCURO }}
-                          onClick={() => abrirEdicion(p)}
-                        />
-                        <Trash2
-                          size={19}
-                          style={{ cursor: "pointer", color: "#c0392b" }}
-                          onClick={() => eliminarProducto(p)}
                         />
                       </div>
                     </td>
@@ -605,94 +530,6 @@ function Inventario() {
             <button onClick={() => setVerProducto(null)} className="btn btn-secondary w-100 mt-3">
               Cerrar
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL EDITAR PRODUCTO */}
-      {editarProducto && (
-        <div
-          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-          style={{ background: "rgba(0,0,0,0.5)", zIndex: 1050 }}
-          onClick={() => setEditarProducto(null)}
-        >
-          <div
-            className="bg-white p-4 rounded-4 shadow"
-            style={{ width: "380px", maxHeight: "90vh", overflowY: "auto" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="d-flex justify-content-between align-items-center mb-3">
-              <h5 className="fw-bold mb-0">Editar Producto</h5>
-              <X size={20} style={{ cursor: "pointer" }} onClick={() => setEditarProducto(null)} />
-            </div>
-
-            <div className="mb-2">
-              <label className="form-label small fw-semibold mb-1">Nombre</label>
-              <input
-                type="text"
-                className="form-control"
-                value={formEdit.nombre_producto || ""}
-                onChange={(e) => setFormEdit({ ...formEdit, nombre_producto: e.target.value })}
-              />
-            </div>
-
-            <div className="mb-2">
-              <label className="form-label small fw-semibold mb-1">Descripción</label>
-              <textarea
-                className="form-control"
-                rows={2}
-                value={formEdit.descripcion || ""}
-                onChange={(e) => setFormEdit({ ...formEdit, descripcion: e.target.value })}
-              />
-            </div>
-
-            <div className="mb-2">
-              <label className="form-label small fw-semibold mb-1">Precio</label>
-              <input
-                type="number"
-                className="form-control"
-                value={formEdit.precio_actual || ""}
-                onChange={(e) => setFormEdit({ ...formEdit, precio_actual: e.target.value })}
-              />
-            </div>
-
-            <div className="mb-2">
-              <label className="form-label small fw-semibold mb-1">Stock actual</label>
-              <input
-                type="number"
-                className="form-control"
-                value={formEdit.stock_actual || ""}
-                onChange={(e) => setFormEdit({ ...formEdit, stock_actual: e.target.value })}
-              />
-            </div>
-
-            <div className="mb-3">
-              <label className="form-label small fw-semibold mb-1">Unidad de medida</label>
-              <input
-                type="text"
-                className="form-control"
-                value={formEdit.unidad_medida || ""}
-                onChange={(e) => setFormEdit({ ...formEdit, unidad_medida: e.target.value })}
-              />
-            </div>
-
-            <div className="d-flex gap-2">
-              <button
-                onClick={() => setEditarProducto(null)}
-                className="btn btn-secondary flex-fill"
-                disabled={guardando}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={guardarEdicion}
-                className="btn flex-fill fw-semibold"
-                style={{ backgroundColor: DORADO_OSCURO, color: "#fff" }}
-                disabled={guardando}
-              >
-                {guardando ? "Guardando..." : "Guardar"}
-              </button>
-            </div>
           </div>
         </div>
       )}

@@ -1,5 +1,16 @@
 import { useState, useMemo, useEffect } from "react";
 import { supabase } from "../../Supabase/SupabaseClient";
+import { Filter, Search, History } from "lucide-react";
+
+// =========================================
+// PALETA (misma que Inventario)
+// =========================================
+const DORADO         = "#d4a743";
+const DORADO_OSCURO   = "#8c6b3f";
+const DORADO_CLARO    = "#e7c98a";
+const FONDO            = "#f7f1e3";
+const ENCABEZADO       = "#13202e"; // navy
+const TEXTO_ENCABEZADO = "#e7c98a";
 
 // Formateador de moneda colombiana (COP)
 const fmt = (n) =>
@@ -27,25 +38,25 @@ function VariacionCell({ anterior, nuevo }) {
   if (variacion > 0) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-        <span style={{ background: "#fee2e2", color: "#991b1b", borderRadius: 999, padding: "2px 8px", fontSize: 11, fontWeight: 600, display: "inline-block" }}>
+        <span style={{ background: "#fbe2df", color: "#c0392b", borderRadius: 999, padding: "2px 8px", fontSize: 11, fontWeight: 600, display: "inline-block" }}>
           ↑ +{variacion.toFixed(2)}%
         </span>
-        {diff && <span style={{ fontSize: 12, color: "#dc2626", fontWeight: 500 }}>{diff}</span>}
+        {diff && <span style={{ fontSize: 12, color: "#c0392b", fontWeight: 500 }}>{diff}</span>}
       </div>
     );
   }
   if (variacion < 0) {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-        <span style={{ background: "#dcfce7", color: "#166534", borderRadius: 999, padding: "2px 8px", fontSize: 11, fontWeight: 600, display: "inline-block" }}>
+        <span style={{ background: "#e3f7e9", color: "#1f9d55", borderRadius: 999, padding: "2px 8px", fontSize: 11, fontWeight: 600, display: "inline-block" }}>
           ↓ {variacion.toFixed(2)}%
         </span>
-        {diff && <span style={{ fontSize: 12, color: "#16a34a", fontWeight: 500 }}>{diff}</span>}
+        {diff && <span style={{ fontSize: 12, color: "#1f9d55", fontWeight: 500 }}>{diff}</span>}
       </div>
     );
   }
   return (
-    <span style={{ background: "#f3f4f6", color: "#6b7280", borderRadius: 999, padding: "2px 10px", fontSize: 11, fontWeight: 500, display: "inline-block" }}>
+    <span style={{ background: "#f0ece4", color: "#6b7280", borderRadius: 999, padding: "2px 10px", fontSize: 11, fontWeight: 500, display: "inline-block" }}>
       = Sin cambio
     </span>
   );
@@ -103,29 +114,41 @@ export default function HistorialPrecios() {
   const sinCambio  = historial.filter((h) => getVariacion(h.precio_anterior, h.precio_nuevo) === 0).length;
 
   const statCards = [
-    { label: "Total Registros", valor: historial.length, sublabel: "cambios registrados",   color: "#B89B6A", border: "#B89B6A" },
-    { label: "Aumentos",        valor: aumentos,          sublabel: "precios incrementados", color: "#1f2937", border: "#9ca3af" },
-    { label: "Reducciones",     valor: reducciones,       sublabel: "precios reducidos",     color: "#374151", border: "#ddd0b0" },
-    { label: "Sin Cambio",      valor: sinCambio,         sublabel: "correcciones",          color: "#6b7280", border: "#e5e7eb" },
+    { label: "Total Registros", valor: historial.length, sublabel: "cambios registrados",   color: DORADO,        border: DORADO,       Icon: History },
+    { label: "Aumentos",        valor: aumentos,          sublabel: "precios incrementados", color: "#1a1a1a",     border: "#9ca3af",    Icon: History },
+    { label: "Reducciones",     valor: reducciones,       sublabel: "precios reducidos",     color: DORADO_OSCURO, border: DORADO_CLARO, Icon: History },
+    { label: "Sin Cambio",      valor: sinCambio,         sublabel: "correcciones",          color: "#6b7280",     border: "#e5e7eb",    Icon: History },
   ];
 
   return (
-    <div className="p-5" style={{ marginTop: "1px", background: "#fff", minHeight: "100vh" }}>
+    <div className="p-4" style={{ margin: 0, backgroundColor: FONDO, minHeight: "100vh", width: "100%" }}>
 
-      {/* HEADER */}
-      <div className="d-flex justify-content-between align-items-center mb-3">
+      {/* ENCABEZADO */}
+      <div
+        className="d-flex justify-content-between align-items-start flex-wrap mb-4 gap-2 p-4 rounded-4"
+        style={{ backgroundColor: "#fffdf8", border: `1px solid ${DORADO_CLARO}`, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}
+      >
         <div>
-          <h4 className="fw-bold mb-1">Historial de Precios</h4>
-          <div style={{ width: "60px", height: "3px", backgroundColor: "#B89B6A", borderRadius: "10px", marginBottom: "5px" }} />
-          <p style={{ color: "#6b7280", fontSize: "13px", margin: 0 }}>Rastrea y analiza todos los cambios de precios de productos</p>
+          <h4 className="fw-bold mb-2" style={{ color: "#1a1a1a" }}>
+            Historial de Precios{" "}
+            <span className="fw-normal text-muted" style={{ fontSize: "16px" }}>
+              - Rastrea y analiza todos los cambios de precios de productos
+            </span>
+          </h4>
+          <div className="d-flex align-items-center" style={{ gap: "10px" }}>
+            <span style={{ height: "2px", width: "70px", background: `linear-gradient(to right, transparent, ${DORADO})`, display: "inline-block" }} />
+            <span style={{ color: DORADO, fontSize: "14px" }}>★</span>
+            <span style={{ height: "2px", width: "70px", background: `linear-gradient(to left, transparent, ${DORADO})`, display: "inline-block" }} />
+          </div>
         </div>
       </div>
 
       {/* STATS */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 24 }}>
         {statCards.map((card, i) => (
-          <div key={i} className="card shadow-sm rounded-4" style={{ padding: "18px 20px", border: `1.5px solid ${card.border}` }}>
-            <small style={{ color: card.color, fontSize: "13px", fontWeight: "600" }}>{card.label}</small>
+          <div key={i} className="rounded-4 shadow-sm"
+            style={{ backgroundColor: "#fffdf8", padding: "18px 20px", border: `1.5px solid ${card.border}` }}>
+            <small style={{ color: card.color, fontSize: "13px", fontWeight: 600 }}>{card.label}</small>
             <h3 style={{ fontSize: "26px", fontWeight: "bold", color: card.color, margin: "4px 0" }}>{card.valor}</h3>
             <small style={{ color: "#6b7280", fontSize: "12px" }}>{card.sublabel}</small>
           </div>
@@ -133,16 +156,23 @@ export default function HistorialPrecios() {
       </div>
 
       {/* FILTROS */}
-      <div className="card p-3 rounded-4 shadow-sm mb-4" style={{ background: "#fff", border: "1px solid #e5e7eb" }}>
-        <h6 className="fw-bold mb-2" style={{ color: "#B89B6A" }}>Búsqueda y Filtros</h6>
+      <div className="p-4 rounded-4 shadow-sm mb-4" style={{ backgroundColor: "#fffdf8", border: `1px solid ${DORADO_CLARO}` }}>
+        <div className="d-flex align-items-center gap-2 mb-3">
+          <Filter size={18} color={DORADO_OSCURO} />
+          <h6 className="fw-bold mb-0" style={{ color: "#1a1a1a", fontSize: "16px" }}>Búsqueda y Filtros</h6>
+        </div>
         <div className="d-flex gap-3" style={{ flexWrap: "wrap" }}>
-          <input
-            type="text"
-            className="form-control rounded-pill"
-            placeholder="Buscar por ID o motivo..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
+          <div style={{ position: "relative", flex: "1 1 250px" }}>
+            <Search size={16} color="#999" style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }} />
+            <input
+              type="text"
+              className="form-control rounded-pill"
+              placeholder="Buscar por ID o motivo..."
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              style={{ paddingLeft: "36px", paddingTop: "10px", paddingBottom: "10px" }}
+            />
+          </div>
           <input
             type="date"
             className="form-control rounded-pill"
@@ -154,38 +184,50 @@ export default function HistorialPrecios() {
       </div>
 
       {/* TABLA */}
-      <div className="card p-3 rounded-4 shadow-sm">
-        <div className="d-flex justify-content-between align-items-center mb-2">
-          <h6 className="fw-bold mb-0" style={{ color: "#B89B6A" }}>Registro Histórico de Precios</h6>
+      <div className="rounded-4 shadow-sm overflow-hidden" style={{ backgroundColor: "#fffdf8", border: `1px solid ${DORADO_CLARO}` }}>
+        <div className="d-flex justify-content-between align-items-center px-4 pt-3 pb-2">
+          <h6 className="fw-bold mb-0" style={{ color: "#1a1a1a" }}>Registro Histórico de Precios</h6>
           <small style={{ color: "#6b7280" }}>
             {filtrado.length} registro{filtrado.length !== 1 ? "s" : ""} encontrado{filtrado.length !== 1 ? "s" : ""}
           </small>
         </div>
 
         {cargando ? (
-          <div className="text-center py-4" style={{ color: "#6b7280", fontSize: 13 }}>Cargando historial...</div>
+          <div className="text-center py-5 text-muted">Cargando historial...</div>
         ) : (
-          <table className="table align-middle">
-            <thead>
-              <tr>
-                {["ID Historial", "Precio Anterior", "Precio Nuevo", "Variación", "Fecha Cambio", "Motivo"].map((col) => (
-                  <th key={col} style={{ fontSize: 12, whiteSpace: "nowrap" }}>{col}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtrado.map((h) => (
-                <tr key={h.id_historial}>
-                  <td style={{ fontSize: 13, fontWeight: 500, color: "#374151" }}>{h.id_historial}</td>
-                  <td style={{ fontSize: 13, color: "#374151", whiteSpace: "nowrap" }}>{fmt(h.precio_anterior)}</td>
-                  <td style={{ fontSize: 13, fontWeight: 600, color: "#111827", whiteSpace: "nowrap" }}>{fmt(h.precio_nuevo)}</td>
-                  <td><VariacionCell anterior={h.precio_anterior} nuevo={h.precio_nuevo} /></td>
-                  <td style={{ fontSize: 13, color: "#374151", whiteSpace: "nowrap" }}>{formatFecha(h.fecha_cambio)}</td>
-                  <td style={{ fontSize: 13, color: "#6b7280", maxWidth: 220 }}>{h.motivo}</td>
+          <div className="table-responsive">
+            <table className="table align-middle mb-0" style={{ backgroundColor: "#fffdf8" }}>
+              <thead>
+                <tr style={{ backgroundColor: ENCABEZADO }}>
+                  {["ID Historial", "Precio Anterior", "Precio Nuevo", "Variación", "Fecha Cambio", "Motivo"].map((col, i) => (
+                    <th key={col} className={i === 0 ? "ps-3" : ""} style={{ backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", whiteSpace: "nowrap", border: "none", padding: "12px 8px" }}>
+                      {col}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtrado.map((h) => (
+                  <tr key={h.id_historial} style={{ borderBottom: "1px solid #ece4d3", backgroundColor: "#fffdf8" }}>
+                    <td className="ps-3 fw-bold" style={{ fontSize: 13, color: DORADO_OSCURO }}>#{h.id_historial}</td>
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      <span style={{ backgroundColor: "#fdf3da", color: "#b8860b", fontSize: 12, fontWeight: 700, padding: "4px 12px", borderRadius: 12, display: "inline-block" }}>
+                        {fmt(h.precio_anterior)}
+                      </span>
+                    </td>
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      <span style={{ backgroundColor: "#e3f7e9", color: "#1f9d55", fontSize: 12, fontWeight: 700, padding: "4px 12px", borderRadius: 12, display: "inline-block" }}>
+                        {fmt(h.precio_nuevo)}
+                      </span>
+                    </td>
+                    <td><VariacionCell anterior={h.precio_anterior} nuevo={h.precio_nuevo} /></td>
+                    <td style={{ fontSize: 13, color: "#374151", whiteSpace: "nowrap" }}>{formatFecha(h.fecha_cambio)}</td>
+                    <td style={{ fontSize: 13, color: "#6b7280", maxWidth: 220 }}>{h.motivo}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

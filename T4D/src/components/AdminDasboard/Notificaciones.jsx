@@ -1,7 +1,17 @@
 import { useState, useEffect } from "react";
-import { Bell, Inbox, Send } from "lucide-react";
+import { Bell, Inbox, Send, X, Filter } from "lucide-react";
 import { supabase } from "../../Supabase/supabaseClient"; // ajusta la ruta
 import { enviarNotificacion } from "../../utils/notificaciones.helper";
+
+// =========================================
+// PALETA (igual a Inventario.jsx)
+// =========================================
+const DORADO = "#d4a743";
+const DORADO_OSCURO = "#8c6b3f";
+const DORADO_CLARO = "#e7c98a";
+const FONDO = "#f7f1e3";
+const ENCABEZADO = "#13202e";
+const TEXTO_ENCABEZADO = "#e7c98a";
 
 function Notificaciones({ usuario }) {
   const [filtro, setFiltro] = useState("todos");
@@ -108,43 +118,70 @@ function Notificaciones({ usuario }) {
 
   return (
     <div
+      className="p-4"
       style={{
-        padding: "20px",
-        background: "#ffffff",
-        width: "100%",
+        margin: 0,
+        backgroundColor: FONDO,
         minHeight: "100vh",
-        boxSizing: "border-box",
+        width: "100%",
       }}
     >
-      {/* HEADER */}
+      {/* ENCABEZADO (mismo estilo que Inventario) */}
       <div
+        className="d-flex justify-content-between align-items-start flex-wrap mb-4 gap-2 p-4 rounded-4"
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "10px",
+          backgroundColor: "#fffdf8",
+          border: `1px solid ${DORADO_CLARO}`,
+          boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
         }}
       >
         <div>
-          <h5 style={{ margin: 0 }}>Notificaciones y Mensajes</h5>
-          <p style={{ color: "#6b7280", marginTop: "3px", fontSize: "13px" }}>
-            Gestiona tus notificaciones
-          </p>
+          <h4 className="fw-bold mb-2" style={{ color: "#1a1a1a" }}>
+            Notificaciones y Mensajes{" "}
+            <span className="fw-normal text-muted" style={{ fontSize: "16px" }}>
+              - Gestiona tus notificaciones
+            </span>
+          </h4>
+          {/* Línea decorativa con estrella, igual a Inventario */}
+          <div className="d-flex align-items-center" style={{ gap: "10px" }}>
+            <span
+              style={{
+                height: "2px",
+                width: "70px",
+                background: `linear-gradient(to right, transparent, ${DORADO})`,
+                display: "inline-block",
+              }}
+            />
+            <span style={{ color: DORADO, fontSize: "14px" }}>★</span>
+            <span
+              style={{
+                height: "2px",
+                width: "70px",
+                background: `linear-gradient(to left, transparent, ${DORADO})`,
+                display: "inline-block",
+              }}
+            />
+          </div>
         </div>
 
         <button
+          className="btn d-flex align-items-center gap-2 fw-semibold"
           onClick={() => setMostrarModal(true)}
           style={{
-            background: "#121212",
-            color: "#B89B6A",
-            border: "1px solid #B89B6A",
-            padding: "6px 12px",
-            borderRadius: "20px",
-            cursor: "pointer",
-            fontSize: "13px",
+            background: `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`,
+            color: "#fff",
+            borderRadius: "8px",
+            padding: "8px 18px 8px 8px",
+            border: "none",
+            boxShadow: "0 3px 12px rgba(140, 107, 63, 0.55)",
           }}
         >
+          <span
+            className="d-flex align-items-center justify-content-center rounded-circle"
+            style={{ width: "24px", height: "24px", backgroundColor: "rgba(255,255,255,0.25)" }}
+          >
+            <Send size={14} />
+          </span>
           + Mensaje
         </button>
       </div>
@@ -154,8 +191,8 @@ function Notificaciones({ usuario }) {
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "10px",
-          margin: "15px 0",
+          gap: "16px",
+          marginBottom: "20px",
         }}
       >
         <CardSimple title="Sin Leer" number={sinLeer} icon={<Bell size={16} />} />
@@ -164,20 +201,21 @@ function Notificaciones({ usuario }) {
       </div>
 
       {/* CONTENIDO */}
-      <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", width: "100%" }}>
+      <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", width: "100%" }}>
 
         {/* IZQUIERDA — lista */}
         <div style={{ flex: "1 1 320px", minWidth: "300px" }}>
           <div
-            style={{
-              background: "#fff",
-              padding: "10px",
-              borderRadius: "10px",
-              marginBottom: "10px",
-              border: "1px solid #eee",
-            }}
+            className="p-3 rounded-4 shadow-sm mb-3"
+            style={{ backgroundColor: "#fffdf8", border: `1px solid ${DORADO_CLARO}` }}
           >
-            <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
+            <div className="d-flex align-items-center gap-2 mb-2">
+              <Filter size={15} color={DORADO_OSCURO} />
+              <span style={{ fontSize: "12px", fontWeight: 600, color: DORADO_OSCURO }}>
+                Filtrar
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
               <button onClick={() => setFiltro("todos")} style={btnFiltro(filtro === "todos")}>
                 Todos
               </button>
@@ -194,9 +232,13 @@ function Notificaciones({ usuario }) {
             {cargando ? (
               <p style={{ textAlign: "center", color: "#aaa", fontSize: 13 }}>Cargando...</p>
             ) : notificacionesFiltradas.length === 0 ? (
-              <p style={{ textAlign: "center", color: "#aaa", fontSize: 13, marginTop: 20 }}>
-                No hay notificaciones
-              </p>
+              <div
+                className="text-center py-5 rounded-4"
+                style={{ backgroundColor: "#fffdf8", border: `1px solid ${DORADO_CLARO}`, color: "#999" }}
+              >
+                <Inbox size={32} className="mb-2 opacity-50" />
+                <p style={{ margin: 0, fontSize: 13 }}>No hay notificaciones</p>
+              </div>
             ) : (
               notificacionesFiltradas.map((n) => (
                 <div
@@ -205,26 +247,27 @@ function Notificaciones({ usuario }) {
                     setMensajeSeleccionado(n);
                     if (!n.leido) marcarLeida(n.id_notificacion);
                   }}
+                  className="shadow-sm"
                   style={{
-                    background: "#fff",
-                    padding: "10px",
-                    borderRadius: "10px",
-                    marginBottom: "8px",
+                    background: "#fffdf8",
+                    padding: "12px",
+                    borderRadius: "12px",
+                    marginBottom: "10px",
                     cursor: "pointer",
-                    border: `1px solid ${n.leido ? "#eee" : "#B89B6A"}`,
+                    border: `1px solid ${n.leido ? DORADO_CLARO : DORADO_OSCURO}`,
                     opacity: n.leido ? 0.7 : 1,
                     transition: "0.2s",
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <strong style={{ fontSize: "13px" }}>{n.titulo}</strong>
+                    <strong style={{ fontSize: "13px", color: "#1a1a1a" }}>{n.titulo}</strong>
                     {!n.leido && (
                       <span
                         style={{
                           width: 8,
                           height: 8,
                           borderRadius: "50%",
-                          background: "#B89B6A",
+                          background: DORADO,
                           display: "inline-block",
                           flexShrink: 0,
                         }}
@@ -232,7 +275,7 @@ function Notificaciones({ usuario }) {
                     )}
                   </div>
 
-                  <p style={{ fontSize: "12px", color: "#555", margin: "4px 0" }}>
+                  <p style={{ fontSize: "12px", color: "#6b7280", margin: "4px 0" }}>
                     {n.descripcion?.substring(0, 60)}...
                   </p>
 
@@ -250,43 +293,47 @@ function Notificaciones({ usuario }) {
           style={{
             flex: "2 1 500px",
             minWidth: "300px",
-            background: "#fff",
-            borderRadius: "10px",
-            padding: "15px",
-            border: "1px solid #eee",
+            background: "#fffdf8",
+            borderRadius: "16px",
+            padding: "20px",
+            border: `1px solid ${DORADO_CLARO}`,
             minHeight: "400px",
           }}
+          className="shadow-sm"
         >
           {!mensajeSeleccionado ? (
             <div style={{ textAlign: "center", color: "#6b7280", marginTop: "30px" }}>
-              Selecciona una notificación
+              <Bell size={32} className="mb-2 opacity-50" color={DORADO_OSCURO} />
+              <p style={{ margin: 0 }}>Selecciona una notificación</p>
             </div>
           ) : (
             <>
-              <h6>{mensajeSeleccionado.titulo}</h6>
+              <h6 style={{ color: "#1a1a1a", fontWeight: 700 }}>{mensajeSeleccionado.titulo}</h6>
 
               <p style={{ color: "#6b7280", fontSize: "12px" }}>
                 {fmtFecha(mensajeSeleccionado.fecha)}
               </p>
 
-              <hr />
+              <hr style={{ borderColor: DORADO_CLARO }} />
 
-              <p style={{ fontSize: "13px", lineHeight: "1.6" }}>
+              <p style={{ fontSize: "13px", lineHeight: "1.6", color: "#333" }}>
                 {mensajeSeleccionado.descripcion}
               </p>
 
               {!mensajeSeleccionado.leido && (
                 <button
                   onClick={() => marcarLeida(mensajeSeleccionado.id_notificacion)}
+                  className="fw-semibold"
                   style={{
                     marginTop: 10,
-                    background: "#121212",
-                    color: "#B89B6A",
-                    border: "1px solid #B89B6A",
-                    padding: "6px 14px",
+                    background: `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`,
+                    color: "#fff",
+                    border: "none",
+                    padding: "8px 16px",
                     borderRadius: "20px",
                     cursor: "pointer",
                     fontSize: "12px",
+                    boxShadow: "0 3px 12px rgba(140, 107, 63, 0.45)",
                   }}
                 >
                   Marcar como leída
@@ -299,43 +346,56 @@ function Notificaciones({ usuario }) {
 
       {/* MODAL — nuevo mensaje */}
       {mostrarModal && (
-        <div style={modalFondo}>
-          <div style={{ ...modalCaja, width: "100%", maxWidth: "400px" }}>
-            <h6>Nuevo Mensaje</h6>
+        <div
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+          style={{ background: "rgba(0,0,0,0.5)", zIndex: 1050, padding: "15px" }}
+          onClick={() => setMostrarModal(false)}
+        >
+          <div
+            className="bg-white p-4 rounded-4 shadow"
+            style={{ width: "100%", maxWidth: "400px", border: `1px solid ${DORADO_CLARO}` }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="d-flex justify-content-between align-items-center mb-2">
+              <h5 className="fw-bold mb-0" style={{ color: "#1a1a1a" }}>Nuevo Mensaje</h5>
+              <X size={20} style={{ cursor: "pointer" }} onClick={() => setMostrarModal(false)} />
+            </div>
 
-            <p style={{ fontSize: "12px", color: "#6b7280", marginBottom: "8px" }}>
+            <p style={{ fontSize: "12px", color: "#6b7280", marginBottom: "12px" }}>
               📢 Esta notificación le llegará a <strong>todos los roles</strong> del sistema.
             </p>
 
+            <label className="form-label small fw-semibold mb-1" style={{ color: DORADO_OSCURO }}>
+              Asunto
+            </label>
             <input
               placeholder="Asunto"
               value={nuevoMensaje.asunto}
               onChange={(e) =>
                 setNuevoMensaje({ ...nuevoMensaje, asunto: e.target.value })
               }
+              className="form-control"
               style={inputStyleSmall}
             />
 
+            <label className="form-label small fw-semibold mb-1" style={{ color: DORADO_OSCURO }}>
+              Mensaje
+            </label>
             <textarea
               placeholder="Mensaje..."
               value={nuevoMensaje.mensaje}
               onChange={(e) =>
                 setNuevoMensaje({ ...nuevoMensaje, mensaje: e.target.value })
               }
+              className="form-control"
               style={{ ...inputStyleSmall, height: "80px", resize: "none" }}
             />
 
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", flexWrap: "wrap" }}>
+            <div className="d-flex justify-content-end gap-2 flex-wrap mt-2">
               <button
                 onClick={() => setMostrarModal(false)}
-                style={{
-                  background: "#fff",
-                  border: "1px solid #ddd",
-                  padding: "6px 12px",
-                  borderRadius: "20px",
-                  cursor: "pointer",
-                  fontSize: "13px",
-                }}
+                className="btn btn-secondary"
+                style={{ borderRadius: "20px", padding: "8px 16px", fontSize: "13px" }}
               >
                 Cancelar
               </button>
@@ -343,15 +403,17 @@ function Notificaciones({ usuario }) {
               <button
                 onClick={handleEnviar}
                 disabled={enviando}
+                className="btn fw-semibold"
                 style={{
-                  background: "#121212",
-                  color: "#B89B6A",
-                  border: "1px solid #B89B6A",
-                  padding: "6px 12px",
+                  background: `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`,
+                  color: "#fff",
+                  border: "none",
+                  padding: "8px 16px",
                   borderRadius: "20px",
                   cursor: enviando ? "not-allowed" : "pointer",
                   fontSize: "13px",
                   opacity: enviando ? 0.7 : 1,
+                  boxShadow: "0 3px 12px rgba(140, 107, 63, 0.55)",
                 }}
               >
                 {enviando ? "Enviando..." : "Enviar"}
@@ -368,62 +430,42 @@ function Notificaciones({ usuario }) {
 
 const inputStyleSmall = {
   width: "100%",
-  padding: "8px",
-  borderRadius: "8px",
-  border: "1px solid #ddd",
-  marginBottom: "8px",
+  padding: "9px 12px",
+  borderRadius: "10px",
+  border: `1px solid ${DORADO_CLARO}`,
+  marginBottom: "10px",
   fontSize: "13px",
-  boxSizing: "border-box",
-};
-
-const modalFondo = {
-  position: "fixed",
-  top: 0,
-  left: 0,
-  width: "100%",
-  height: "100%",
-  background: "rgba(0,0,0,0.3)",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  padding: "15px",
-  zIndex: 1000,
-};
-
-const modalCaja = {
-  background: "#fff",
-  padding: "20px",
-  borderRadius: "12px",
-  border: "1px solid #B89B6A",
   boxSizing: "border-box",
 };
 
 const CardSimple = ({ title, number, icon }) => (
   <div
+    className="shadow-sm"
     style={{
-      background: "#fff",
-      padding: "10px",
-      borderRadius: "12px",
-      border: "1px solid #B89B6A",
-      boxShadow: "0 2px 6px rgba(0,0,0,0.05)",
+      background: "#fffdf8",
+      padding: "14px",
+      borderRadius: "14px",
+      border: `1px solid ${DORADO_CLARO}`,
     }}
   >
     <div style={{ display: "flex", justifyContent: "space-between" }}>
       <span style={{ fontSize: "13px", color: "#555" }}>{title}</span>
-      <span style={{ color: "#B89B6A" }}>{icon}</span>
+      <span style={{ color: DORADO_OSCURO }}>{icon}</span>
     </div>
-    <h5 style={{ margin: "5px 0", color: "#121212" }}>{number}</h5>
+    <h5 style={{ margin: "6px 0 0", color: "#1a1a1a", fontWeight: 700 }}>{number}</h5>
   </div>
 );
 
 const btnFiltro = (activo) => ({
-  padding: "4px 10px",
+  padding: "5px 14px",
   borderRadius: "20px",
-  border: "1px solid #B89B6A",
-  background: activo ? "#121212" : "#fff",
-  color: activo ? "#B89B6A" : "#333",
+  border: `1px solid ${activo ? ENCABEZADO : DORADO_OSCURO}`,
+  background: activo ? ENCABEZADO : "#fffdf8",
+  color: activo ? TEXTO_ENCABEZADO : "#333",
   cursor: "pointer",
   fontSize: "12px",
+  fontWeight: activo ? 600 : 400,
+  boxShadow: activo ? "0 2px 8px rgba(19, 32, 46, 0.35)" : "none",
 });
 
 export default Notificaciones;

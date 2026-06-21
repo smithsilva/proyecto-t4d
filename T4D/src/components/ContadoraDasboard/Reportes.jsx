@@ -3,6 +3,7 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend,
 } from "recharts";
+import { RefreshCcw, AlertTriangle, BarChart3 } from "lucide-react";
 import {
   getResumenVentas,
   getVentasPorSucursal,
@@ -12,7 +13,17 @@ import {
   getTopClientes,
 } from "../../api/reportesApi";
 
-const COLORS = ["#B89B6A", "#1f2937", "#d1d5db", "#6b7280", "#374151"];
+// =========================================
+// PALETA (igual a Inventario.jsx)
+// =========================================
+const DORADO = "#d4a743";
+const DORADO_OSCURO = "#8c6b3f";
+const DORADO_CLARO = "#e7c98a";
+const FONDO = "#f7f1e3";
+const ENCABEZADO = "#13202e";
+const TEXTO_ENCABEZADO = "#e7c98a";
+
+const COLORS = [DORADO, ENCABEZADO, DORADO_CLARO, "#6b7280", DORADO_OSCURO];
 const fmt = (n) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n || 0);
 
 function Reportes() {
@@ -53,27 +64,60 @@ function Reportes() {
     setCargando(false);
   };
 
-  return (
-    <div className="p-3" style={{ width: "100%", minHeight: "100vh", boxSizing: "border-box" }}>
+  const tarjeta = {
+    backgroundColor: "#fffdf8",
+    border: `1px solid ${DORADO_CLARO}`,
+  };
 
-      {/* TITULO */}
-      <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  return (
+    <div className="p-4" style={{ margin: 0, backgroundColor: FONDO, minHeight: "100vh", width: "100%" }}>
+
+      {/* ENCABEZADO (mismo estilo que Inventario) */}
+      <div
+        className="d-flex justify-content-between align-items-start flex-wrap mb-4 gap-2 p-4 rounded-4"
+        style={{ ...tarjeta, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}
+      >
         <div>
-          <h4 className="fw-bold">Reportes y Análisis</h4>
-          <small className="text-muted">Estadísticas y métricas del negocio</small>
+          <h4 className="fw-bold mb-2" style={{ color: "#1a1a1a" }}>
+            Reportes y Análisis{" "}
+            <span className="fw-normal text-muted" style={{ fontSize: "16px" }}>
+              - Estadísticas y métricas del negocio
+            </span>
+          </h4>
+          <div className="d-flex align-items-center" style={{ gap: "10px" }}>
+            <span style={{ height: "2px", width: "70px", background: `linear-gradient(to right, transparent, ${DORADO})`, display: "inline-block" }} />
+            <span style={{ color: DORADO, fontSize: "14px" }}>★</span>
+            <span style={{ height: "2px", width: "70px", background: `linear-gradient(to left, transparent, ${DORADO})`, display: "inline-block" }} />
+          </div>
         </div>
+
         <button
-          className="btn btn-sm"
+          className="btn d-flex align-items-center gap-2 fw-semibold"
           onClick={cargarTodo}
-          style={{ border: "1px solid #B89B6A", color: "#B89B6A" }}
+          style={{
+            background: `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`,
+            color: "#fff",
+            borderRadius: "8px",
+            padding: "8px 18px 8px 8px",
+            border: "none",
+            boxShadow: "0 3px 12px rgba(140, 107, 63, 0.55)",
+          }}
         >
+          <span
+            className="d-flex align-items-center justify-content-center rounded-circle"
+            style={{ width: "24px", height: "24px", backgroundColor: "rgba(255,255,255,0.25)" }}
+          >
+            <RefreshCcw size={14} />
+          </span>
           Actualizar
         </button>
       </div>
 
       {/* ERROR */}
       {error && (
-        <div className="alert alert-danger rounded-4" style={{ fontSize: 13 }}>{error}</div>
+        <div className="alert rounded-4" style={{ fontSize: 13, background: "#fbe2df", color: "#c0392b", border: "1px solid #f0b8b2" }}>
+          {error}
+        </div>
       )}
 
       {/* CARGANDO */}
@@ -84,7 +128,7 @@ function Reportes() {
       ) : (
         <>
           {/* TARJETAS RESUMEN */}
-          <div className="row g-3 mb-3">
+          <div className="row g-3 mb-4">
             {[
               { title: "Total Servicios",   value: resumen?.total_servicios ?? "—" },
               { title: "Ingresos Totales",  value: fmt(resumen?.ingresos_totales) },
@@ -92,9 +136,9 @@ function Reportes() {
               { title: "Productos Stock Bajo", value: stockBajo.length },
             ].map((item, i) => (
               <div className="col-12 col-sm-6 col-lg-3" key={i}>
-                <div className="p-3 rounded-4 shadow-sm h-100" style={{ background: "#fff", border: "1px solid #B89B6A" }}>
-                  <small style={{ color: "#6b7280" }}>{item.title}</small>
-                  <h5 className="fw-bold mb-0" style={{ color: "#1f2937" }}>{item.value}</h5>
+                <div className="p-3 rounded-4 shadow-sm h-100" style={{ background: ENCABEZADO, border: `1px solid ${DORADO_CLARO}`, color: "#fff" }}>
+                  <small style={{ color: DORADO }}>{item.title}</small>
+                  <h5 className="fw-bold mb-0" style={{ marginTop: 4 }}>{item.value}</h5>
                 </div>
               </div>
             ))}
@@ -104,19 +148,19 @@ function Reportes() {
 
             {/* INGRESOS VS EGRESOS POR PERIODO */}
             <div className="col-12 col-xl-6">
-              <div className="bg-white p-3 rounded-4 shadow-sm h-100" style={{ border: "1px solid #eee" }}>
-                <h6>Balance por Período</h6>
+              <div className="p-4 rounded-4 shadow-sm h-100" style={tarjeta}>
+                <h6 className="fw-bold mb-3" style={{ color: "#1a1a1a" }}>Balance por Período</h6>
                 <div style={{ width: "100%", overflowX: "auto" }}>
                   <div style={{ minWidth: 500, height: 260 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={[...balance].reverse()}>
-                        <CartesianGrid strokeDasharray="3 3" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#ece4d3" />
                         <XAxis dataKey="periodo" tick={{ fontSize: 11 }} />
                         <YAxis tick={{ fontSize: 11 }} />
                         <Tooltip formatter={(v) => fmt(v)} />
                         <Legend />
-                        <Line type="monotone" dataKey="ingresos" stroke="#B89B6A" strokeWidth={3} />
-                        <Line type="monotone" dataKey="egresos" stroke="#1f2937" strokeWidth={3} />
+                        <Line type="monotone" dataKey="ingresos" stroke={DORADO} strokeWidth={3} />
+                        <Line type="monotone" dataKey="egresos" stroke={ENCABEZADO} strokeWidth={3} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -126,18 +170,18 @@ function Reportes() {
 
             {/* INGRESOS POR SUCURSAL */}
             <div className="col-12 col-xl-6">
-              <div className="bg-white p-3 rounded-4 shadow-sm h-100" style={{ border: "1px solid #eee" }}>
-                <h6>Ingresos por Sucursal</h6>
+              <div className="p-4 rounded-4 shadow-sm h-100" style={tarjeta}>
+                <h6 className="fw-bold mb-3" style={{ color: "#1a1a1a" }}>Ingresos por Sucursal</h6>
                 <div style={{ width: "100%", overflowX: "auto" }}>
                   <div style={{ minWidth: 500, height: 260 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={porSucursal}>
-                        <CartesianGrid strokeDasharray="3 3" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#ece4d3" />
                         <XAxis dataKey="sucursal" tick={{ fontSize: 11 }} />
                         <YAxis tick={{ fontSize: 11 }} />
                         <Tooltip formatter={(v) => fmt(v)} />
                         <Legend />
-                        <Bar dataKey="ingresos" fill="#B89B6A" radius={[6, 6, 0, 0]} />
+                        <Bar dataKey="ingresos" fill={DORADO} radius={[6, 6, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -147,8 +191,8 @@ function Reportes() {
 
             {/* PRODUCTOS MÁS USADOS */}
             <div className="col-12 col-xl-6">
-              <div className="bg-white p-3 rounded-4 shadow-sm h-100" style={{ border: "1px solid #eee" }}>
-                <h6>Productos Más Usados en Mantenimiento</h6>
+              <div className="p-4 rounded-4 shadow-sm h-100" style={tarjeta}>
+                <h6 className="fw-bold mb-3" style={{ color: "#1a1a1a" }}>Productos Más Usados en Mantenimiento</h6>
                 <div style={{ width: "100%", overflowX: "auto" }}>
                   <div style={{ minWidth: 500, height: 260 }}>
                     <ResponsiveContainer width="100%" height="100%">
@@ -169,23 +213,23 @@ function Reportes() {
 
             {/* TOP CLIENTES */}
             <div className="col-12 col-xl-6">
-              <div className="bg-white p-3 rounded-4 shadow-sm h-100" style={{ border: "1px solid #eee" }}>
-                <h6>Top 10 Clientes</h6>
+              <div className="p-4 rounded-4 shadow-sm h-100" style={tarjeta}>
+                <h6 className="fw-bold mb-3" style={{ color: "#1a1a1a" }}>Top 10 Clientes</h6>
                 <div style={{ overflowX: "auto" }}>
-                  <table className="table table-sm align-middle" style={{ fontSize: 12 }}>
+                  <table className="table table-sm align-middle mb-0" style={{ fontSize: 12 }}>
                     <thead>
-                      <tr>
-                        <th>Cliente</th>
-                        <th>Servicios</th>
-                        <th>Total Gastado</th>
+                      <tr style={{ backgroundColor: ENCABEZADO }}>
+                        <th style={{ padding: "10px 12px", color: TEXTO_ENCABEZADO, border: "none", fontWeight: 600 }}>Cliente</th>
+                        <th style={{ padding: "10px 12px", color: TEXTO_ENCABEZADO, border: "none", fontWeight: 600 }}>Servicios</th>
+                        <th style={{ padding: "10px 12px", color: TEXTO_ENCABEZADO, border: "none", fontWeight: 600 }}>Total Gastado</th>
                       </tr>
                     </thead>
                     <tbody>
                       {topClientes.map((c) => (
-                        <tr key={c.id}>
-                          <td>{c.nombre}</td>
-                          <td>{c.total_servicios}</td>
-                          <td style={{ color: "#B89B6A", fontWeight: 600 }}>{fmt(c.total_gastado)}</td>
+                        <tr key={c.id} style={{ borderBottom: "1px solid #ece4d3" }}>
+                          <td style={{ padding: "10px 12px" }}>{c.nombre}</td>
+                          <td style={{ padding: "10px 12px" }}>{c.total_servicios}</td>
+                          <td style={{ padding: "10px 12px", color: DORADO_OSCURO, fontWeight: 700 }}>{fmt(c.total_gastado)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -197,24 +241,29 @@ function Reportes() {
             {/* STOCK BAJO */}
             {stockBajo.length > 0 && (
               <div className="col-12">
-                <div className="bg-white p-3 rounded-4 shadow-sm" style={{ border: "1px solid #fecaca" }}>
-                  <h6 style={{ color: "#dc2626" }}>⚠ Productos con Stock Bajo (≤ 5 unidades)</h6>
+                <div className="p-4 rounded-4 shadow-sm" style={{ backgroundColor: "#fffdf8", border: "1px solid #f0b8b2" }}>
+                  <div className="d-flex align-items-center gap-2 mb-3">
+                    <AlertTriangle size={18} color="#c0392b" />
+                    <h6 className="fw-bold mb-0" style={{ color: "#c0392b" }}>
+                      Productos con Stock Bajo (≤ 5 unidades)
+                    </h6>
+                  </div>
                   <div style={{ overflowX: "auto" }}>
-                    <table className="table table-sm align-middle" style={{ fontSize: 12 }}>
+                    <table className="table table-sm align-middle mb-0" style={{ fontSize: 12 }}>
                       <thead>
-                        <tr>
-                          <th>ID</th>
-                          <th>Producto</th>
-                          <th>Stock Actual</th>
+                        <tr style={{ backgroundColor: ENCABEZADO }}>
+                          <th style={{ padding: "10px 12px", color: TEXTO_ENCABEZADO, border: "none", fontWeight: 600 }}>ID</th>
+                          <th style={{ padding: "10px 12px", color: TEXTO_ENCABEZADO, border: "none", fontWeight: 600 }}>Producto</th>
+                          <th style={{ padding: "10px 12px", color: TEXTO_ENCABEZADO, border: "none", fontWeight: 600 }}>Stock Actual</th>
                         </tr>
                       </thead>
                       <tbody>
                         {stockBajo.map((p) => (
-                          <tr key={p.id_producto}>
-                            <td style={{ color: "#6b7280" }}>#{p.id_producto}</td>
-                            <td>{p.nombre_producto}</td>
-                            <td>
-                              <span style={{ background: "#fef2f2", color: "#dc2626", padding: "2px 10px", borderRadius: 20, fontWeight: 700, fontSize: 11 }}>
+                          <tr key={p.id_producto} style={{ borderBottom: "1px solid #ece4d3" }}>
+                            <td style={{ padding: "10px 12px", color: DORADO_OSCURO, fontWeight: 700 }}>#{p.id_producto}</td>
+                            <td style={{ padding: "10px 12px" }}>{p.nombre_producto}</td>
+                            <td style={{ padding: "10px 12px" }}>
+                              <span style={{ background: "#fbe2df", color: "#c0392b", padding: "3px 12px", borderRadius: 20, fontWeight: 700, fontSize: 11 }}>
                                 {p.stock_actual}
                               </span>
                             </td>

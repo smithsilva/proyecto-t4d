@@ -12,11 +12,6 @@ const IconPlus = () => (
     <path d="M12 5v14M5 12h14"/>
   </svg>
 );
-const IconArrowLeft = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
-  </svg>
-);
 const IconPencil = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
@@ -78,30 +73,40 @@ const IconUserEdit = () => (
   </svg>
 );
 
+// ─── Paleta tomada de Inventario ─────────────────────────────────────────────
+const DORADO = "#d4a743";
+const DORADO_OSCURO = "#8c6b3f";
+const DORADO_CLARO = "#e7c98a";
+const FONDO = "#f7f1e3";
+const ENCABEZADO = "#13202e";
+const TEXTO_ENCABEZADO = "#e7c98a";
+const GRADIENTE_DORADO = `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`;
+
 // ─── Estilos compartidos ──────────────────────────────────────────────────────
 const S = {
   btnGold: {
     padding: "8px 18px", borderRadius: "50px", border: "none",
-    background: "#B89B6A", color: "#000", fontSize: "13px",
+    background: GRADIENTE_DORADO, color: "#fff", fontSize: "13px",
     cursor: "pointer", fontWeight: "600", display: "inline-flex",
     alignItems: "center", gap: "6px",
+    boxShadow: "0 3px 12px rgba(140, 107, 63, 0.45)",
   },
   btnGhost: {
     padding: "8px 18px", borderRadius: "50px",
-    border: "1.5px solid #e5e7eb", background: "#fff",
-    fontSize: "13px", cursor: "pointer", color: "#374151",
+    border: `1.5px solid ${DORADO_OSCURO}`, background: "#fff",
+    fontSize: "13px", cursor: "pointer", color: DORADO_OSCURO,
     fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "6px",
   },
   btnSmEdit: {
     padding: "5px 10px", borderRadius: "8px",
-    border: "1.5px solid #e5e7eb", background: "#fff",
-    fontSize: "12px", cursor: "pointer", color: "#B89B6A",
+    border: `1.5px solid ${DORADO_CLARO}`, background: "#fff",
+    fontSize: "12px", cursor: "pointer", color: DORADO_OSCURO,
     display: "inline-flex", alignItems: "center",
   },
   btnSmDelete: {
     padding: "5px 10px", borderRadius: "8px",
-    border: "none", background: "#fef2f2",
-    fontSize: "12px", cursor: "pointer", color: "#dc2626",
+    border: "none", background: "#fbe2df",
+    fontSize: "12px", cursor: "pointer", color: "#c0392b",
     display: "inline-flex", alignItems: "center",
   },
   input: {
@@ -115,18 +120,21 @@ const S = {
     display: "block", marginBottom: "6px",
   },
   badgeGold: {
-    background: "#B89B6A", color: "#000", padding: "3px 12px",
+    background: GRADIENTE_DORADO, color: "#fff", padding: "3px 12px",
     borderRadius: "20px", fontSize: "11px", fontWeight: "600",
     display: "inline-flex", alignItems: "center", gap: "5px",
+    boxShadow: "0 2px 8px rgba(140, 107, 63, 0.4)",
   },
   badgeDark: {
-    background: "#374151", color: "#fff", padding: "3px 12px",
+    background: GRADIENTE_DORADO, color: "#fff", padding: "3px 12px",
     borderRadius: "20px", fontSize: "11px", fontWeight: "600",
+    boxShadow: "0 2px 8px rgba(140, 107, 63, 0.4)",
   },
   badgePrincipal: {
-    background: "#f5e9cc", color: "#8a7450", padding: "3px 10px",
+    background: GRADIENTE_DORADO, color: "#fff", padding: "3px 10px",
     borderRadius: "20px", fontSize: "11px", fontWeight: "600",
-    border: "1px solid #ddd0b0", display: "inline-flex", alignItems: "center", gap: "4px",
+    display: "inline-flex", alignItems: "center", gap: "4px",
+    boxShadow: "0 2px 8px rgba(140, 107, 63, 0.4)",
   },
 };
 
@@ -145,12 +153,12 @@ function Toast({ message }) {
   return (
     <div style={{
       position: "fixed", bottom: "24px", right: "24px",
-      background: "#1f2937", color: "#fff", padding: "12px 20px",
+      background: ENCABEZADO, color: "#fff", padding: "12px 20px",
       borderRadius: "12px", fontSize: "13px", fontWeight: "500",
       zIndex: 9999, boxShadow: "0 4px 20px rgba(0,0,0,0.25)",
       display: "flex", alignItems: "center", gap: "8px",
     }}>
-      <IconCheck /> {message}
+      <span style={{ color: TEXTO_ENCABEZADO, display: "flex" }}><IconCheck /></span> {message}
     </div>
   );
 }
@@ -199,16 +207,16 @@ function ModalDireccion({ tipo, cliente, dirInicial, onGuardar, onCerrar }) {
         boxShadow: "0 8px 30px rgba(0,0,0,0.2)",
       }}>
         <div style={{
-          background: "#1f2937", padding: "20px 24px",
+          background: ENCABEZADO, padding: "20px 24px",
           borderRadius: "16px 16px 0 0",
           display: "flex", alignItems: "center", justifyContent: "space-between",
         }}>
           <div>
             <div style={{ color: "#fff", fontSize: "16px", fontWeight: "700", display: "flex", alignItems: "center", gap: "8px" }}>
-              <span style={{ color: "#B89B6A" }}><IconMapPin /></span>
+              <span style={{ color: TEXTO_ENCABEZADO }}><IconMapPin /></span>
               {tipo === "agregar" ? "Agregar dirección" : "Editar dirección"}
             </div>
-            <div style={{ color: "#B89B6A", fontSize: "12px", marginTop: "4px" }}>
+            <div style={{ color: TEXTO_ENCABEZADO, fontSize: "12px", marginTop: "4px" }}>
               Cliente: {cliente.nombre}
             </div>
           </div>
@@ -265,7 +273,7 @@ function ModalDireccion({ tipo, cliente, dirInicial, onGuardar, onCerrar }) {
               id="chkPrincipal"
               checked={form.esPrincipal}
               onChange={(e) => set("esPrincipal", e.target.checked)}
-              style={{ accentColor: "#B89B6A", width: "16px", height: "16px", cursor: "pointer" }}
+              style={{ accentColor: DORADO_OSCURO, width: "16px", height: "16px", cursor: "pointer" }}
             />
             <label htmlFor="chkPrincipal" style={{ fontSize: "13px", color: "#111827", cursor: "pointer", fontWeight: "500" }}>
               Marcar como dirección principal
@@ -273,7 +281,9 @@ function ModalDireccion({ tipo, cliente, dirInicial, onGuardar, onCerrar }) {
           </div>
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", paddingTop: "16px", borderTop: "1px solid #e5e7eb" }}>
-            <button style={S.btnGhost} onClick={onCerrar}>Cancelar</button>
+            <button style={S.btnGhost} onClick={onCerrar}>
+              <IconX /> Cancelar
+            </button>
             <button style={S.btnGold} onClick={handleGuardar}>
               <IconCheck /> Guardar dirección
             </button>
@@ -319,12 +329,12 @@ function ModalEditarCliente({ cliente, onGuardar, onCerrar }) {
         boxShadow: "0 8px 30px rgba(0,0,0,0.2)",
       }}>
         <div style={{
-          background: "#1f2937", padding: "20px 24px",
+          background: ENCABEZADO, padding: "20px 24px",
           borderRadius: "16px 16px 0 0",
           display: "flex", alignItems: "center", justifyContent: "space-between",
         }}>
           <div style={{ color: "#fff", fontSize: "16px", fontWeight: "700", display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ color: "#B89B6A" }}><IconUserEdit /></span>
+            <span style={{ color: TEXTO_ENCABEZADO }}><IconUserEdit /></span>
             Editar cliente
           </div>
           <button onClick={onCerrar} style={{ background: "transparent", border: "none", color: "#fff", cursor: "pointer", display: "flex" }}>
@@ -367,7 +377,9 @@ function ModalEditarCliente({ cliente, onGuardar, onCerrar }) {
           </div>
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", paddingTop: "16px", borderTop: "1px solid #e5e7eb" }}>
-            <button style={S.btnGhost} onClick={onCerrar}>Cancelar</button>
+            <button style={S.btnGhost} onClick={onCerrar}>
+              <IconX /> Cancelar
+            </button>
             <button style={S.btnGold} onClick={() => { if (validar()) onGuardar(form); }}>
               <IconCheck /> Guardar cambios
             </button>
@@ -379,7 +391,7 @@ function ModalEditarCliente({ cliente, onGuardar, onCerrar }) {
 }
 
 // ─── Componente principal ────────────────────────────────────────────────────
-function DireccionesCliente({ onVolver }) {
+function DireccionesCliente() {
   const [clientes, setClientes] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [busqueda, setBusqueda] = useState("");
@@ -553,54 +565,80 @@ function DireccionesCliente({ onVolver }) {
   const dirDelModal = modal?.dirId ? clienteDelModal?.direcciones.find(d => d.id === modal.dirId) : null;
 
   return (
-    <div className="p-5" style={{ background: "#fff", minHeight: "100vh", marginTop: "1px" }}>
+    <div className="p-5" style={{ background: FONDO, minHeight: "100vh", marginTop: "1px" }}>
 
       {/* HEADER */}
-      <div className="d-flex justify-content-between align-items-center mb-3">
+      <div
+        className="d-flex justify-content-between align-items-start flex-wrap mb-4 gap-2 p-4 rounded-4"
+        style={{
+          backgroundColor: "#fffdf8",
+          border: `1px solid ${DORADO_CLARO}`,
+          boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
+        }}
+      >
         <div>
-          <h4 className="fw-bold mb-1">Direcciones del cliente</h4>
-          <div style={{ width: "60px", height: "3px", backgroundColor: "#B89B6A", borderRadius: "10px", marginBottom: "5px" }} />
-          <p style={{ color: "#6b7280", fontSize: "13px", margin: 0 }}>
+          <h4 className="fw-bold mb-2" style={{ color: "#1a1a1a" }}>
+            Direcciones del cliente
+          </h4>
+          <div className="d-flex align-items-center" style={{ gap: "10px" }}>
+            <span style={{ height: "2px", width: "70px", background: `linear-gradient(to right, transparent, ${DORADO})`, display: "inline-block" }} />
+            <span style={{ color: DORADO, fontSize: "14px" }}>★</span>
+            <span style={{ height: "2px", width: "70px", background: `linear-gradient(to left, transparent, ${DORADO})`, display: "inline-block" }} />
+          </div>
+          <p style={{ color: "#6b7280", fontSize: "13px", margin: "8px 0 0 0" }}>
             Gestión y administración de direcciones registradas por los clientes
           </p>
         </div>
-        <div style={{ display: "flex", gap: "10px" }}>
-          <button style={S.btnGhost} onClick={onVolver || (() => window.history.back())}>
-            <IconArrowLeft /> Volver
-          </button>
-          <button
-            className="btn rounded-pill btn-sm"
-            style={{ backgroundColor: "#B89B6A", color: "#000", border: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}
-            onClick={() => clientesFiltrados[0] && setModal({ tipo: "agregar", clienteId: clientesFiltrados[0].id })}
+        <button
+          className="btn d-flex align-items-center gap-2 fw-semibold"
+          onClick={() => clientesFiltrados[0] && setModal({ tipo: "agregar", clienteId: clientesFiltrados[0].id })}
+          style={{
+            background: GRADIENTE_DORADO,
+            color: "#fff",
+            borderRadius: "8px",
+            padding: "8px 18px 8px 8px",
+            border: "none",
+            boxShadow: "0 3px 12px rgba(140, 107, 63, 0.55)",
+          }}
+        >
+          <span
+            className="d-flex align-items-center justify-content-center rounded-circle"
+            style={{ width: "24px", height: "24px", backgroundColor: "rgba(255,255,255,0.25)" }}
           >
-            <IconPlus /> Agregar dirección
-          </button>
-        </div>
+            <IconPlus />
+          </span>
+          Agregar dirección
+        </button>
       </div>
 
       {/* BUSCADOR */}
-      <div style={{ marginBottom: "20px", position: "relative", display: "inline-block" }}>
-        <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#9ca3af", display: "flex" }}>
-          <IconSearch />
-        </span>
-        <input
-          type="text"
-          placeholder="Buscar por nombre o documento..."
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          className="form-control rounded-pill"
-          style={{ width: "340px", paddingLeft: "36px", fontSize: "13px" }}
-        />
+      <div
+        className="p-4 rounded-4 shadow-sm mb-4"
+        style={{ backgroundColor: "#fffdf8", border: `1px solid ${DORADO_CLARO}` }}
+      >
+        <div style={{ position: "relative" }}>
+          <span style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#999", display: "flex" }}>
+            <IconSearch />
+          </span>
+          <input
+            type="text"
+            placeholder="Buscar por nombre o documento..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            className="form-control rounded-pill"
+            style={{ paddingLeft: "36px", paddingTop: "10px", paddingBottom: "10px", fontSize: "13px" }}
+          />
+        </div>
       </div>
 
       {/* STATS */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", marginBottom: "24px" }}>
         {[
-          { label: "Total clientes", valor: clientes.length, border: "#B89B6A", color: "#B89B6A", icon: <IconUsers /> },
-          { label: "Total direcciones", valor: totalDirecciones, border: "#9ca3af", color: "#374151", icon: <IconMapPin /> },
-          { label: "Direcciones principales", valor: totalPrincipales, border: "#ddd0b0", color: "#8a7450", icon: <IconStar /> },
+          { label: "Total clientes", valor: clientes.length, border: DORADO_OSCURO, color: DORADO_OSCURO, icon: <IconUsers /> },
+          { label: "Total direcciones", valor: totalDirecciones, border: DORADO_CLARO, color: "#1a1a1a", icon: <IconMapPin /> },
+          { label: "Direcciones principales", valor: totalPrincipales, border: DORADO_CLARO, color: DORADO_OSCURO, icon: <IconStar /> },
         ].map((stat, i) => (
-          <div key={i} className="card shadow-sm rounded-4" style={{ padding: "18px 20px", border: `1.5px solid ${stat.border}` }}>
+          <div key={i} className="card shadow-sm rounded-4" style={{ padding: "18px 20px", border: `1.5px solid ${stat.border}`, backgroundColor: "#fffdf8" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
               <span style={{ color: stat.color }}>{stat.icon}</span>
               <span style={{ fontSize: "28px", fontWeight: "700", color: stat.color }}>{stat.valor}</span>
@@ -621,18 +659,18 @@ function DireccionesCliente({ onVolver }) {
       {!cargando && (
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           {clientesFiltrados.length === 0 && (
-            <div className="card rounded-4" style={{ textAlign: "center", padding: "40px", color: "#9ca3af", border: "1.5px solid #e5e7eb" }}>
+            <div className="card rounded-4" style={{ textAlign: "center", padding: "40px", color: "#9ca3af", border: `1.5px solid ${DORADO_CLARO}`, backgroundColor: "#fffdf8" }}>
               No se encontraron clientes.
             </div>
           )}
           {clientesFiltrados.map((cliente) => (
-            <div key={cliente.id} className="card shadow-sm rounded-4" style={{ border: "1.5px solid #e5e7eb", overflow: "hidden" }}>
+            <div key={cliente.id} className="card shadow-sm rounded-4" style={{ border: `1.5px solid ${DORADO_CLARO}`, overflow: "hidden", backgroundColor: "#fffdf8" }}>
 
               {/* Header cliente */}
               <div style={{
-                padding: "18px 24px", borderBottom: "1px solid #f3f4f6",
+                padding: "18px 24px", borderBottom: `1px solid ${DORADO_CLARO}`,
                 display: "flex", alignItems: "center", justifyContent: "space-between",
-                background: "#fafafa", flexWrap: "wrap", gap: "12px",
+                background: "#fffaf0", flexWrap: "wrap", gap: "12px",
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
                   <div style={{
@@ -662,7 +700,7 @@ function DireccionesCliente({ onVolver }) {
                     <IconCalendar /> {cliente.fechaRegistro}
                   </span>
                   <span style={S.badgeGold}>
-                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#1a1a1a", display: "inline-block" }} />
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#fff", display: "inline-block" }} />
                     {cliente.estado}
                   </span>
                   <span style={S.badgeDark}>
@@ -673,18 +711,18 @@ function DireccionesCliente({ onVolver }) {
 
               {/* Tabla de direcciones */}
               <div style={{ overflowX: "auto" }}>
-                <table className="table align-middle" style={{ marginBottom: 0 }}>
+                <table className="table align-middle mb-0" style={{ minWidth: "900px" }}>
                   <thead>
-                    <tr>
+                    <tr style={{ backgroundColor: ENCABEZADO }}>
                       {["ID", "Dirección", "Ciudad", "Barrio", "Indicaciones", "Principal", "Estado", "Acciones"].map((h) => (
-                        <th key={h} style={{ fontSize: "12px", whiteSpace: "nowrap" }}>{h}</th>
+                        <th key={h} style={{ fontSize: "13px", whiteSpace: "nowrap", backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, border: "none", padding: "12px 8px" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {cliente.direcciones.map((dir) => (
-                      <tr key={dir.id}>
-                        <td style={{ fontSize: "12px", color: "#374151", fontFamily: "monospace" }}>{dir.id}</td>
+                      <tr key={dir.id} style={{ borderBottom: "1px solid #ece4d3" }}>
+                        <td style={{ fontSize: "13px", color: DORADO_OSCURO, fontWeight: "700", padding: "10px 8px" }}>#{dir.id}</td>
                         <td style={{ fontSize: "13px", color: "#111827", fontWeight: "600", maxWidth: "200px" }}>{dir.direccion}</td>
                         <td style={{ fontSize: "13px" }}>{dir.ciudad}</td>
                         <td style={{ fontSize: "13px" }}>{dir.barrio}</td>
@@ -724,13 +762,12 @@ function DireccionesCliente({ onVolver }) {
 
               {/* Footer cliente */}
               <div style={{
-                padding: "12px 24px", borderTop: "1px solid #f3f4f6",
+                padding: "12px 24px", borderTop: `1px solid ${DORADO_CLARO}`,
                 display: "flex", gap: "10px", justifyContent: "flex-end",
-                background: "#fafafa",
+                background: "#fffaf0",
               }}>
                 <button
-                  className="btn rounded-pill btn-sm"
-                  style={{ backgroundColor: "#B89B6A", color: "#000", border: "none", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  style={{ ...S.btnGold, fontSize: "12px", padding: "7px 16px" }}
                   onClick={() => setModal({ tipo: "agregar", clienteId: cliente.id })}
                 >
                   <IconPlus /> Agregar dirección

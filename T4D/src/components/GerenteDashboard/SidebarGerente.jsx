@@ -77,10 +77,10 @@ function SidebarGerente({ setVistaGerente, vistaGerente }) {
           {abierto && (
             <div style={{ lineHeight: 1.3, textAlign: "center" }}>
               <div style={{ color: "#ffffff", fontWeight: 800, fontSize: "20px", letterSpacing: "1px" }}>
-                DEFENSA ÉLITE
+                T4D
               </div>
               <div style={{ color: DORADO_SUAVE, fontSize: "14px", fontWeight: 600, letterSpacing: "0.8px", marginTop: "4px" }}>
-                TECNOLOGÍA · PROTECCIÓN · SUPREMACÍA
+                TECHNOLOGY FOR DEFENSE SAS 
               </div>
             </div>
           )}
