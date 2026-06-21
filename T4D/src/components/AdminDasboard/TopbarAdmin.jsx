@@ -51,7 +51,7 @@ function TopbarAdmin({ setVistaAdmin, usuario }) {
         borderBottom:   `2px solid ${DORADO}`,
         display:        "flex",
         alignItems:     "center",
-        justifyContent: "space-between",   /* ← espacio entre título y controles */
+        justifyContent: "space-between",   
         padding:        "0 28px",
         height:         "72px",
         position:       "relative",
