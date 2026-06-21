@@ -41,8 +41,8 @@ function TopbarAdmin({ setVistaAdmin, usuario }) {
     setTimeout(() => { window.location.href = "/"; }, 1500);
   };
 
-  const noLeidas    = notificaciones.filter((n) => !n.leido).length;
-  const fmtFecha    = (f) => f ? new Date(f).toLocaleDateString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+  const noLeidas = notificaciones.filter((n) => !n.leido).length;
+  const fmtFecha = (f) => f ? new Date(f).toLocaleDateString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
 
   return (
     <header
@@ -51,12 +51,26 @@ function TopbarAdmin({ setVistaAdmin, usuario }) {
         borderBottom:   `2px solid ${DORADO}`,
         display:        "flex",
         alignItems:     "center",
-        justifyContent: "flex-end",   /* ← todo a la derecha, sin texto a la izquierda */
+        justifyContent: "space-between",   /* ← espacio entre título y controles */
         padding:        "0 28px",
         height:         "72px",
         position:       "relative",
       }}
     >
+      {/* ══ IZQUIERDA: título Panel de Administrador ══ */}
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        {/* Línea decorativa dorada */}
+        <div style={{ width: "3px", height: "32px", background: DORADO, borderRadius: "2px" }} />
+        <div>
+          <div style={{ color: DORADO, fontSize: "11px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", lineHeight: 1 }}>
+            Bienvenido
+          </div>
+          <div style={{ color: "#ffffff", fontSize: "16px", fontWeight: 700, letterSpacing: "0.5px", lineHeight: 1.3 }}>
+            Panel de Administrador
+          </div>
+        </div>
+      </div>
+
       {/* ══ DERECHA: campana + perfil ══ */}
       <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
 
@@ -123,7 +137,6 @@ function TopbarAdmin({ setVistaAdmin, usuario }) {
               {usuario?.foto ? (
                 <img src={usuario.foto} alt="perfil" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
               ) : (
-                /* Ícono persona SVG igual al de la imagen de referencia */
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={DORADO} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                   <circle cx="12" cy="7" r="4"/>

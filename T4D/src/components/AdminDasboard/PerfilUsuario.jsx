@@ -1,24 +1,28 @@
 import { useState } from "react";
-import { User, Mail, Shield, Lock, Camera } from "lucide-react";
+import { User, Mail, Shield, Camera, Check, X, LogOut, Info } from "lucide-react";
 
-function PerfilUsuario({ usuario, setUsuario }) {
+// ─── Paleta ───────────────────────────────────────────────────────
+const DORADO_OSCURO      = "#8c6b3f";
+const DORADO_CLARO       = "#e7c98a";
+const FONDO              = "#f7f1e3";
+const GRADIENTE_DORADO   = "linear-gradient(135deg, #c9941f, #8c6b3f)";
+
+const btnOutline = (activo = false) => ({
+  border: `1.5px solid ${DORADO_OSCURO}`,
+  color: DORADO_OSCURO,
+  background: activo ? "#fdf6e8" : "#fff",
+});
+
+function PerfilAdmin({ usuario, setUsuario }) {
+  const [nombreEditado, setNombreEditado] = useState(usuario.nombre);
   const [tab, setTab] = useState("info");
-  const [nombreEditado, setNombreEditado] = useState(usuario?.nombre || "");
-  const [passwordActual, setPasswordActual] = useState("");
-  const [passwordNuevo, setPasswordNuevo] = useState("");
-  const [passwordConfirm, setPasswordConfirm] = useState("");
-
-  const iniciales = usuario?.nombre
-    ? usuario.nombre.substring(0, 2).toUpperCase()
-    : "??";
 
   const subirImagen = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onloadend = () => {
-      const usuarioActual = JSON.parse(localStorage.getItem("usuario"));
-      const actualizado = { ...usuarioActual, foto: reader.result };
+      const actualizado = { ...usuario, foto: reader.result };
       setUsuario(actualizado);
       localStorage.setItem("usuario", JSON.stringify(actualizado));
     };
@@ -26,235 +30,240 @@ function PerfilUsuario({ usuario, setUsuario }) {
   };
 
   const guardarCambios = () => {
-    const usuarioActual = JSON.parse(localStorage.getItem("usuario"));
-    const actualizado = { ...usuarioActual, nombre: nombreEditado };
+    const actualizado = { ...usuario, nombre: nombreEditado };
     setUsuario(actualizado);
     localStorage.setItem("usuario", JSON.stringify(actualizado));
   };
 
-  const cancelar = () => setNombreEditado(usuario?.nombre || "");
-
-  const inputWrapper = {
-    display: "flex", alignItems: "center", gap: 8,
-    border: "1px solid #e5e7eb", borderRadius: 10,
-    padding: "9px 12px", background: "#fff",
-  };
-  const inputWrapperReadonly = {
-    ...inputWrapper, background: "#f9fafb", border: "1px solid #f3f4f6",
-  };
-  const inputBase = {
-    border: "none", background: "transparent", fontSize: 13,
-    color: "#111827", outline: "none", width: "100%",
-  };
-  const inputReadonly = { ...inputBase, color: "#9ca3af" };
-  const labelStyle = {
-    fontSize: 12, fontWeight: 600, color: "#374151",
-    display: "block", marginBottom: 5,
-  };
-  const btnPrimary = {
-    fontSize: 13, padding: "8px 20px", borderRadius: 999,
-    border: "none", background: "#111827", color: "#B89B6A",
-    cursor: "pointer", fontWeight: 600,
-  };
-  const btnSecondary = {
-    fontSize: 13, padding: "8px 20px", borderRadius: 999,
-    border: "1px solid #e5e7eb", background: "#fff",
-    color: "#6b7280", cursor: "pointer",
-  };
+  const cancelar = () => setNombreEditado(usuario.nombre);
 
   return (
-    <div style={{ padding: "28px 24px", maxWidth: 860, margin: "0 auto", fontFamily: "inherit" }}>
+    <div
+      className="p-3"
+      style={{ maxWidth: "1600px", margin: "0 auto", maxHeight: "90vh", overflowY: "auto", backgroundColor: FONDO }}
+    >
 
       {/* HEADER */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
+      <div
+        className="d-flex justify-content-between align-items-center mb-3 p-3 rounded-4"
+        style={{ backgroundColor: "#fffdf8", border: `1px solid ${DORADO_CLARO}`, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}
+      >
         <div>
-          <h5 style={{ fontWeight: 700, margin: "0 0 4px", fontSize: 20, color: "#111827" }}>Mi Perfil</h5>
-          <p style={{ margin: 0, fontSize: 13, color: "#6b7280" }}>Gestiona tu información personal</p>
+          <h5 className="fw-bold mb-1" style={{ color: "#1a1a1a" }}>Perfil del Administrador</h5>
+          <p className="text-muted mb-0 small">Gestiona tu información personal</p>
         </div>
-        <button style={btnSecondary}>Cerrar</button>
+        <button
+          className="btn btn-sm d-flex align-items-center gap-2 fw-semibold rounded-pill"
+          style={{ ...btnOutline(), padding: "6px 16px" }}
+        >
+          <LogOut size={14} color={DORADO_OSCURO} />
+          Cerrar
+        </button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 16, alignItems: "stretch" }}>
+      {/* FILAS */}
+      <div className="row g-3 align-items-stretch">
 
-        {/* COLUMNA IZQUIERDA */}
-        <div style={{
-          background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16,
-          padding: "24px 16px", display: "flex", flexDirection: "column",
-          alignItems: "center", gap: 12,
-        }}>
+        {/* TARJETA PERFIL */}
+        <div className="col-md-4 d-flex">
+          <div
+            className="rounded-4 p-3 text-center w-100"
+            style={{ backgroundColor: "#fffdf8", border: `1px solid ${DORADO_CLARO}`, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}
+          >
+            <h6 className="fw-bold text-start mb-2" style={{ fontSize: "14px", color: "#1a1a1a" }}>
+              Información del Perfil
+            </h6>
 
-          {/* Avatar */}
-          <div style={{
-            width: 90, height: 90, borderRadius: "50%",
-            background: "#111827", display: "flex", alignItems: "center",
-            justifyContent: "center", overflow: "hidden", flexShrink: 0,
-          }}>
-            {usuario?.foto ? (
-              <img src={usuario.foto} alt="perfil" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            ) : (
-              <span style={{ fontSize: 30, fontWeight: 700, color: "#B89B6A" }}>{iniciales}</span>
-            )}
-          </div>
-
-          {/* Nombre y rol */}
-          <div style={{ textAlign: "center" }}>
-            <p style={{ fontWeight: 700, fontSize: 15, margin: "0 0 3px", color: "#111827" }}>{usuario?.nombre}</p>
-            <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 10px" }}>{usuario?.correo}</p>
-            <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 14px", borderRadius: 999, background: "#f5efe4", color: "#7a6340" }}>
-              {usuario?.rol}
-            </span>
-          </div>
-
-          {/* Estado y último acceso */}
-          <div style={{ width: "100%", borderTop: "1px solid #f3f4f6", paddingTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-              <span style={{ color: "#6b7280" }}>Estado</span>
-              <span style={{ color: "#16a34a", fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#16a34a", display: "inline-block" }} />
-                Activo
-              </span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-              <span style={{ color: "#6b7280" }}>Último acceso</span>
-              <span style={{ color: "#374151" }}>Hace 2h</span>
-            </div>
-          </div>
-
-          {/* Spacer para empujar el botón abajo */}
-          <div style={{ flex: 1 }} />
-
-          {/* Botón cambiar foto */}
-          <label style={{
-            width: "100%", textAlign: "center", fontSize: 12, color: "#6b7280",
-            padding: "8px 0", border: "1px solid #e5e7eb", borderRadius: 10,
-            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-          }}>
-            <Camera size={14} /> Cambiar foto
-            <input type="file" accept="image/*" style={{ display: "none" }} onChange={subirImagen} />
-          </label>
-          <p style={{ fontSize: 11, color: "#9ca3af", margin: 0 }}>JPG, PNG · máx 5MB</p>
-
-        </div>
-
-        {/* COLUMNA DERECHA */}
-        <div style={{
-          background: "#fff", border: "1px solid #e5e7eb", borderRadius: 16,
-          padding: "24px", display: "flex", flexDirection: "column",
-        }}>
-
-          {/* Tabs */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 24, paddingBottom: 16, borderBottom: "1px solid #f3f4f6" }}>
-            <button
-              onClick={() => setTab("info")}
-              style={{ fontSize: 13, padding: "7px 18px", borderRadius: 999, fontWeight: 600, cursor: "pointer", border: "none",
-                background: tab === "info" ? "#111827" : "#fff",
-                color: tab === "info" ? "#B89B6A" : "#6b7280",
-                outline: tab === "info" ? "none" : "1px solid #e5e7eb",
-              }}
-            >
-              Información
-            </button>
-            <button
-              onClick={() => setTab("seguridad")}
-              style={{ fontSize: 13, padding: "7px 18px", borderRadius: 999, fontWeight: 600, cursor: "pointer", border: "none",
-                background: tab === "seguridad" ? "#111827" : "#fff",
-                color: tab === "seguridad" ? "#B89B6A" : "#6b7280",
-                outline: tab === "seguridad" ? "none" : "1px solid #e5e7eb",
-              }}
-            >
-              Seguridad
-            </button>
-          </div>
-
-          {/* TAB INFO */}
-          {tab === "info" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16, flex: 1 }}>
-
-              <div>
-                <label style={labelStyle}>Nombre completo</label>
-                <div style={inputWrapper}>
-                  <User size={15} color="#9ca3af" />
-                  <input type="text" style={inputBase} value={nombreEditado} onChange={(e) => setNombreEditado(e.target.value)} />
-                </div>
-              </div>
-
-              <div>
-                <label style={labelStyle}>Correo electrónico</label>
-                <div style={inputWrapperReadonly}>
-                  <Mail size={15} color="#9ca3af" />
-                  <input type="email" style={inputReadonly} value={usuario?.correo || ""} readOnly />
-                </div>
-                <p style={{ fontSize: 11, color: "#9ca3af", margin: "4px 0 0" }}>El correo no se puede modificar</p>
-              </div>
-
-              <div>
-                <label style={labelStyle}>Rol</label>
-                <div style={inputWrapperReadonly}>
-                  <Shield size={15} color="#9ca3af" />
-                  <input type="text" style={inputReadonly} value={usuario?.rol || ""} readOnly />
-                </div>
-              </div>
-
-              <div style={{ flex: 1 }} />
-
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, paddingTop: 16, borderTop: "1px solid #f3f4f6" }}>
-                <button style={btnSecondary} onClick={cancelar}>Cancelar</button>
-                <button style={btnPrimary} onClick={guardarCambios}>Guardar cambios</button>
-              </div>
-
-            </div>
-          )}
-
-          {/* TAB SEGURIDAD */}
-          {tab === "seguridad" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16, flex: 1 }}>
-
-              <div>
-                <label style={labelStyle}>Contraseña actual</label>
-                <div style={inputWrapper}>
-                  <Lock size={15} color="#9ca3af" />
-                  <input type="password" style={inputBase} placeholder="••••••••"
-                    value={passwordActual} onChange={(e) => setPasswordActual(e.target.value)} />
-                </div>
-              </div>
-
-              <div>
-                <label style={labelStyle}>Nueva contraseña</label>
-                <div style={inputWrapper}>
-                  <Lock size={15} color="#9ca3af" />
-                  <input type="password" style={inputBase} placeholder="••••••••"
-                    value={passwordNuevo} onChange={(e) => setPasswordNuevo(e.target.value)} />
-                </div>
-              </div>
-
-              <div>
-                <label style={labelStyle}>Confirmar nueva contraseña</label>
-                <div style={inputWrapper}>
-                  <Lock size={15} color="#9ca3af" />
-                  <input type="password" style={inputBase} placeholder="••••••••"
-                    value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} />
-                </div>
-                {passwordNuevo && passwordConfirm && passwordNuevo !== passwordConfirm && (
-                  <p style={{ fontSize: 11, color: "#dc2626", margin: "4px 0 0" }}>Las contraseñas no coinciden</p>
+            {/* FOTO */}
+            <div className="mx-auto mb-2 position-relative" style={{ width: "150px", height: "150px" }}>
+              <div
+                className="d-flex align-items-center justify-content-center shadow-sm overflow-hidden"
+                style={{
+                  width: "150px", height: "150px", borderRadius: "50%",
+                  background: usuario.foto ? "#e5e7eb" : GRADIENTE_DORADO,
+                  border: `3px solid ${DORADO_CLARO}`,
+                  boxShadow: "0 4px 16px rgba(140,107,63,0.35)",
+                }}
+              >
+                {usuario.foto ? (
+                  <img src={usuario.foto} alt="perfil" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <span style={{ color: "#fff", fontSize: "40px", fontWeight: "bold" }}>
+                    {usuario.nombre.substring(0, 2).toUpperCase()}
+                  </span>
                 )}
               </div>
 
-              <div style={{ flex: 1 }} />
-
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, paddingTop: 16, borderTop: "1px solid #f3f4f6" }}>
-                <button style={btnSecondary} onClick={() => { setPasswordActual(""); setPasswordNuevo(""); setPasswordConfirm(""); }}>
-                  Cancelar
-                </button>
-                <button style={btnPrimary}>Actualizar contraseña</button>
-              </div>
-
+              {/* Botón cámara superpuesto */}
+              <label
+                title="Cambiar foto"
+                style={{
+                  position: "absolute", bottom: "2px", right: "2px",
+                  width: "36px", height: "36px", borderRadius: "50%",
+                  background: GRADIENTE_DORADO, border: "2.5px solid #fffdf8",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer", boxShadow: "0 2px 8px rgba(140,107,63,0.5)",
+                }}
+              >
+                <Camera size={16} color="#fff" />
+                <input type="file" accept="image/*" style={{ display: "none" }} onChange={subirImagen} />
+              </label>
             </div>
-          )}
 
+            <h6 className="fw-bold mb-0" style={{ color: "#1a1a1a" }}>{usuario.nombre}</h6>
+            <p className="text-muted small mb-2">{usuario.correo}</p>
+
+            {/* ROL */}
+            <span
+              className="badge rounded-pill px-2 py-1 mb-2"
+              style={{ background: GRADIENTE_DORADO, color: "#fff", fontSize: "11px", boxShadow: "0 3px 10px rgba(140,107,63,0.4)" }}
+            >
+              {usuario.rol}
+            </span>
+
+            {/* CAMBIAR FOTO */}
+            <label
+              className="btn btn-sm rounded-pill w-100 mb-2 d-flex align-items-center justify-content-center gap-2 fw-semibold"
+              style={{ ...btnOutline(), cursor: "pointer" }}
+            >
+              <Camera size={14} color={DORADO_OSCURO} />
+              Cambiar foto
+              <input type="file" accept="image/*" style={{ display: "none" }} onChange={subirImagen} />
+            </label>
+
+            <small className="text-muted d-block" style={{ fontSize: "11px" }}>JPG, PNG • Máx 5MB</small>
+
+            <hr className="my-2" style={{ borderColor: DORADO_CLARO }} />
+
+            {/* ESTADO */}
+            <div className="text-start" style={{ fontSize: "12px" }}>
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <strong>Estado</strong>
+                <span style={{ color: "#1f9d55", display: "flex", alignItems: "center", gap: "5px", fontWeight: 600 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#1f9d55", display: "inline-block" }} />
+                  Activo
+                </span>
+              </div>
+              <div className="d-flex justify-content-between align-items-center">
+                <strong>Último acceso</strong>
+                <span style={{ color: DORADO_OSCURO, fontWeight: 600 }}>Hace 2h</span>
+              </div>
+            </div>
+          </div>
         </div>
+
+        {/* CONFIGURACIÓN */}
+        <div className="col-md-8 d-flex">
+          <div
+            className="rounded-4 p-3 w-100"
+            style={{ backgroundColor: "#fffdf8", border: `1px solid ${DORADO_CLARO}`, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}
+          >
+            <h6 className="fw-bold mb-2" style={{ fontSize: "14px", color: "#1a1a1a" }}>
+              Configuración de Cuenta
+            </h6>
+
+            {/* TABS */}
+            <div className="d-flex gap-2 mb-3">
+              <button
+                className="btn btn-sm rounded-pill px-3 d-flex align-items-center gap-2 fw-semibold"
+                onClick={() => setTab("info")}
+                style={btnOutline(tab === "info")}
+              >
+                <Info size={14} color={DORADO_OSCURO} /> Información
+              </button>
+              <button
+                className="btn btn-sm rounded-pill px-3 d-flex align-items-center gap-2 fw-semibold"
+                onClick={() => setTab("seguridad")}
+                style={btnOutline(tab === "seguridad")}
+              >
+                <Shield size={14} color={DORADO_OSCURO} /> Seguridad
+              </button>
+            </div>
+
+            {tab === "info" ? (
+              <>
+                {/* NOMBRE */}
+                <div className="mb-2">
+                  <label className="form-label small fw-semibold">Nombre completo</label>
+                  <div className="input-group input-group-sm">
+                    <span className="input-group-text bg-white" style={{ borderColor: "#d1d5db" }}>
+                      <User size={14} color={DORADO_OSCURO} />
+                    </span>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={nombreEditado}
+                      onChange={(e) => setNombreEditado(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* CORREO */}
+                <div className="mb-2">
+                  <label className="form-label small fw-semibold">Correo electrónico</label>
+                  <div className="input-group input-group-sm">
+                    <span className="input-group-text bg-white" style={{ borderColor: "#d1d5db" }}>
+                      <Mail size={14} color={DORADO_OSCURO} />
+                    </span>
+                    <input
+                      type="email"
+                      className="form-control"
+                      style={{ backgroundColor: "#f3f4f6" }}
+                      value={usuario.correo}
+                      readOnly
+                    />
+                  </div>
+                  <small className="d-block mt-1" style={{ fontSize: "10px", color: DORADO_OSCURO }}>
+                    El correo no se puede modificar
+                  </small>
+                </div>
+
+                {/* ROL */}
+                <div className="mb-3">
+                  <label className="form-label small fw-semibold">Rol del sistema</label>
+                  <div className="input-group input-group-sm">
+                    <span className="input-group-text bg-white" style={{ borderColor: "#d1d5db" }}>
+                      <Shield size={14} color={DORADO_OSCURO} />
+                    </span>
+                    <input
+                      type="text"
+                      className="form-control"
+                      style={{ backgroundColor: "#f3f4f6" }}
+                      value={usuario.rol}
+                      readOnly
+                    />
+                  </div>
+                </div>
+
+                {/* BOTONES */}
+                <div className="d-flex justify-content-end gap-2 pt-2" style={{ borderTop: `1px solid ${DORADO_CLARO}` }}>
+                  <button
+                    className="btn btn-sm rounded-pill px-3 d-flex align-items-center gap-2 fw-semibold"
+                    onClick={cancelar}
+                    style={btnOutline()}
+                  >
+                    <X size={14} color={DORADO_OSCURO} /> Cancelar
+                  </button>
+                  <button
+                    className="btn btn-sm rounded-pill px-3 d-flex align-items-center gap-2 fw-semibold"
+                    onClick={guardarCambios}
+                    style={btnOutline()}
+                  >
+                    <Check size={14} color={DORADO_OSCURO} /> Guardar cambios
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="text-muted small" style={{ padding: "16px 0" }}>
+                Próximamente: opciones de seguridad (cambio de contraseña, verificación en dos pasos, sesiones activas).
+              </div>
+            )}
+          </div>
+        </div>
+
       </div>
     </div>
   );
 }
 
-export default PerfilUsuario;
+export default PerfilAdmin;
