@@ -7,6 +7,7 @@ const {
   postProducto,
   putProducto,
   deleteProducto,
+  patchProducto,
 } = require("../controllers/productos.controller");
 
 // GET
@@ -20,5 +21,7 @@ router.put("/:id", putProducto);
 
 // DELETE
 router.delete("/:id", deleteProducto);
+
+router.patch("/:id", patchProducto);
 
 module.exports = router;

@@ -75,46 +75,44 @@ function PerfilGerente({ usuario, setUsuario }) {
             <h6 className="fw-bold text-start mb-2">
               Información del Perfil
             </h6>
-
-            {/* FOTO */}
-            <div
-              className="mx-auto mb-2 d-flex align-items-center justify-content-center shadow-sm overflow-hidden"
-              style={{
-                width: "180px",
-                height: "180px",
-                borderRadius: "50%",
-                background: "#e5e7eb",
-              }}
-            >
-              {usuario.foto ? (
-                <img
-                  src={usuario.foto}
-                  alt="perfil"
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                  }}
-                />
-              ) : (
-                <span
-                  style={{
-                    color: "#fff",
-                    fontSize: "44px",
-                    fontWeight: "bold",
-                    background:
-                      "linear-gradient(135deg, #1f2937, #B89B6A)",
-                    width: "100%",
-                    height: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {usuario.nombre.substring(0, 2).toUpperCase()}
-                </span>
-              )}
-            </div>
+{/* FOTO */}
+<div
+  className="mx-auto mb-2 d-flex align-items-center justify-content-center shadow-sm overflow-hidden"
+  style={{
+    width: "220px",      // antes: 180px
+    height: "220px",     // antes: 180px
+    borderRadius: "50%",
+    background: "#e5e7eb",
+  }}
+>
+  {usuario.foto ? (
+    <img
+      src={usuario.foto}
+      alt="perfil"
+      style={{
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+      }}
+    />
+  ) : (
+    <span
+      style={{
+        color: "#fff",
+        fontSize: "56px",    // antes: 44px
+        fontWeight: "bold",
+        background: "linear-gradient(135deg, #1f2937, #B89B6A)",
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      {usuario.nombre.substring(0, 2).toUpperCase()}
+    </span>
+  )}
+</div>
 
             <h6 className="fw-bold mb-0">{usuario.nombre}</h6>
 

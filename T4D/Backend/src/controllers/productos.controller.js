@@ -3,6 +3,7 @@ const {
   agregarProducto,
   editarProducto,
   eliminarProducto,
+  actualizarParcialProducto,
 } = require("../services/productos.service");
 
 // =====================================
@@ -83,9 +84,30 @@ const deleteProducto = async (req, res) => {
   }
 };
 
+const patchProducto = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const producto = await actualizarParcialProducto(
+      id,
+      req.body
+    );
+
+    res.json(producto);
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      error: "Error al actualizar producto",
+    });
+  }
+};
+
+
 module.exports = {
   getProductos,
   postProducto,
   putProducto,
+  patchProducto,
   deleteProducto,
 };

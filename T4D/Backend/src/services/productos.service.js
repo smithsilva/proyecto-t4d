@@ -78,9 +78,24 @@ const eliminarProducto = async (id) => {
   return true;
 };
 
+const actualizarParcialProducto = async (id, datos) => {
+  const { data, error } = await supabase
+    .from("productos")
+    .update(datos)
+    .eq("id_producto", id)
+    .select();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+};
+
 module.exports = {
   obtenerProductos,
   agregarProducto,
   editarProducto,
   eliminarProducto,
+  actualizarParcialProducto,
 };
