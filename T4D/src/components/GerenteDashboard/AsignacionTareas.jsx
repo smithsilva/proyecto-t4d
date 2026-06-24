@@ -24,6 +24,7 @@ const UsersIcon    = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill
 const WifiIcon     = () => (<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>);
 const CashIcon     = () => (<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 12h.01M18 12h.01"/></svg>);
 const UserIcon     = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>);
+const BuildingIcon = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01M9 12v.01M9 15v.01M9 18v.01"/></svg>);
 
 const estadoStyle = {
   Pendiente:    { background: "#f3f4f6", color: "#374151", border: "1px solid #d1d5db" },
@@ -54,6 +55,7 @@ const FORM_EMPTY = {
   fecha_limite:   "",
   costo:          "",
   id_metodo_pago: "",
+  id_sucursal:    "",
 };
 
 const fmtFecha = (f) => { if (!f) return "—"; const [y,m,d] = f.split("-"); return `${d}/${m}/${y}`; };
@@ -68,9 +70,11 @@ export default function AsignacionTareas() {
   const [mecanicos,        setMecanicos]        = useState([]);
   const [metodosPago,      setMetodosPago]      = useState([]);
   const [clientes,         setClientes]         = useState([]);
+  const [sucursales,       setSucursales]       = useState([]);
   const [cargando,         setCargando]         = useState(true);
   const [cargandoMec,      setCargandoMec]      = useState(false);
   const [cargandoClientes, setCargandoClientes] = useState(false);
+  const [cargandoSuc,      setCargandoSuc]      = useState(false);
   const [guardando,        setGuardando]        = useState(false);
   const [error,            setError]            = useState(null);
   const [modalNueva,       setModalNueva]       = useState(false);
@@ -87,7 +91,8 @@ export default function AsignacionTareas() {
         prioridad, fecha_limite, estado, costo,
         metodos_pago(id_metodo_pago, nombre_metodo, permite_online),
         usuarios!fk_mecanico(id_usuario, username),
-        clientes(id_cliente, nombre_completo, tipo_documento, numero_documento)
+        clientes(id_cliente, nombre_completo, tipo_documento, numero_documento),
+        sucursales(id_sucursal, nombre_sucursal)
       `)
       .order("id_asignacion", { ascending: false });
     if (error) setError("No se pudieron cargar las asignaciones: " + error.message);
@@ -100,8 +105,9 @@ export default function AsignacionTareas() {
     setMecanicos([]);
     setMetodosPago([]);
     setClientes([]);
+    setSucursales([]);
     setModalNueva(true);
-    await Promise.all([cargarMecanicos(), cargarMetodosPago(), cargarClientes()]);
+    await Promise.all([cargarMecanicos(), cargarMetodosPago(), cargarClientes(), cargarSucursales()]);
   };
 
   const cerrarModal = () => {
@@ -110,6 +116,7 @@ export default function AsignacionTareas() {
     setMecanicos([]);
     setMetodosPago([]);
     setClientes([]);
+    setSucursales([]);
   };
 
   const cargarMecanicos = async () => {
@@ -144,6 +151,16 @@ export default function AsignacionTareas() {
     setCargandoClientes(false);
   };
 
+  const cargarSucursales = async () => {
+    setCargandoSuc(true);
+    const { data, error: err } = await supabase
+      .from("sucursales")
+      .select("id_sucursal, nombre_sucursal")
+      .order("id_sucursal", { ascending: true });
+    setSucursales(err ? [] : (data || []));
+    setCargandoSuc(false);
+  };
+
   const metodoPagoSeleccionado = metodosPago.find(
     (m) => String(m.id_metodo_pago) === String(form.id_metodo_pago)
   );
@@ -153,10 +170,11 @@ export default function AsignacionTareas() {
   );
 
   const crearAsignacion = async () => {
-    if (!form.vehiculo.trim())                                              return alert("El vehículo es obligatorio.");
+    if (!form.vehiculo.trim())                                               return alert("El vehículo es obligatorio.");
     if (!form.costo || isNaN(Number(form.costo)) || Number(form.costo) <= 0) return alert("Ingresa un costo válido.");
-    if (!form.id_metodo_pago)                                               return alert("Selecciona un método de pago.");
-    if (mecanicos.length === 0)                                             return alert("No se encontraron mecánicos activos.");
+    if (!form.id_metodo_pago)                                                return alert("Selecciona un método de pago.");
+    if (!form.id_sucursal)                                                   return alert("Selecciona la sucursal.");
+    if (mecanicos.length === 0)                                              return alert("No se encontraron mecánicos activos.");
 
     setGuardando(true);
 
@@ -174,13 +192,13 @@ export default function AsignacionTareas() {
           estado:         "Pendiente",
           costo:          Number(form.costo),
           id_metodo_pago: Number(form.id_metodo_pago),
+          id_sucursal:    Number(form.id_sucursal),
         }))
       )
       .select("id_asignacion, id_mecanico");
 
     if (errInsert) { alert("Error al guardar: " + errInsert.message); setGuardando(false); return; }
 
-    // ── Texto enriquecido con cliente para notificación ──────────
     const parteCliente = clienteSeleccionado
       ? ` | Cliente: ${clienteSeleccionado.nombre_completo} (${clienteSeleccionado.tipo_documento} ${clienteSeleccionado.numero_documento})`
       : "";
@@ -189,7 +207,7 @@ export default function AsignacionTareas() {
       clienteSeleccionado ? ` — Cliente: ${clienteSeleccionado.nombre_completo}` : ""
     }`;
 
-    // ── Movimientos contables ────────────────────────────────────
+    // Movimientos contables
     await supabase.from("movimientos_contables").insert(
       asignadas.map(() => ({
         tipo_movimiento:     "Egreso",
@@ -201,7 +219,7 @@ export default function AsignacionTareas() {
       }))
     );
 
-    // ── Notificaciones con cliente incluido ──────────────────────
+    // Notificaciones
     await supabase.from("notificaciones").insert(
       asignadas.map((a) => ({
         titulo:        "Nueva asignación",
@@ -221,10 +239,12 @@ export default function AsignacionTareas() {
   const filtradas = asignaciones.filter((a) => {
     const mec     = a.usuarios?.username || "";
     const cliente = a.clientes?.nombre_completo || "";
+    const sucursal = a.sucursales?.nombre_sucursal || "";
     return (
       (a.vehiculo || "").toLowerCase().includes(busqueda.toLowerCase()) ||
-      mec.toLowerCase().includes(busqueda.toLowerCase()) ||
-      cliente.toLowerCase().includes(busqueda.toLowerCase())
+      mec.toLowerCase().includes(busqueda.toLowerCase())                ||
+      cliente.toLowerCase().includes(busqueda.toLowerCase())            ||
+      sucursal.toLowerCase().includes(busqueda.toLowerCase())
     );
   });
 
@@ -235,7 +255,12 @@ export default function AsignacionTareas() {
     { label: "Alta prioridad", value: asignaciones.filter((a) => a.prioridad === "Alta").length,    icon: <TriangleIcon /> },
   ];
 
-  const btnPrimario = { background: `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`, color: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer", boxShadow: "0 3px 12px rgba(140,107,63,0.45)", display: "inline-flex", alignItems: "center", gap: 6 };
+  const btnPrimario = {
+    background: `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`, color: "#fff",
+    border: "none", borderRadius: 8, padding: "8px 18px", fontSize: 13, fontWeight: 600,
+    cursor: "pointer", boxShadow: "0 3px 12px rgba(140,107,63,0.45)",
+    display: "inline-flex", alignItems: "center", gap: 6,
+  };
 
   return (
     <div className="p-4" style={{ margin: 0, backgroundColor: FONDO, minHeight: "100vh", width: "100%" }}>
@@ -288,7 +313,7 @@ export default function AsignacionTareas() {
             type="text"
             className="form-control rounded-pill"
             style={{ paddingLeft: 36, paddingTop: 10, paddingBottom: 10, fontSize: 13 }}
-            placeholder="Buscar por vehículo, mecánico o cliente..."
+            placeholder="Buscar por vehículo, mecánico, cliente o sucursal..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
@@ -322,21 +347,23 @@ export default function AsignacionTareas() {
             <table className="table align-middle mb-0" style={{ backgroundColor: "#fffdf8" }}>
               <thead>
                 <tr style={{ backgroundColor: ENCABEZADO }}>
-                  {["Cliente", "Vehículo", "Tipo", "Descripción", "Mecánico", "Costo", "Método de pago", "Prioridad", "Fecha límite", "Estado"].map((h) => (
+                  {["Cliente", "Vehículo", "Tipo", "Descripción", "Mecánico", "Sucursal", "Costo", "Método de pago", "Prioridad", "Fecha límite", "Estado"].map((h) => (
                     <th key={h} style={{ backgroundColor: ENCABEZADO, color: TEXTO_ENC, fontSize: "13px", border: "none", padding: "12px 10px", fontWeight: 600 }}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filtradas.length === 0 ? (
-                  <tr><td colSpan={10} style={{ padding: "40px 0", textAlign: "center", color: "#9ca3af", fontSize: 13 }}>
+                  <tr><td colSpan={11} style={{ padding: "40px 0", textAlign: "center", color: "#9ca3af", fontSize: 13 }}>
                     {asignaciones.length === 0 ? "No hay asignaciones aún." : "Sin resultados."}
                   </td></tr>
                 ) : filtradas.map((a) => {
-                  const metodo  = a.metodos_pago;
-                  const cliente = a.clientes;
+                  const metodo   = a.metodos_pago;
+                  const cliente  = a.clientes;
+                  const sucursal = a.sucursales;
                   return (
                     <tr key={a.id_asignacion} style={{ borderBottom: "1px solid #ece4d3", backgroundColor: "#fffdf8" }}>
+                      {/* Cliente */}
                       <td style={{ padding: "12px 10px", minWidth: 160 }}>
                         {cliente ? (
                           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -347,16 +374,33 @@ export default function AsignacionTareas() {
                           <span style={{ fontSize: 12, color: "#9ca3af", fontStyle: "italic" }}>Sin cliente</span>
                         )}
                       </td>
+                      {/* Vehículo */}
                       <td style={{ padding: "12px 10px" }}>
                         <div className="d-flex align-items-center gap-2">
                           <span style={{ color: DORADO_OSCURO }}><TruckIcon /></span>
                           <span style={{ fontSize: 13, fontWeight: 600 }}>{a.vehiculo}</span>
                         </div>
                       </td>
+                      {/* Tipo */}
                       <td style={{ padding: "12px 10px", fontSize: 13 }}>{a.tipo_trabajo}</td>
+                      {/* Descripción */}
                       <td style={{ padding: "12px 10px", fontSize: 13, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#6b7280" }} title={a.descripcion}>{a.descripcion || "—"}</td>
+                      {/* Mecánico */}
                       <td style={{ padding: "12px 10px", fontSize: 13 }}>{a.usuarios?.username || "—"}</td>
+                      {/* ✅ Sucursal */}
+                      <td style={{ padding: "12px 10px" }}>
+                        {sucursal ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                            <span style={{ color: DORADO_OSCURO }}><BuildingIcon /></span>
+                            <span style={{ fontSize: 13 }}>{sucursal.nombre_sucursal}</span>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: 12, color: "#9ca3af", fontStyle: "italic" }}>—</span>
+                        )}
+                      </td>
+                      {/* Costo */}
                       <td style={{ padding: "12px 10px", fontWeight: 600, fontSize: 13, color: "#1f2937", whiteSpace: "nowrap" }}>{fmtCOP(a.costo)}</td>
+                      {/* Método de pago */}
                       <td style={{ padding: "12px 10px" }}>
                         {metodo ? (
                           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -368,8 +412,11 @@ export default function AsignacionTareas() {
                           </div>
                         ) : "—"}
                       </td>
+                      {/* Prioridad */}
                       <td style={{ padding: "12px 10px" }}>{badgePrioridad(a.prioridad)}</td>
+                      {/* Fecha límite */}
                       <td style={{ padding: "12px 10px", fontSize: 13, color: "#6b7280" }}>{fmtFecha(a.fecha_limite)}</td>
+                      {/* Estado */}
                       <td style={{ padding: "12px 10px" }}>
                         <span style={{ ...(estadoStyle[a.estado] || estadoStyle.Pendiente), padding: "4px 12px", borderRadius: 12, fontSize: 12, fontWeight: 600 }}>
                           {a.estado}
@@ -407,21 +454,34 @@ export default function AsignacionTareas() {
               )}
             </div>
 
-            {/* ── SECCIÓN CLIENTE ── */}
+            {/* Sucursal */}
+            <div style={{ marginBottom: 16, padding: "14px 16px", borderRadius: 10, background: "#faf7f2", border: `1px solid ${DORADO_CLARO}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                <span style={{ color: DORADO_OSCURO }}><BuildingIcon /></span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: DORADO_OSCURO }}>Sucursal del mantenimiento</span>
+              </div>
+              {cargandoSuc ? (
+                <div style={{ fontSize: 12, color: "#9ca3af", padding: "8px 0" }}>Cargando sucursales...</div>
+              ) : (
+                <select value={form.id_sucursal} onChange={(e) => setForm({ ...form, id_sucursal: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }}>
+                  <option value="">— Selecciona sucursal —</option>
+                  {sucursales.map((s) => (
+                    <option key={s.id_sucursal} value={s.id_sucursal}>{s.nombre_sucursal}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* Cliente */}
             <div style={{ marginBottom: 16, padding: "14px 16px", borderRadius: 10, background: "#faf7f2", border: `1px solid ${DORADO_CLARO}` }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
                 <span style={{ color: DORADO_OSCURO }}><UserIcon /></span>
                 <span style={{ fontSize: 13, fontWeight: 600, color: DORADO_OSCURO }}>Cliente del mantenimiento</span>
               </div>
-
               {cargandoClientes ? (
                 <div style={{ fontSize: 12, color: "#9ca3af", padding: "8px 0" }}>Cargando clientes...</div>
               ) : (
-                <select
-                  value={form.id_cliente}
-                  onChange={(e) => setForm({ ...form, id_cliente: e.target.value })}
-                  style={{ ...inputStyle, marginBottom: clienteSeleccionado ? 10 : 0 }}
-                >
+                <select value={form.id_cliente} onChange={(e) => setForm({ ...form, id_cliente: e.target.value })} style={{ ...inputStyle, marginBottom: clienteSeleccionado ? 10 : 0 }}>
                   <option value="">— Sin cliente asignado (opcional) —</option>
                   {clientes.map((c) => (
                     <option key={c.id_cliente} value={c.id_cliente}>
@@ -431,17 +491,11 @@ export default function AsignacionTareas() {
                   ))}
                 </select>
               )}
-
-              {/* Tarjeta info cliente */}
               {clienteSeleccionado && (
                 <div style={{ background: "#fff", border: `1px solid ${DORADO_CLARO}`, borderRadius: 8, padding: "10px 14px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: "#1a1a1a" }}>{clienteSeleccionado.nombre_completo}</span>
-                    <span style={{
-                      fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20,
-                      background: clienteSeleccionado.estado === "Activo" ? "#f0ece4" : "#f3f4f6",
-                      color:      clienteSeleccionado.estado === "Activo" ? DORADO_OSCURO : "#6b7280",
-                    }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20, background: clienteSeleccionado.estado === "Activo" ? "#f0ece4" : "#f3f4f6", color: clienteSeleccionado.estado === "Activo" ? DORADO_OSCURO : "#6b7280" }}>
                       {clienteSeleccionado.estado}
                     </span>
                   </div>

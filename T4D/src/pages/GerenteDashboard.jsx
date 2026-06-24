@@ -8,6 +8,7 @@ import AsignacionTareas from "../components/GerenteDashboard/AsignacionTareas";
 import Clientes from "../components/GerenteDashboard/Clientes";
 import DireccionesCliente from "../components/GerenteDashboard/DireccionesCliente";
 import PerfilUsuario from "../components/AdminDasboard/PerfilUsuario";
+import HistorialPrecios from "../components/GerenteDashboard/HistorialPrecios";
 
 function GerenteDashboard() {
 
@@ -69,6 +70,7 @@ function GerenteDashboard() {
 
           {vistaGerente === "inventario" && <Inventario />}
           {vistaGerente === "movimientos" && <Movimientos />}
+          {vistaGerente === "historialprecios" && <HistorialPrecios usuario={usuario} />}
           {vistaGerente === "asignacion-tareas" && <AsignacionTareas />}
           {vistaGerente === "cliente" && <Clientes />}
           {vistaGerente === "direcciones-cliente" && <DireccionesCliente />}

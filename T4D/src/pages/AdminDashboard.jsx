@@ -7,7 +7,8 @@ import Reportes from "../components/AdminDasboard/Reportes";
 import GestionUsuarios from "../components/AdminDasboard/GestionUsuarios";
 import Notificaciones from "../components/AdminDasboard/Notificaciones";
 import RegistroUsuarios from "../components/AdminDasboard/RegistroUsuarios";
-import PerfilAdmin from "../components/AdminDasboard/PerfilUsuario";  // ← cambiado
+import PerfilAdmin from "../components/AdminDasboard/PerfilUsuario";  
+import HistorialPrecios from "../components/AdminDasboard/HistorialPrecios";
 
 function AdminDashboard() {
 
@@ -55,6 +56,7 @@ function AdminDashboard() {
         <main className="p-4">
           {vistaAdmin === "inventario"      && <Inventario />}
           {vistaAdmin === "movimientos"     && <Movimientos />}
+          {vistaAdmin === "historialprecios" && <HistorialPrecios usuario={usuario} />}
           {vistaAdmin === "notificaciones"  && <Notificaciones notificaciones={notificaciones} setNotificaciones={setNotificaciones} />}
           {vistaAdmin === "reportes"        && <Reportes />}
           {vistaAdmin === "GestionUsuarios" && <GestionUsuarios />}

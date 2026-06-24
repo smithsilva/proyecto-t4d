@@ -89,7 +89,7 @@ function ContadoraDashboard() {
             {vistaContadora === "movimientoscontables" && <MovimientosContables />}
             {vistaContadora === "empleados" && <Empleados />}
             {vistaContadora === "proveedores" && <Proveedores />}
-            {vistaContadora === "historialprecios" && <HistorialPrecios />}
+            {vistaContadora === "historialprecios" && <HistorialPrecios usuario={usuario} />}
             {vistaContadora === "metodospago" && <MetodosPago />}
             {vistaContadora === "sucursales" && <Sucursales />}
         </main>

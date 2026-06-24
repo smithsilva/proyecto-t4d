@@ -34,6 +34,7 @@ function SidebarAdmin({ setVistaAdmin, vistaAdmin }) {
   const menuItems = [
     { key: "inventario",      icon: "bi-box-seam",        label: "Inventario"   },
     { key: "movimientos",     icon: "bi-arrow-left-right", label: "Movimientos"  },
+    { key: "historialprecios", icon: "bi-clock-history", label: "Historial de Precios" },
     { key: "notificaciones",  icon: "bi-bell",             label: "Notificaciones" },
     { key: "reportes",        icon: "bi-bar-chart",        label: "Reportes"     },
     { key: "GestionUsuarios", icon: "bi-people",           label: "Usuarios"     },

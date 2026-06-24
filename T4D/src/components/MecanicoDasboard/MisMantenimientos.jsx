@@ -7,36 +7,25 @@ import { supabase } from "../../supabase/supabaseClient";
 
 function MisMantenimientos({ usuario }) {
 
-  // =========================
-  // PALETA (igual a Inventario)
-  // =========================
-  const DORADO = "#d4a743";
-  const DORADO_OSCURO = "#8c6b3f";
-  const DORADO_CLARO = "#e7c98a";
-  const FONDO = "#f7f1e3";
-  const ENCABEZADO = "#13202e";
+  const DORADO           = "#d4a743";
+  const DORADO_OSCURO    = "#8c6b3f";
+  const DORADO_CLARO     = "#e7c98a";
+  const FONDO            = "#f7f1e3";
+  const ENCABEZADO       = "#13202e";
   const TEXTO_ENCABEZADO = "#e7c98a";
 
-  // =========================
-  // ESTADOS
-  // =========================
-  const [data, setData] = useState([]);
-  const [cargando, setCargando] = useState(true);
-  const [search, setSearch] = useState("");
-  const [filterEstado, setFilterEstado] = useState("");
-  const [filterTipo, setFilterTipo] = useState("");
-
-  // Modal detalle
-  const [modalDetalle, setModalDetalle] = useState(null);
-  const [productos, setProductos] = useState([]);
-  const [detalles, setDetalles] = useState([]);
+  const [data,            setData]            = useState([]);
+  const [cargando,        setCargando]        = useState(true);
+  const [search,          setSearch]          = useState("");
+  const [filterEstado,    setFilterEstado]    = useState("");
+  const [filterTipo,      setFilterTipo]      = useState("");
+  const [modalDetalle,    setModalDetalle]    = useState(null);
+  const [productos,       setProductos]       = useState([]);
+  const [detalles,        setDetalles]        = useState([]);
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
-  const [nuevoProducto, setNuevoProducto] = useState({ id_producto: "", cantidad: 1 });
-  const [guardando, setGuardando] = useState(false);
+  const [nuevoProducto,   setNuevoProducto]   = useState({ id_producto: "", cantidad: 1 });
+  const [guardando,       setGuardando]       = useState(false);
 
-  // =========================
-  // TIPOS
-  // =========================
   const TIPOS = [
     "Mantenimiento", "Reparación", "Blindamiento", "Inspección",
     "Fisica", "Online", "Preventivo", "Correctivo",
@@ -44,9 +33,7 @@ function MisMantenimientos({ usuario }) {
     "Blindaje Nivel 4", "Blindaje Nivel 5",
   ];
 
-  // =========================
-  // CARGAR ASIGNACIONES
-  // =========================
+  // ── Carga asignaciones ────────────────────────────────────────
   const cargarAsignaciones = async () => {
     if (!usuario) { setCargando(false); return; }
     setCargando(true);
@@ -54,132 +41,90 @@ function MisMantenimientos({ usuario }) {
     const { data: rows, error } = await supabase
       .from("asignaciones_tareas")
       .select(`
-        id_asignacion, id_mecanico, vehiculo, tipo_trabajo,
+        id_asignacion, id_mantenimiento, id_mecanico, vehiculo, tipo_trabajo,
         descripcion, prioridad, fecha_limite, estado, fecha_asignacion,
-        costo,
-        metodos_pago(
-          nombre_metodo,
-          permite_online
-        )
+        costo, id_metodo_pago, id_cliente, id_sucursal,
+        metodos_pago(nombre_metodo, permite_online),
+        clientes(id_cliente, nombre_completo, tipo_documento, numero_documento, telefono, email, estado)
       `)
       .eq("id_mecanico", usuario.id_usuario)
       .order("fecha_asignacion", { ascending: false });
 
-    if (error) {
-      Swal.fire({ icon: "error", title: "Error cargando asignaciones", text: error.message });
-      setCargando(false);
-      return;
-    }
-
     setData((rows || []).map((r) => ({
-      id_mantenimiento: r.id_asignacion,
-      fecha_hora: r.fecha_asignacion?.slice(0, 16).replace("T", " ") || "—",
+      id_asignacion:         r.id_asignacion,
+      id_mantenimiento_real: r.id_mantenimiento,
+      id_cliente:            r.id_cliente,
+      id_metodo_pago:        r.id_metodo_pago,
+      id_sucursal:           r.id_sucursal,
+      fecha_hora:            r.fecha_asignacion?.slice(0, 16).replace("T", " ") || "—",
       tipo_de_mantenimiento: r.tipo_trabajo,
-      id_cliente: r.vehiculo,
-      descripcion: r.descripcion,
-      prioridad: r.prioridad,
-      fecha_limite: r.fecha_limite,
-      estado: r.estado,
-      costo: r.costo,
-      metodo_pago: r.metodos_pago,
+      vehiculo:              r.vehiculo,
+      descripcion:           r.descripcion,
+      prioridad:             r.prioridad,
+      fecha_limite:          r.fecha_limite,
+      estado:                r.estado,
+      costo:                 r.costo,
+      metodo_pago:           r.metodos_pago,
+      cliente:               r.clientes || null,
     })));
 
     setCargando(false);
   };
 
-  // =========================
-  // CARGAR PRODUCTOS (catálogo)
-  // =========================
   const cargarProductos = async () => {
-    const { data, error } = await supabase
+    const { data: prods } = await supabase
       .from("productos")
       .select("id_producto, nombre_producto, stock_actual")
       .eq("activo", true)
       .order("nombre_producto");
-    if (!error) setProductos(data || []);
+    setProductos(prods || []);
   };
 
-  // =========================
-  // CARGAR DETALLE DE UNA ASIGNACIÓN
-  // =========================
   const cargarDetalle = async (id_asignacion) => {
     setCargandoDetalle(true);
-    const { data, error } = await supabase
+    const { data: det } = await supabase
       .from("detalle_asignacion")
-      .select(`
-        id_detalle,
-        cantidad,
-        productos(id_producto, nombre_producto, precio_actual)
-      `)
+      .select(`id_detalle, cantidad, productos(id_producto, nombre_producto, precio_actual)`)
       .eq("id_asignacion", id_asignacion);
-
-    if (!error) setDetalles(data || []);
+    setDetalles(det || []);
     setCargandoDetalle(false);
   };
 
-  // =========================
-  // ABRIR MODAL DETALLE
-  // =========================
+  // ── Abrir detalle usando id_asignacion ────────────────────────
   const abrirDetalle = async (m) => {
     setModalDetalle(m);
     setNuevoProducto({ id_producto: "", cantidad: 1 });
-    await cargarDetalle(m.id_mantenimiento);
+    await cargarDetalle(m.id_asignacion); // ✅ corregido
   };
 
-  // =========================
-  // AGREGAR PRODUCTO AL DETALLE
-  // =========================
   const agregarProducto = async () => {
     if (!nuevoProducto.id_producto || nuevoProducto.cantidad < 1) {
       Swal.fire({ icon: "warning", title: "Completa los campos", text: "Selecciona un producto e indica la cantidad.", confirmButtonColor: DORADO_OSCURO });
       return;
     }
-
-    const yaExiste = detalles.find(d => d.productos?.id_producto === parseInt(nuevoProducto.id_producto));
+    const yaExiste = detalles.find((d) => d.productos?.id_producto === parseInt(nuevoProducto.id_producto));
     if (yaExiste) {
-      Swal.fire({ icon: "warning", title: "Producto ya agregado", text: "Ese producto ya está en el detalle. Elimínalo primero si quieres cambiar la cantidad.", confirmButtonColor: DORADO_OSCURO });
+      Swal.fire({ icon: "warning", title: "Producto ya agregado", text: "Ese producto ya está en el detalle.", confirmButtonColor: DORADO_OSCURO });
       return;
     }
-
     setGuardando(true);
-    const { error } = await supabase
-      .from("detalle_asignacion")
-      .insert([{
-        id_asignacion: modalDetalle.id_mantenimiento,
-        id_producto: parseInt(nuevoProducto.id_producto),
-        cantidad: parseInt(nuevoProducto.cantidad),
-      }]);
-
-    if (error) {
-      Swal.fire({ icon: "error", title: "Error", text: error.message });
-      setGuardando(false);
-      return;
-    }
-
+    const { error } = await supabase.from("detalle_asignacion").insert([{
+      id_asignacion: modalDetalle.id_asignacion, // ✅ corregido
+      id_producto:   parseInt(nuevoProducto.id_producto),
+      cantidad:      parseInt(nuevoProducto.cantidad),
+    }]);
+    if (error) { Swal.fire({ icon: "error", title: "Error", text: error.message }); setGuardando(false); return; }
     setNuevoProducto({ id_producto: "", cantidad: 1 });
-    await cargarDetalle(modalDetalle.id_mantenimiento);
+    await cargarDetalle(modalDetalle.id_asignacion); // ✅ corregido
     setGuardando(false);
   };
 
-  // =========================
-  // ELIMINAR PRODUCTO DEL DETALLE
-  // =========================
   const eliminarDetalle = async (id_detalle) => {
-    const { error } = await supabase
-      .from("detalle_asignacion")
-      .delete()
-      .eq("id_detalle", id_detalle);
-
-    if (error) {
-      Swal.fire({ icon: "error", title: "Error", text: error.message });
-      return;
-    }
-    await cargarDetalle(modalDetalle.id_mantenimiento);
+    const { error } = await supabase.from("detalle_asignacion").delete().eq("id_detalle", id_detalle);
+    if (error) { Swal.fire({ icon: "error", title: "Error", text: error.message }); return; }
+    await cargarDetalle(modalDetalle.id_asignacion); // ✅ corregido
   };
 
-  // =========================
-  // EFECTO
-  // =========================
   useEffect(() => {
     cargarAsignaciones();
     cargarProductos();
@@ -187,68 +132,99 @@ function MisMantenimientos({ usuario }) {
     return () => clearInterval(intervalo);
   }, [usuario]);
 
-  // =========================
-  // FILTROS
-  // =========================
   const filtered = data.filter((d) => {
-    const texto = search.toLowerCase();
-    const coincideBusqueda =
+    const texto         = search.toLowerCase();
+    const nombreCliente = d.cliente?.nombre_completo || "";
+    const coincide =
       !texto ||
-      String(d.id_mantenimiento).includes(texto) ||
-      (d.id_cliente || "").toLowerCase().includes(texto) ||
-      (d.tipo_de_mantenimiento || "").toLowerCase().includes(texto);
-    return coincideBusqueda &&
-      (!filterEstado || d.estado === filterEstado) &&
-      (!filterTipo || d.tipo_de_mantenimiento === filterTipo);
+      String(d.id_asignacion).includes(texto) ||
+      (d.vehiculo              || "").toLowerCase().includes(texto) ||
+      (d.tipo_de_mantenimiento || "").toLowerCase().includes(texto) ||
+      nombreCliente.toLowerCase().includes(texto);
+    return coincide &&
+      (!filterEstado || d.estado               === filterEstado) &&
+      (!filterTipo   || d.tipo_de_mantenimiento === filterTipo);
   });
 
-  // =========================
-  // MÉTRICAS
-  // =========================
   const pendientes  = data.filter((d) => d.estado === "Pendiente").length;
   const enProceso   = data.filter((d) => d.estado === "En proceso").length;
   const finalizados = data.filter((d) => d.estado === "Finalizada").length;
 
-  // =========================
-  // ACEPTAR TAREA
-  // =========================
-  const aceptarTarea = async (id_asignacion) => {
-    const { error } = await supabase
+  // ── Aceptar tarea: recibe el objeto completo ──────────────────
+  const aceptarTarea = async (item) => {
+    // 1. Cambiar estado de la asignación
+    const { error: errUpd } = await supabase
       .from("asignaciones_tareas")
       .update({ estado: "En proceso" })
-      .eq("id_asignacion", id_asignacion);
+      .eq("id_asignacion", item.id_asignacion); // ✅ corregido
+    if (errUpd) { Swal.fire({ icon: "error", title: "Error", text: errUpd.message }); return; }
 
-    if (error) { Swal.fire({ icon: "error", title: "Error", text: error.message }); return; }
+    // 2. Calcular subtotal e IVA
+    const total    = Number(item.costo) || 0;
+    const subtotal = +(total / 1.19).toFixed(2);
+    const iva      = +(total - subtotal).toFixed(2);
+
+    // 3. Crear el mantenimiento real
+    const { data: mant, error: errMant } = await supabase
+      .from("mantenimiento")
+      .insert([{
+        fecha_hora:            new Date().toISOString(),
+        tipo_de_mantenimiento: item.metodo_pago?.permite_online ? "Online" : "Fisica", // ✅ respeta el CHECK
+        estado:                "Pendiente",
+        id_sucursal:           item.id_sucursal,
+        id_cliente:            item.id_cliente,
+        id_empleado_cajero:    null,
+        subtotal, iva, total,
+        id_metodo_pago:        item.id_metodo_pago,
+        id_asignacion:         item.id_asignacion, // ✅ corregido
+      }])
+      .select("id_mantenimiento")
+      .single();
+
+    if (errMant) { Swal.fire({ icon: "error", title: "Error creando mantenimiento", text: errMant.message }); return; }
+
+    // 4. Vincular el mantenimiento creado a la asignación
+    await supabase
+      .from("asignaciones_tareas")
+      .update({ id_mantenimiento: mant.id_mantenimiento })
+      .eq("id_asignacion", item.id_asignacion); // ✅ corregido
 
     setData((prev) => prev.map((d) =>
-      d.id_mantenimiento === id_asignacion ? { ...d, estado: "En proceso" } : d
+      d.id_asignacion === item.id_asignacion
+        ? { ...d, estado: "En proceso", id_mantenimiento_real: mant.id_mantenimiento }
+        : d
     ));
-    Swal.fire({ icon: "success", title: "Tarea aceptada", text: "La tarea ahora está en proceso", confirmButtonColor: DORADO_OSCURO, timer: 1800, showConfirmButton: false });
+
+    // 5. Cerrar modal si está abierto con esta asignación
+    if (modalDetalle?.id_asignacion === item.id_asignacion) {
+      setModalDetalle((prev) => ({ ...prev, estado: "En proceso" }));
+    }
+
+    Swal.fire({ icon: "success", title: "Tarea aceptada", text: "Se agregó a tus mantenimientos.", timer: 1800, showConfirmButton: false });
   };
 
-  // =========================
-  // FINALIZAR TAREA
-  // =========================
+  // ── Finalizar tarea ───────────────────────────────────────────
   const finalizarTarea = async (id_asignacion) => {
     const { error } = await supabase
       .from("asignaciones_tareas")
       .update({ estado: "Finalizada" })
-      .eq("id_asignacion", id_asignacion);
-
+      .eq("id_asignacion", id_asignacion); // ✅ corregido
     if (error) { Swal.fire({ icon: "error", title: "Error", text: error.message }); return; }
 
-    setData((prev) => prev.map((d) =>
-      d.id_mantenimiento === id_asignacion ? { ...d, estado: "Finalizada" } : d
-    ));
-    if (modalDetalle?.id_mantenimiento === id_asignacion) {
+    // Cierra también el mantenimiento vinculado
+    const { error: errMant } = await supabase
+      .from("mantenimiento")
+      .update({ estado: "Completada" })
+      .eq("id_asignacion", id_asignacion); // ✅ corregido
+    if (errMant) { Swal.fire({ icon: "error", title: "Error actualizando mantenimiento", text: errMant.message }); return; }
+
+    setData((prev) => prev.map((d) => d.id_asignacion === id_asignacion ? { ...d, estado: "Finalizada" } : d));
+    if (modalDetalle?.id_asignacion === id_asignacion)
       setModalDetalle((prev) => ({ ...prev, estado: "Finalizada" }));
-    }
-    Swal.fire({ icon: "success", title: "Trabajo finalizado", confirmButtonColor: DORADO_OSCURO, timer: 1800, showConfirmButton: false });
+
+    Swal.fire({ icon: "success", title: "Trabajo finalizado", timer: 1800, showConfirmButton: false });
   };
 
-  // =========================
-  // BADGES (estilo Inventario: píldoras suaves)
-  // =========================
   const TipoBadge = ({ tipo }) => (
     <span style={{ backgroundColor: "#f0ece4", color: DORADO_OSCURO, padding: "4px 12px", borderRadius: "12px", fontSize: "12px", fontWeight: 600 }}>
       {tipo || "—"}
@@ -257,9 +233,9 @@ function MisMantenimientos({ usuario }) {
 
   const EstadoBadge = ({ estado }) => {
     const estilos = {
-      Pendiente:    { color: "#b8860b", fondo: "#fdf3da" },
+      Pendiente:    { color: "#b8860b",     fondo: "#fdf3da" },
       "En proceso": { color: DORADO_OSCURO, fondo: "#f5e8c8" },
-      Finalizada:   { color: "#1f9d55", fondo: "#e3f7e9" },
+      Finalizada:   { color: "#1f9d55",     fondo: "#e3f7e9" },
     };
     const e = estilos[estado] || { color: "#555", fondo: "#eee" };
     return (
@@ -269,9 +245,16 @@ function MisMantenimientos({ usuario }) {
     );
   };
 
-  // =========================
-  // TARJETAS MÉTRICAS (estilo Inventario)
-  // =========================
+  const ClienteBadge = ({ cliente }) => {
+    if (!cliente) return <span style={{ fontSize: 12, color: "#9ca3af", fontStyle: "italic" }}>Sin cliente</span>;
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a" }}>{cliente.nombre_completo}</span>
+        <span style={{ fontSize: 11, color: "#6b7280" }}>{cliente.tipo_documento} {cliente.numero_documento}</span>
+      </div>
+    );
+  };
+
   const CardMetric = ({ titulo, valor, subtitulo, icono }) => (
     <div className="col-md-3">
       <div className="p-3 rounded-4 shadow-sm d-flex justify-content-between"
@@ -286,28 +269,15 @@ function MisMantenimientos({ usuario }) {
     </div>
   );
 
-  const labelFiltro = {
-    fontSize: "12px",
-    fontWeight: 600,
-    color: DORADO_OSCURO,
-    marginBottom: "4px",
-    display: "block",
-  };
+  const labelFiltro = { fontSize: "12px", fontWeight: 600, color: DORADO_OSCURO, marginBottom: "4px", display: "block" };
 
-  // =========================
-  // RENDER
-  // =========================
   return (
     <div style={{ padding: "20px", width: "100%", minHeight: "100vh", boxSizing: "border-box", backgroundColor: FONDO }}>
 
       {/* HEADER */}
-      <div
-        className="mb-4 p-4 rounded-4"
-        style={{ backgroundColor: "#fffdf8", border: `1px solid ${DORADO_CLARO}`, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}
-      >
-        <h4 className="fw-bold mb-2" style={{ color: "#1a1a1a" }}>
-          Mis Tareas y Mantenimientos
-        </h4>
+      <div className="mb-4 p-4 rounded-4"
+        style={{ backgroundColor: "#fffdf8", border: `1px solid ${DORADO_CLARO}`, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
+        <h4 className="fw-bold mb-2" style={{ color: "#1a1a1a" }}>Mis Tareas y Mantenimientos</h4>
         <div className="d-flex align-items-center" style={{ gap: "10px" }}>
           <span style={{ height: "2px", width: "70px", background: `linear-gradient(to right, transparent, ${DORADO})`, display: "inline-block" }} />
           <span style={{ color: DORADO, fontSize: "14px" }}>★</span>
@@ -318,33 +288,26 @@ function MisMantenimientos({ usuario }) {
 
       {/* MÉTRICAS */}
       <div className="row g-3 mb-4">
-        <CardMetric titulo="Pendientes"   valor={pendientes}   subtitulo="Por aceptar"      icono={<Clock3 size={20} color={DORADO_OSCURO} />} />
-        <CardMetric titulo="En proceso"   valor={enProceso}    subtitulo="Trabajos activos" icono={<Wrench size={20} color={DORADO_OSCURO} />} />
-        <CardMetric titulo="Finalizados"  valor={finalizados}  subtitulo="Completados"      icono={<CheckCircle size={20} color={DORADO_OSCURO} />} />
-        <CardMetric titulo="Total tareas" valor={data.length}  subtitulo="Asignaciones"     icono={<Shield size={20} color={DORADO_OSCURO} />} />
+        <CardMetric titulo="Pendientes"   valor={pendientes}  subtitulo="Por aceptar"      icono={<Clock3      size={20} color={DORADO_OSCURO} />} />
+        <CardMetric titulo="En proceso"   valor={enProceso}   subtitulo="Trabajos activos" icono={<Wrench      size={20} color={DORADO_OSCURO} />} />
+        <CardMetric titulo="Finalizados"  valor={finalizados} subtitulo="Completados"      icono={<CheckCircle size={20} color={DORADO_OSCURO} />} />
+        <CardMetric titulo="Total tareas" valor={data.length} subtitulo="Asignaciones"     icono={<Shield      size={20} color={DORADO_OSCURO} />} />
       </div>
 
       {/* FILTROS */}
       <div className="p-4 rounded-4 shadow-sm mb-4" style={{ backgroundColor: "#fffdf8", border: `1px solid ${DORADO_CLARO}` }}>
         <div className="d-flex align-items-center gap-2 mb-3">
           <Filter size={18} color={DORADO_OSCURO} />
-          <h6 className="fw-bold mb-0" style={{ color: "#1a1a1a", fontSize: "16px" }}>
-            Filtros y búsqueda
-          </h6>
+          <h6 className="fw-bold mb-0" style={{ color: "#1a1a1a", fontSize: "16px" }}>Filtros y búsqueda</h6>
         </div>
-
         <div className="row g-2">
           <div className="col-md-6">
             <div className="position-relative">
               <Search size={16} style={{ position: "absolute", top: "12px", left: "12px", color: "#999" }} />
-              <input
-                type="text"
-                className="form-control rounded-pill"
-                placeholder="Buscar..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                style={{ paddingLeft: "35px" }}
-              />
+              <input type="text" className="form-control rounded-pill"
+                placeholder="Buscar por vehículo, cliente o tipo..."
+                value={search} onChange={(e) => setSearch(e.target.value)}
+                style={{ paddingLeft: "35px" }} />
             </div>
           </div>
           <div className="col-md-3">
@@ -376,85 +339,103 @@ function MisMantenimientos({ usuario }) {
           </div>
         ) : (
           <div className="table-responsive">
-            <table className="table align-middle mb-0" style={{ minWidth: "900px", backgroundColor: "#fffdf8" }}>
+            <table className="table align-middle mb-0" style={{ minWidth: "1000px", backgroundColor: "#fffdf8" }}>
               <thead>
                 <tr style={{ backgroundColor: ENCABEZADO }}>
-                  <th className="ps-3" style={{ backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none", padding: "12px 8px" }}>ID</th>
-                  <th style={{ backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Fecha</th>
-                  <th style={{ backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Tipo</th>
-                  <th style={{ backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Vehículo / Cliente</th>
-                  <th style={{ backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Estado</th>
-                  <th className="text-center" style={{ backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Acciones</th>
+                  {["ID", "Fecha", "Tipo", "Cliente", "Vehículo", "Estado", "Acciones"].map((h) => (
+                    <th key={h} className={h === "ID" ? "ps-3" : ""}
+                      style={{ backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none", padding: "12px 10px", fontWeight: 600 }}>
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="text-center py-5 text-muted">
+                    <td colSpan="7" className="text-center py-5 text-muted">
                       {data.length === 0 ? "No tienes asignaciones aún" : "Sin resultados"}
                     </td>
                   </tr>
-                ) : (
-                  filtered.map((d) => (
-                    <tr key={d.id_mantenimiento} style={{ fontSize: "13px", borderBottom: "1px solid #ece4d3" }}>
-                      <td className="ps-3 fw-bold" style={{ color: DORADO_OSCURO }}>#{d.id_mantenimiento}</td>
-                      <td>{d.fecha_hora}</td>
-                      <td><TipoBadge tipo={d.tipo_de_mantenimiento} /></td>
-                      <td>{d.id_cliente || "—"}</td>
-                      <td><EstadoBadge estado={d.estado} /></td>
-                      <td>
-                        <div className="d-flex gap-3 justify-content-center align-items-center">
-                          <Eye size={18} style={{ cursor: "pointer", color: "#555" }} onClick={() => abrirDetalle(d)} />
-                          {d.estado === "Pendiente" && (
-                            <button onClick={() => aceptarTarea(d.id_mantenimiento)} className="btn btn-sm"
-                              style={{ background: `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`, color: "#fff", border: "none", borderRadius: "20px", fontSize: "11px", fontWeight: 600 }}>
-                              <Check size={14} />
-                            </button>
-                          )}
-                          {d.estado === "En proceso" && (
-                            <button onClick={() => finalizarTarea(d.id_mantenimiento)} className="btn btn-sm"
-                              style={{ backgroundColor: "#1f9d55", color: "#fff", border: "none", borderRadius: "20px", fontSize: "11px", fontWeight: 600 }}>
-                              <Check size={14} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                ) : filtered.map((d) => (
+                  // ✅ key e ID usan id_asignacion
+                  <tr key={d.id_asignacion} style={{ fontSize: "13px", borderBottom: "1px solid #ece4d3" }}>
+                    <td className="ps-3 fw-bold" style={{ color: DORADO_OSCURO }}>#{d.id_asignacion}</td>
+                    <td style={{ fontSize: 12, color: "#6b7280" }}>{d.fecha_hora}</td>
+                    <td><TipoBadge tipo={d.tipo_de_mantenimiento} /></td>
+                    <td style={{ minWidth: 160 }}><ClienteBadge cliente={d.cliente} /></td>
+                    <td style={{ fontWeight: 600 }}>{d.vehiculo || "—"}</td>
+                    <td><EstadoBadge estado={d.estado} /></td>
+                    <td>
+                      <div className="d-flex gap-3 justify-content-center align-items-center">
+                        <Eye size={18} style={{ cursor: "pointer", color: "#555" }} onClick={() => abrirDetalle(d)} />
+                        {/* ✅ Se pasa el objeto completo d, no solo el ID */}
+                        {d.estado === "Pendiente" && (
+                          <button onClick={() => aceptarTarea(d)} className="btn btn-sm"
+                            style={{ background: `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`, color: "#fff", border: "none", borderRadius: "20px", fontSize: "11px", fontWeight: 600 }}>
+                            <Check size={14} />
+                          </button>
+                        )}
+                        {d.estado === "En proceso" && (
+                          <button onClick={() => finalizarTarea(d.id_asignacion)} className="btn btn-sm"
+                            style={{ backgroundColor: "#1f9d55", color: "#fff", border: "none", borderRadius: "20px", fontSize: "11px", fontWeight: 600 }}>
+                            <Check size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      {/* ==============================
-          MODAL DETALLE
-      ============================== */}
+      {/* MODAL DETALLE */}
       {modalDetalle && (
-        <div
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
-          onClick={() => setModalDetalle(null)}
-        >
-          <div
-            style={{ background: "#fffdf8", borderRadius: 20, width: "100%", maxWidth: 560, maxHeight: "90vh", overflowY: "auto", padding: 28, position: "relative", border: `1px solid ${DORADO_CLARO}` }}
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+          onClick={() => setModalDetalle(null)}>
+          <div style={{ background: "#fffdf8", borderRadius: 20, width: "100%", maxWidth: 580, maxHeight: "90vh", overflowY: "auto", padding: 28, position: "relative", border: `1px solid ${DORADO_CLARO}` }}
+            onClick={(e) => e.stopPropagation()}>
+
             <button onClick={() => setModalDetalle(null)}
               style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer" }}>
               <X size={20} color="#6b7280" />
             </button>
 
-            <h5 className="fw-bold mb-1" style={{ color: "#1a1a1a" }}>Asignación #{modalDetalle.id_mantenimiento}</h5>
+            <h5 className="fw-bold mb-1" style={{ color: "#1a1a1a" }}>Asignación #{modalDetalle.id_asignacion}</h5>
             <div style={{ width: 40, height: 3, backgroundColor: DORADO, borderRadius: 4, marginBottom: 18 }} />
 
+            {/* Tarjeta cliente */}
+            {modalDetalle.cliente && (
+              <div style={{ marginBottom: 18, padding: "12px 16px", borderRadius: 10, background: "#fff", border: `1.5px solid ${DORADO_CLARO}` }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: DORADO_OSCURO, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Cliente</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "#1a1a1a" }}>{modalDetalle.cliente.nombre_completo}</span>
+                    <span style={{
+                      fontSize: 10, fontWeight: 600, padding: "2px 8px", borderRadius: 20,
+                      background: modalDetalle.cliente.estado === "Activo" ? "#f0ece4" : "#f3f4f6",
+                      color:      modalDetalle.cliente.estado === "Activo" ? DORADO_OSCURO : "#6b7280",
+                    }}>
+                      {modalDetalle.cliente.estado}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>{modalDetalle.cliente.tipo_documento} · {modalDetalle.cliente.numero_documento}</span>
+                  {modalDetalle.cliente.telefono && <span style={{ fontSize: 12, color: "#6b7280" }}>📞 {modalDetalle.cliente.telefono}</span>}
+                  {modalDetalle.cliente.email    && <span style={{ fontSize: 12, color: "#6b7280" }}>✉ {modalDetalle.cliente.email}</span>}
+                </div>
+              </div>
+            )}
+
             {[
-              ["Vehículo",         modalDetalle.id_cliente || "—"],
+              ["Vehículo",         modalDetalle.vehiculo              || "—"],
               ["Tipo",             modalDetalle.tipo_de_mantenimiento || "—"],
-              ["Descripción",      modalDetalle.descripcion || "—"],
-              ["Prioridad",        modalDetalle.prioridad || "—"],
+              ["Descripción",      modalDetalle.descripcion           || "—"],
+              ["Prioridad",        modalDetalle.prioridad             || "—"],
               ["Fecha asignación", modalDetalle.fecha_hora],
-              ["Fecha límite",     modalDetalle.fecha_limite || "—"],
+              ["Fecha límite",     modalDetalle.fecha_limite          || "—"],
               ["Estado",           modalDetalle.estado],
             ].map(([label, valor]) => (
               <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #ece4d3", fontSize: 13 }}>
@@ -464,14 +445,16 @@ function MisMantenimientos({ usuario }) {
             ))}
 
             <div className="d-flex gap-2 mt-3 mb-4">
+              {/* ✅ Se pasa el objeto completo modalDetalle */}
               {modalDetalle.estado === "Pendiente" && (
-                <button onClick={() => aceptarTarea(modalDetalle.id_mantenimiento)} className="btn btn-sm"
+                <button onClick={() => aceptarTarea(modalDetalle)} className="btn btn-sm"
                   style={{ background: `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`, color: "#fff", border: "none", borderRadius: 20, fontWeight: 600, fontSize: 12 }}>
                   <Check size={13} /> Aceptar tarea
                 </button>
               )}
+              {/* ✅ Se pasa id_asignacion */}
               {modalDetalle.estado === "En proceso" && (
-                <button onClick={() => finalizarTarea(modalDetalle.id_mantenimiento)} className="btn btn-sm"
+                <button onClick={() => finalizarTarea(modalDetalle.id_asignacion)} className="btn btn-sm"
                   style={{ backgroundColor: "#1f9d55", color: "#fff", border: "none", borderRadius: 20, fontWeight: 600, fontSize: 12 }}>
                   <Check size={13} /> Finalizar tarea
                 </button>
@@ -481,12 +464,9 @@ function MisMantenimientos({ usuario }) {
             <h6 className="fw-bold mb-2" style={{ color: DORADO_OSCURO }}>Productos usados</h6>
 
             <div className="d-flex gap-2 mb-3" style={{ flexWrap: "wrap" }}>
-              <select
-                value={nuevoProducto.id_producto}
+              <select value={nuevoProducto.id_producto}
                 onChange={(e) => setNuevoProducto((p) => ({ ...p, id_producto: e.target.value }))}
-                className="form-select form-select-sm rounded-pill"
-                style={{ flex: 2, minWidth: 160 }}
-              >
+                className="form-select form-select-sm rounded-pill" style={{ flex: 2, minWidth: 160 }}>
                 <option value="">Seleccionar producto</option>
                 {productos.map((p) => (
                   <option key={p.id_producto} value={p.id_producto}>
@@ -494,16 +474,11 @@ function MisMantenimientos({ usuario }) {
                   </option>
                 ))}
               </select>
-              <input
-                type="number" min={1}
-                value={nuevoProducto.cantidad}
+              <input type="number" min={1} value={nuevoProducto.cantidad}
                 onChange={(e) => setNuevoProducto((p) => ({ ...p, cantidad: e.target.value }))}
-                className="form-control form-control-sm rounded-pill"
-                placeholder="Cant."
-                style={{ flex: 1, minWidth: 70, maxWidth: 90 }}
-              />
-              <button onClick={agregarProducto} disabled={guardando}
-                className="btn btn-sm"
+                className="form-control form-control-sm rounded-pill" placeholder="Cant."
+                style={{ flex: 1, minWidth: 70, maxWidth: 90 }} />
+              <button onClick={agregarProducto} disabled={guardando} className="btn btn-sm"
                 style={{ background: `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`, color: "#fff", border: "none", borderRadius: 20, fontWeight: 600, whiteSpace: "nowrap" }}>
                 <Plus size={13} /> Agregar
               </button>
@@ -516,11 +491,7 @@ function MisMantenimientos({ usuario }) {
             ) : (
               <table className="table table-sm align-middle" style={{ fontSize: 12 }}>
                 <thead>
-                  <tr>
-                    <th>Producto</th>
-                    <th>Cantidad</th>
-                    <th></th>
-                  </tr>
+                  <tr><th>Producto</th><th>Cantidad</th><th></th></tr>
                 </thead>
                 <tbody>
                   {detalles.map((d) => (
@@ -538,11 +509,9 @@ function MisMantenimientos({ usuario }) {
                 </tbody>
               </table>
             )}
-
           </div>
         </div>
       )}
-
     </div>
   );
 }

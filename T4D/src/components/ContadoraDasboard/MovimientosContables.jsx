@@ -3,7 +3,6 @@ import { Search, Plus, Eye, Pencil, Trash2, Download, TrendingUp, TrendingDown, 
 import * as XLSX from "xlsx";
 import { supabase } from "../../Supabase/SupabaseClient";
 
-// ─── PALETA (igual a Inventario) ─────────────────────────────────────────────
 const DORADO        = "#d4a743";
 const DORADO_OSCURO = "#8c6b3f";
 const DORADO_CLARO  = "#e7c98a";
@@ -20,11 +19,10 @@ const badgeConfig = {
   Ajuste:  { bg: "transparent", color: "#b8860b", border: "1.5px solid #b8860b" },
 };
 
-// Colores de valor: mismo estilo píldora que stock de Inventario
 const badgeValor = {
-  Ingreso: { color: "#1f9d55", fondo: "#e3f7e9" }, // verde  (stock alto)
-  Egreso:  { color: "#c0392b", fondo: "#fbe2df" }, // rojo   (stock bajo)
-  Ajuste:  { color: "#b8860b", fondo: "#fdf3da" }, // amarillo (stock medio)
+  Ingreso: { color: "#1f9d55", fondo: "#e3f7e9" },
+  Egreso:  { color: "#c0392b", fondo: "#fbe2df" },
+  Ajuste:  { color: "#b8860b", fondo: "#fdf3da" },
 };
 
 const fmtFechaLeg = (f) => {
@@ -33,7 +31,7 @@ const fmtFechaLeg = (f) => {
   return `${d}/${m}/${y}`;
 };
 
-// ─── EXPORT HELPERS ───────────────────────────────────────────────────────────
+// ─── EXPORTS ──────────────────────────────────────────────────────────────────
 
 function exportToExcel(rows) {
   const data = rows.map((m) => ({
@@ -43,17 +41,16 @@ function exportToExcel(rows) {
     "Concepto":         m.concepto,
     "ID Mantenimiento": m.id_mantenimiento ?? "—",
     "Valor":            m.valor,
-    "Usuario Registro": m.usuario ?? "—",
+    "Cliente":          m.cliente ?? "—",
   }));
   const ws = XLSX.utils.json_to_sheet(data);
-  ws["!cols"] = [10, 14, 10, 50, 16, 16, 20].map((w) => ({ wch: w }));
+  ws["!cols"] = [10, 14, 10, 50, 16, 16, 25].map((w) => ({ wch: w }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Movimientos");
   XLSX.writeFile(wb, "movimientos_contables.xlsx");
 }
 
 function exportToWord(rows, totals) {
-  const { totalIngresos, totalEgresos, totalAjustes, balance } = totals;
   const tableRows = rows.map((m) => `
     <tr>
       <td style="border:1px solid #ccc;padding:6px;font-size:12px">${m.id_movimiento}</td>
@@ -62,14 +59,14 @@ function exportToWord(rows, totals) {
       <td style="border:1px solid #ccc;padding:6px;font-size:12px">${m.concepto}</td>
       <td style="border:1px solid #ccc;padding:6px;font-size:12px">${m.id_mantenimiento ?? "—"}</td>
       <td style="border:1px solid #ccc;padding:6px;font-size:12px;text-align:right">${fmt(m.valor)}</td>
-      <td style="border:1px solid #ccc;padding:6px;font-size:12px">${m.usuario ?? "—"}</td>
+      <td style="border:1px solid #ccc;padding:6px;font-size:12px">${m.cliente ?? "—"}</td>
     </tr>`).join("");
 
   const html = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
   <head><meta charset='utf-8'><title>Movimientos Contables</title></head>
   <body style="font-family:Calibri,sans-serif;margin:40px;color:#1f2937">
     <h1 style="color:#8c6b3f;font-size:20px">Gestión de Movimientos Contables</h1>
-    <table><thead><tr>${["ID","Fecha","Tipo","Concepto","ID Mantenimiento","Valor","Usuario"].map(h=>`<th style="background:#13202e;color:#e7c98a;padding:8px;font-size:12px;border:1px solid #374151">${h}</th>`).join("")}</tr></thead><tbody>${tableRows}</tbody></table>
+    <table><thead><tr>${["ID","Fecha","Tipo","Concepto","ID Mantenimiento","Valor","Cliente"].map(h=>`<th style="background:#13202e;color:#e7c98a;padding:8px;font-size:12px;border:1px solid #374151">${h}</th>`).join("")}</tr></thead><tbody>${tableRows}</tbody></table>
   </body></html>`;
 
   const blob = new Blob(["\ufeff", html], { type: "application/msword" });
@@ -80,7 +77,6 @@ function exportToWord(rows, totals) {
 }
 
 function exportToPDF(rows, totals) {
-  const { totalIngresos, totalEgresos, totalAjustes, balance } = totals;
   const tableRows = rows.map((m, i) => `
     <tr style="background:${i % 2 === 0 ? "#fffdf8" : "#f7f1e3"}">
       <td>${m.id_movimiento}</td>
@@ -89,7 +85,7 @@ function exportToPDF(rows, totals) {
       <td>${m.concepto}</td>
       <td>${m.id_mantenimiento ?? "—"}</td>
       <td style="text-align:right;font-weight:600">${fmt(m.valor)}</td>
-      <td>${m.usuario ?? "—"}</td>
+      <td>${m.cliente ?? "—"}</td>
     </tr>`).join("");
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Movimientos Contables</title>
@@ -102,7 +98,7 @@ function exportToPDF(rows, totals) {
     td{padding:6px 8px;font-size:11px;border-bottom:1px solid #ece4d3}
   </style></head><body>
     <h1>Gestión de Movimientos Contables</h1>
-    <table><thead><tr>${["ID","Fecha","Tipo","Concepto","ID Mantenimiento","Valor","Usuario"].map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${tableRows}</tbody></table>
+    <table><thead><tr>${["ID","Fecha","Tipo","Concepto","ID Mantenimiento","Valor","Cliente"].map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${tableRows}</tbody></table>
     <script>window.onload=()=>{window.print();}<\/script>
   </body></html>`;
 
@@ -122,26 +118,67 @@ export default function MovimientosContables() {
   const [tipoFiltro,   setTipoFiltro]   = useState("Todos los tipos");
   const [exportMenu,   setExportMenu]   = useState(false);
 
-  const cargarMovimientos = async () => {
-    setCargando(true);
-    const { data, error } = await supabase
-      .from("movimientos_contables")
-      .select(`id_movimiento, fecha_movimiento, tipo_movimiento, concepto, id_mantenimiento, valor, usuarios(username)`)
-      .order("id_movimiento", { ascending: false });
+const cargarMovimientos = async () => {
+  setCargando(true);
 
-    if (!error) {
-      setMovimientos((data || []).map((m) => ({ ...m, usuario: m.usuarios?.username ?? null })));
+  const { data, error } = await supabase
+    .from("movimientos_contables")
+    .select(`
+      id_movimiento,
+      fecha_movimiento,
+      tipo_movimiento,
+      concepto,
+      valor,
+      id_asignacion,
+      asignaciones_tareas (
+        id_asignacion,
+        clientes (
+          id_cliente,
+          nombre_completo
+        )
+      )
+    `)
+    .order("id_movimiento", { ascending: false });
+
+  if (!error && data) {
+    const idAsignaciones = [...new Set(data.map(m => m.id_asignacion).filter(Boolean))];
+
+    let mantenimientosMap = {};
+    if (idAsignaciones.length > 0) {
+      const { data: mants, error: errorMants } = await supabase  // ← cambia esta línea
+        .from("mantenimiento")
+        .select("id_mantenimiento, id_asignacion")
+        .in("id_asignacion", idAsignaciones);
+
+      // ↓ AGREGA ESTAS 3 LÍNEAS AQUÍ
+      console.log("idAsignaciones:", idAsignaciones);
+      console.log("mants:", mants);
+      console.log("errorMants:", errorMants);
+
+      (mants || []).forEach(mn => {
+        mantenimientosMap[mn.id_asignacion] = mn.id_mantenimiento;
+      });
     }
-    setCargando(false);
-  };
 
+    setMovimientos(
+      data.map((m) => ({
+        ...m,
+        cliente:          m.asignaciones_tareas?.clientes?.nombre_completo ?? null,
+        id_cliente:       m.asignaciones_tareas?.clientes?.id_cliente      ?? null,
+        id_mantenimiento: mantenimientosMap[m.id_asignacion]               ?? null,
+      }))
+    );
+  }
+
+  setCargando(false);
+};
   useEffect(() => { cargarMovimientos(); }, []);
 
   const totalIngresos = movimientos.filter(m => m.tipo_movimiento === "Ingreso").reduce((a, m) => a + Number(m.valor), 0);
   const totalEgresos  = movimientos.filter(m => m.tipo_movimiento === "Egreso" ).reduce((a, m) => a + Number(m.valor), 0);
   const totalAjustes  = movimientos.filter(m => m.tipo_movimiento === "Ajuste" ).reduce((a, m) => a + Number(m.valor), 0);
   const balance = totalIngresos - totalEgresos;
-  const totals = { totalIngresos, totalEgresos, totalAjustes, balance };
+  const totals  = { totalIngresos, totalEgresos, totalAjustes, balance };
 
   const filtrados = movimientos.filter((m) => {
     const txt = busqueda.toLowerCase();
@@ -166,10 +203,8 @@ export default function MovimientosContables() {
     <div className="p-5" style={{ background: FONDO, minHeight: "100vh" }}>
 
       {/* HEADER */}
-      <div
-        className="d-flex justify-content-between align-items-start flex-wrap mb-4 gap-2 p-4 rounded-4"
-        style={{ backgroundColor: "#fffdf8", border: `1px solid ${DORADO_CLARO}`, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}
-      >
+      <div className="d-flex justify-content-between align-items-start flex-wrap mb-4 gap-2 p-4 rounded-4"
+        style={{ backgroundColor: "#fffdf8", border: `1px solid ${DORADO_CLARO}`, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
         <div>
           <h4 className="fw-bold mb-2" style={{ color: "#1a1a1a" }}>
             Gestión de Movimientos Contables{" "}
@@ -184,22 +219,11 @@ export default function MovimientosContables() {
 
         {/* EXPORT DROPDOWN */}
         <div style={{ position: "relative" }}>
-          <button
-            className="btn d-flex align-items-center gap-2 fw-semibold"
+          <button className="btn d-flex align-items-center gap-2 fw-semibold"
             onClick={() => setExportMenu((v) => !v)}
-            style={{
-              background: BTN_GRAD,
-              color: "#fff",
-              borderRadius: "8px",
-              padding: "8px 18px 8px 8px",
-              border: "none",
-              boxShadow: "0 3px 12px rgba(140,107,63,0.55)",
-            }}
-          >
-            <span
-              className="d-flex align-items-center justify-content-center rounded-circle"
-              style={{ width: "24px", height: "24px", backgroundColor: "rgba(255,255,255,0.25)" }}
-            >
+            style={{ background: BTN_GRAD, color: "#fff", borderRadius: "8px", padding: "8px 18px 8px 8px", border: "none", boxShadow: "0 3px 12px rgba(140,107,63,0.55)" }}>
+            <span className="d-flex align-items-center justify-content-center rounded-circle"
+              style={{ width: "24px", height: "24px", backgroundColor: "rgba(255,255,255,0.25)" }}>
               <Download size={14} />
             </span>
             Exportar ▾
@@ -291,7 +315,7 @@ export default function MovimientosContables() {
             <table className="table align-middle mb-0" style={{ minWidth: "900px" }}>
               <thead>
                 <tr style={{ backgroundColor: ENCABEZADO }}>
-                  {["ID Movimiento", "Fecha", "Tipo", "Concepto", "ID Mantenimiento", "Valor", "Usuario Registro"].map((h) => (
+                  {["ID Movimiento", "Fecha", "Tipo", "Concepto", "ID Mantenimiento", "Valor", "Cliente"].map((h) => (
                     <th key={h} style={{ fontSize: 13, whiteSpace: "nowrap", backgroundColor: ENCABEZADO, color: TEXTO_ENC, border: "none", padding: "12px 8px" }}>{h}</th>
                   ))}
                 </tr>
@@ -306,7 +330,7 @@ export default function MovimientosContables() {
                 ) : (
                   filtrados.map((m) => {
                     const badge = badgeConfig[m.tipo_movimiento] || badgeConfig.Ajuste;
-                    const bv = badgeValor[m.tipo_movimiento] || badgeValor.Ajuste;
+                    const bv    = badgeValor[m.tipo_movimiento]  || badgeValor.Ajuste;
                     return (
                       <tr key={m.id_movimiento} style={{ borderBottom: `1px solid #ece4d3`, backgroundColor: "#fffdf8" }}>
                         <td>
@@ -327,24 +351,31 @@ export default function MovimientosContables() {
                         </td>
                         <td style={{ fontSize: 13, color: "#374151" }}>{m.concepto}</td>
                         <td>
-                          <span style={{ fontFamily: "monospace", fontSize: 12, background: "#f3f0e8", color: "#6b7280", padding: "3px 8px", borderRadius: 5 }}>
-                            {m.id_mantenimiento ?? "—"}
-                          </span>
+                          {m.id_mantenimiento ? (
+                            <span style={{ fontFamily: "monospace", fontSize: 12, background: "#f3f0e8", color: DORADO_OSCURO, fontWeight: 700, padding: "3px 8px", borderRadius: 5 }}>
+                              #{m.id_mantenimiento}
+                            </span>
+                          ) : (
+                            <span style={{ fontFamily: "monospace", fontSize: 12, background: "#f3f0e8", color: "#6b7280", padding: "3px 8px", borderRadius: 5 }}>
+                              —
+                            </span>
+                          )}
                         </td>
                         <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                          <span style={{
-                            backgroundColor: bv.fondo,
-                            color: bv.color,
-                            fontSize: "12px",
-                            fontWeight: 700,
-                            padding: "4px 12px",
-                            borderRadius: "12px",
-                            display: "inline-block",
-                          }}>
+                          <span style={{ backgroundColor: bv.fondo, color: bv.color, fontSize: "12px", fontWeight: 700, padding: "4px 12px", borderRadius: "12px", display: "inline-block" }}>
                             {fmt(m.valor)}
                           </span>
                         </td>
-                        <td style={{ fontSize: 13, color: "#374151" }}>{m.usuario ?? "—"}</td>
+
+                        {/* ── CLIENTE ── */}
+                        <td style={{ fontSize: 13, color: "#374151" }}>
+                          {m.cliente ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                              <span style={{ fontWeight: 600, color: "#1a1a1a" }}>{m.cliente}</span>
+                              <span style={{ fontSize: 11, color: "#6b7280" }}>ID: {m.id_cliente}</span>
+                            </div>
+                          ) : "—"}
+                        </td>
                       </tr>
                     );
                   })
