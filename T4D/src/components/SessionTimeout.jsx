@@ -7,7 +7,8 @@ function SessionTimeout({ setVista, setUsuario }) {
     let timeout;
 
     const cerrarSesion = async () => {
-          console.log("Sesión cerrada por inactividad");
+      console.log("Sesión cerrada por inactividad");
+
       await Swal.fire({
         icon: "warning",
         title: "Sesión expirada",
@@ -30,9 +31,13 @@ function SessionTimeout({ setVista, setUsuario }) {
     const reiniciarTemporizador = () => {
       clearTimeout(timeout);
 
-       console.log("Temporizador reiniciado:", new Date().toLocaleTimeString());
+      console.log(
+        "Temporizador reiniciado:",
+        new Date().toLocaleTimeString()
+      );
 
       timeout = setTimeout(() => {
+        console.log("Tiempo cumplido");
         cerrarSesion();
       }, 15 * 60 * 1000); // 15 minutos
     };
@@ -42,6 +47,7 @@ function SessionTimeout({ setVista, setUsuario }) {
     window.addEventListener("click", reiniciarTemporizador);
     window.addEventListener("scroll", reiniciarTemporizador);
 
+    // Inicia el temporizador
     reiniciarTemporizador();
 
     return () => {
@@ -57,4 +63,4 @@ function SessionTimeout({ setVista, setUsuario }) {
   return null;
 }
 
-export default SessionTimeout;
+export default SessionTimeout; 
