@@ -95,3 +95,19 @@ export const eliminarUsuario = async (id) => {
   }
 
 };
+
+
+export const actualizarParcialUsuario = async (id, datos) => {
+  try {
+    const response = await axios.patch(
+      `${API_URL}/${id}`,
+      datos,
+      { headers }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.log("Error actualizando parcialmente usuario:", error);
+    throw error;
+  }
+};
