@@ -203,9 +203,43 @@ const eliminarUsuario = async (req, res) => {
 
 };
 
+
+
+const actualizarParcialUsuario = async (
+  req,
+  res
+) => {
+  try {
+    const id = req.params.id;
+
+    const { data, error } = await supabase
+      .from("usuarios")
+      .update(req.body)
+      .eq("id_usuario", id)
+      .select();
+
+    if (error) {
+      return res.status(400).json({
+        error: error.message,
+      });
+    }
+
+    res.json({
+      success: true,
+      data,
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   obtenerUsuarios,
   crearUsuario,
   editarUsuario,
+  actualizarParcialUsuario,
   eliminarUsuario,
 };
