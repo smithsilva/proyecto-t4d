@@ -177,7 +177,7 @@ exports.getBalancePeriodo = async () => {
 
 exports.getMasVendidos = async () => {
   const { data, error } = await supabase
-    .from('detalle_mantenimiento')
+    .from('detalle_asignacion')   // ← cambiado
     .select('cantidad, productos(id_producto, nombre_producto, precio_actual)');
   if (error) throw new Error(error.message);
 
