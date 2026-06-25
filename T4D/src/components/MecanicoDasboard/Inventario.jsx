@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Eye, Package, X, Plus, Filter, Search } from "lucide-react";
 import { supabase } from "../../supabase/supabaseClient";
 
-function Inventario() {
+function Inventario({ usuario }) {
   const [busqueda,        setBusqueda]        = useState("");
   const [filtroEstado,    setFiltroEstado]    = useState("todos");
   const [filtroCategoria, setFiltroCategoria] = useState("todas");
@@ -42,7 +42,6 @@ function Inventario() {
 
   const recargar = async () => {
     setCargando(true);
-
     const [{ data: prods, error }, { data: provs }] = await Promise.all([
       supabase
         .from("productos")
@@ -52,20 +51,9 @@ function Inventario() {
         .from("proveedores")
         .select("id_proveedor, nombre_proveedor, nit"),
     ]);
-
     if (error) { console.error("Error al cargar productos:", error); setCargando(false); return; }
-
-    const provsMap = Object.fromEntries(
-      (provs || []).map((p) => [p.id_proveedor, p])
-    );
-
-    setProductos(
-      (prods || []).map((p) => ({
-        ...p,
-        proveedores: provsMap[p.id_proveedor] || null,
-      }))
-    );
-
+    const provsMap = Object.fromEntries((provs || []).map((p) => [p.id_proveedor, p]));
+    setProductos((prods || []).map((p) => ({ ...p, proveedores: provsMap[p.id_proveedor] || null })));
     setCargando(false);
   };
 
@@ -137,25 +125,22 @@ function Inventario() {
       normalizar(String(p.id_producto)).includes(texto) ||
       normalizar(p.descripcion || "").includes(texto) ||
       normalizar(p.codigo_barras || "").includes(texto);
-
     const estado = calcularEstado(p);
     const matchEstado    = filtroEstado    === "todos" || estado === filtroEstado;
     const matchCategoria = filtroCategoria === "todas" || String(p.id_categoria) === String(filtroCategoria);
     const matchRol       = filtroRol       === "todos" || normalizar(p.usuarios?.rol || "") === normalizar(filtroRol);
     const matchUnidad    = filtroUnidad    === "todas" || normalizar(p.unidad_medida || "") === normalizar(filtroUnidad);
     const matchProveedor = filtroProveedor === "todos" || String(p.id_proveedor) === String(filtroProveedor);
-
     return matchTexto && matchEstado && matchCategoria && matchRol && matchUnidad && matchProveedor;
   });
 
   const unidadesDisponibles = Array.from(new Set(productos.map((p) => p.unidad_medida).filter(Boolean)));
-
-  const nombreCategoria = (id) =>
-    categorias.find((c) => c.id_categoria == id)?.nombre_categoria || "Sin categoría";
+  const nombreCategoria = (id) => categorias.find((c) => c.id_categoria == id)?.nombre_categoria || "Sin categoría";
 
   const crearProducto = async () => {
     if (!formNuevo.nombre_producto.trim()) { alert("El nombre del producto es obligatorio."); return; }
     setCreando(true);
+
     const payload = {
       nombre_producto: formNuevo.nombre_producto,
       descripcion:     formNuevo.descripcion  || null,
@@ -165,15 +150,49 @@ function Inventario() {
       codigo_barras:   formNuevo.codigo_barras || null,
       id_categoria:    formNuevo.id_categoria  ? parseInt(formNuevo.id_categoria) : null,
       id_proveedor:    formNuevo.id_proveedor  ? parseInt(formNuevo.id_proveedor) : null,
+      id_usuario:      usuario?.id_usuario || null,  // ← FIX
     };
 
-    const { data, error } = await supabase.from("productos").insert([payload]).select();
+    const { data, error } = await supabase
+      .from("productos")
+      .insert([payload])
+      .select(`*, usuarios(id_usuario, username, rol)`);  // ← FIX: trae el join
+
     setCreando(false);
 
     if (error) { console.error("Error al crear producto:", error); alert("No se pudo crear el producto."); return; }
 
-    if (data && data.length > 0) setProductos((prev) => [data[0], ...prev]);
-    else recargar();
+    if (data && data.length > 0) {
+      const productoCreado = data[0];
+
+      // ← movimiento de entrada inicial
+      if (formNuevo.stock_actual && parseInt(formNuevo.stock_actual) > 0) {
+        await supabase.from("movimientos_inventario").insert([{
+          id_producto:      productoCreado.id_producto,
+          id_usuario:       usuario?.id_usuario || null,
+          tipo_movimiento:  "entrada",
+          cantidad:         parseInt(formNuevo.stock_actual),
+          observacion:      "Stock inicial al crear producto",
+          fecha_movimiento: new Date().toISOString(),
+        }]);
+      }
+
+      // ← historial de precios inicial
+      if (formNuevo.precio_actual && parseFloat(formNuevo.precio_actual) > 0) {
+        const { error: errorHist } = await supabase.from("historial_precios").insert([{
+          id_producto:     productoCreado.id_producto,
+          precio_anterior: 0,
+          precio_nuevo:    parseFloat(formNuevo.precio_actual),
+          motivo:          "Precio inicial al crear producto",
+          fecha_cambio:    new Date().toISOString(),
+        }]);
+        if (errorHist) console.error("Error al guardar historial de precios:", errorHist);
+      }
+
+      setProductos((prev) => [productoCreado, ...prev]);
+    } else {
+      recargar();
+    }
 
     setFormNuevo({ nombre_producto: "", descripcion: "", precio_actual: "", stock_actual: "", unidad_medida: "", codigo_barras: "", id_categoria: "", id_proveedor: "" });
     setMostrarCrear(false);
@@ -214,7 +233,6 @@ function Inventario() {
           <Filter size={18} color={DORADO_OSCURO} />
           <h6 className="fw-bold mb-0" style={{ color: "#1a1a1a", fontSize: "16px" }}>Filtros y Búsqueda</h6>
         </div>
-
         <div className="mb-3 position-relative">
           <Search size={16} style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#999" }} />
           <input type="text" className="form-control rounded-pill"
@@ -222,7 +240,6 @@ function Inventario() {
             placeholder="Buscar por producto, código o descripción..."
             value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
         </div>
-
         <div className="d-flex gap-3 flex-wrap align-items-end">
           <div style={{ minWidth: "150px", flex: "1 1 150px" }}>
             <label style={labelFiltro}>Categoría</label>
@@ -231,8 +248,6 @@ function Inventario() {
               {categorias.map((cat) => <option key={cat.id_categoria} value={cat.id_categoria}>{cat.nombre_categoria}</option>)}
             </select>
           </div>
-
-          {/* ── FILTRO PROVEEDOR ── */}
           <div style={{ minWidth: "150px", flex: "1 1 150px" }}>
             <label style={labelFiltro}>Proveedor</label>
             <select className="form-select rounded-pill" value={filtroProveedor} onChange={(e) => setFiltroProveedor(e.target.value)}>
@@ -240,7 +255,6 @@ function Inventario() {
               {proveedores.map((pv) => <option key={pv.id_proveedor} value={pv.id_proveedor}>{pv.nombre_proveedor}</option>)}
             </select>
           </div>
-
           <div style={{ minWidth: "150px", flex: "1 1 150px" }}>
             <label style={labelFiltro}>Estado</label>
             <select className="form-select rounded-pill" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
@@ -250,7 +264,6 @@ function Inventario() {
               <option value="bajo">Stock Bajo</option>
             </select>
           </div>
-
           <div style={{ minWidth: "150px", flex: "1 1 150px" }}>
             <label style={labelFiltro}>Unidad</label>
             <select className="form-select rounded-pill" value={filtroUnidad} onChange={(e) => setFiltroUnidad(e.target.value)}>
@@ -258,7 +271,6 @@ function Inventario() {
               {unidadesDisponibles.map((unidad) => <option key={unidad} value={unidad}>{unidad}</option>)}
             </select>
           </div>
-
           <div style={{ minWidth: "150px", flex: "1 1 150px" }}>
             <label style={labelFiltro}>Usuario</label>
             <select className="form-select rounded-pill" value={filtroRol} onChange={(e) => setFiltroRol(e.target.value)}>
@@ -269,7 +281,6 @@ function Inventario() {
               <option value="contadora">Contadora</option>
             </select>
           </div>
-
           <button className="btn d-flex align-items-center gap-1 fw-semibold"
             style={{ color: DORADO_OSCURO, border: `1px solid ${DORADO_OSCURO}`, borderRadius: "20px", padding: "8px 16px", whiteSpace: "nowrap" }}
             onClick={() => { setBusqueda(""); setFiltroEstado("todos"); setFiltroCategoria("todas"); setFiltroRol("todos"); setFiltroUnidad("todas"); setFiltroProveedor("todos"); }}>
@@ -326,8 +337,6 @@ function Inventario() {
                     </td>
                     <td className="text-muted small text-truncate" style={{ maxWidth: "130px" }}>{p.descripcion || "—"}</td>
                     <td style={{ fontSize: "13px" }}>{nombreCategoria(p.id_categoria)}</td>
-
-                    {/* ── COLUMNA PROVEEDOR ── */}
                     <td style={{ fontSize: "13px" }}>
                       {p.proveedores ? (
                         <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
@@ -338,7 +347,6 @@ function Inventario() {
                         <span style={{ color: "#9ca3af", fontStyle: "italic", fontSize: 12 }}>Sin proveedor</span>
                       )}
                     </td>
-
                     <td style={{ fontSize: "13px" }}>{p.usuarios?.username || "—"}</td>
                     <td>{getBadgeRol(p.usuarios?.rol)}</td>
                     <td className="text-muted small">{p.unidad_medida || "—"}</td>
@@ -368,7 +376,6 @@ function Inventario() {
               <h5 className="fw-bold mb-0">Detalle del Producto</h5>
               <X size={20} style={{ cursor: "pointer" }} onClick={() => setVerProducto(null)} />
             </div>
-
             {verProducto.imagen ? (
               <img src={verProducto.imagen} alt="" style={{ width: "100%", borderRadius: "10px", marginBottom: "12px" }} />
             ) : (
@@ -376,7 +383,6 @@ function Inventario() {
                 <Package size={40} color={DORADO_OSCURO} />
               </div>
             )}
-
             {[
               ["ID",           `#${verProducto.id_producto}`],
               ["Cód. Barras",  verProducto.codigo_barras || "—"],
@@ -396,11 +402,9 @@ function Inventario() {
                 <strong>{label}:</strong> {val}
               </p>
             ))}
-
             <p className="mb-1">
               <strong>Estado:</strong> {getBadgeEstado(verProducto)}
             </p>
-
             <button onClick={() => setVerProducto(null)} className="btn btn-secondary w-100 mt-3">Cerrar</button>
           </div>
         </div>
@@ -422,20 +426,16 @@ function Inventario() {
               <input type="text" className="form-control" value={formNuevo.nombre_producto}
                 onChange={(e) => setFormNuevo({ ...formNuevo, nombre_producto: e.target.value })} />
             </div>
-
             <div className="mb-2">
               <label className="form-label small fw-semibold mb-1">Código de barras</label>
               <input type="text" className="form-control" value={formNuevo.codigo_barras}
                 onChange={(e) => setFormNuevo({ ...formNuevo, codigo_barras: e.target.value })} />
             </div>
-
             <div className="mb-2">
               <label className="form-label small fw-semibold mb-1">Descripción</label>
               <textarea className="form-control" rows={2} value={formNuevo.descripcion}
                 onChange={(e) => setFormNuevo({ ...formNuevo, descripcion: e.target.value })} />
             </div>
-
-            {/* ── CATEGORÍA ── */}
             <div className="mb-2">
               <label className="form-label small fw-semibold mb-1">Categoría</label>
               <select className="form-select" value={formNuevo.id_categoria}
@@ -446,8 +446,6 @@ function Inventario() {
                 ))}
               </select>
             </div>
-
-            {/* ── PROVEEDOR ── */}
             <div className="mb-2">
               <label className="form-label small fw-semibold mb-1">Proveedor</label>
               <select className="form-select" value={formNuevo.id_proveedor}
@@ -460,19 +458,16 @@ function Inventario() {
                 ))}
               </select>
             </div>
-
             <div className="mb-2">
               <label className="form-label small fw-semibold mb-1">Precio</label>
               <input type="number" className="form-control" value={formNuevo.precio_actual}
                 onChange={(e) => setFormNuevo({ ...formNuevo, precio_actual: e.target.value })} />
             </div>
-
             <div className="mb-2">
               <label className="form-label small fw-semibold mb-1">Stock inicial</label>
               <input type="number" className="form-control" value={formNuevo.stock_actual}
                 onChange={(e) => setFormNuevo({ ...formNuevo, stock_actual: e.target.value })} />
             </div>
-
             <div className="mb-3">
               <label className="form-label small fw-semibold mb-1">Unidad de medida</label>
               <input type="text" className="form-control" value={formNuevo.unidad_medida}

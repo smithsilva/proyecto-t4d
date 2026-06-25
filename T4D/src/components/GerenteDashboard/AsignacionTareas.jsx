@@ -207,17 +207,19 @@ export default function AsignacionTareas() {
       clienteSeleccionado ? ` — Cliente: ${clienteSeleccionado.nombre_completo}` : ""
     }`;
 
-    // Movimientos contables
-    await supabase.from("movimientos_contables").insert(
-      asignadas.map(() => ({
-        tipo_movimiento:     "Egreso",
-        concepto:            conceptoContable,
-        id_mantenimiento:    null,
-        valor:               Number(form.costo),
-        fecha_movimiento:    new Date().toISOString().split("T")[0],
-        id_usuario_registro: null,
-      }))
-    );
+   
+   // Movimientos contables
+await supabase.from("movimientos_contables").insert(
+  asignadas.map((a) => ({
+    tipo_movimiento:     "Egreso",
+    concepto:            conceptoContable,
+    id_asignacion:       a.id_asignacion,
+    id_mantenimiento:    null,
+    valor:               Number(form.costo),
+    fecha_movimiento:    new Date().toISOString().split("T")[0],
+    id_usuario_registro: null,
+  }))
+);
 
     // Notificaciones
     await supabase.from("notificaciones").insert(

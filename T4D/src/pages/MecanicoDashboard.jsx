@@ -40,9 +40,9 @@ function MecanicoDashboard({
 
         <main className="p-4">
 
-          {vistaMecanico === "inventario" && (
-            <Inventario />
-          )}
+         {vistaMecanico === "inventario" && (
+  <Inventario usuario={usuario} />
+)}
 
           {vistaMecanico === "mantenimientos" && (
             <MisMantenimientos usuario={usuario} />

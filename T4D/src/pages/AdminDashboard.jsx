@@ -7,26 +7,32 @@ import Reportes from "../components/AdminDasboard/Reportes";
 import GestionUsuarios from "../components/AdminDasboard/GestionUsuarios";
 import Notificaciones from "../components/AdminDasboard/Notificaciones";
 import RegistroUsuarios from "../components/AdminDasboard/RegistroUsuarios";
-import PerfilAdmin from "../components/AdminDasboard/PerfilUsuario";  
+import PerfilAdmin from "../components/AdminDasboard/PerfilUsuario";
 import HistorialPrecios from "../components/AdminDasboard/HistorialPrecios";
 
 function AdminDashboard() {
-
   const [vistaAdmin, setVistaAdmin] = useState("inventario");
 
   const [usuario, setUsuario] = useState(() => {
     const guardado = localStorage.getItem("usuario");
     try {
-      const usuarioParseado = guardado ? JSON.parse(guardado) : null;
+      const u = guardado ? JSON.parse(guardado) : null;
       return {
-        nombre: usuarioParseado?.nombre || usuarioParseado?.username || "Usuario",
-        correo: usuarioParseado?.correo || usuarioParseado?.email   || "correo@email.com",
-        rol:    usuarioParseado?.rol    || "Administrador",
-        foto:   usuarioParseado?.foto   || null,
+        id_usuario: u?.id_usuario || null,          // ← FIX: preservar id_usuario
+        nombre:     u?.nombre     || u?.username || "Usuario",
+        correo:     u?.correo     || u?.email    || "correo@email.com",
+        rol:        u?.rol        || "Administrador",
+        foto:       u?.foto       || null,
       };
     } catch (error) {
       localStorage.removeItem("usuario");
-      return { nombre: "Usuario", correo: "", rol: "Administrador", foto: null };
+      return {
+        id_usuario: null,
+        nombre:     "Usuario",
+        correo:     "",
+        rol:        "Administrador",
+        foto:       null,
+      };
     }
   });
 
@@ -54,17 +60,14 @@ function AdminDashboard() {
 
         {/* MAIN */}
         <main className="p-4">
-          {vistaAdmin === "inventario"      && <Inventario />}
+          {vistaAdmin === "inventario"      && <Inventario usuario={usuario} />}
           {vistaAdmin === "movimientos"     && <Movimientos />}
-          {vistaAdmin === "historialprecios" && <HistorialPrecios usuario={usuario} />}
+          {vistaAdmin === "historialprecios"&& <HistorialPrecios usuario={usuario} />}
           {vistaAdmin === "notificaciones"  && <Notificaciones notificaciones={notificaciones} setNotificaciones={setNotificaciones} />}
           {vistaAdmin === "reportes"        && <Reportes />}
           {vistaAdmin === "GestionUsuarios" && <GestionUsuarios />}
           {vistaAdmin === "RegistroUsuarios"&& <RegistroUsuarios />}
-
-          {vistaAdmin === "perfil" && (
-            <PerfilAdmin usuario={usuario} setUsuario={setUsuario} />  // ← cambiado
-          )}
+          {vistaAdmin === "perfil"          && <PerfilAdmin usuario={usuario} setUsuario={setUsuario} />}
         </main>
 
       </div>

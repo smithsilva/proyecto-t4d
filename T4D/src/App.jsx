@@ -31,54 +31,42 @@ function App() {
   // =========================================
 
   useEffect(() => {
-
-    const usuarioGuardado =
-      localStorage.getItem("usuario");
+  try {
+    const usuarioGuardado = localStorage.getItem("usuario");
 
     if (usuarioGuardado) {
+      const usuarioParseado = JSON.parse(usuarioGuardado);
 
-      const usuarioParseado =
-        JSON.parse(usuarioGuardado);
+      // ← asegurarse de que id_usuario esté presente
+      const u = {
+        id_usuario: usuarioParseado?.id_usuario || null,
+        nombre:     usuarioParseado?.nombre     || usuarioParseado?.username || "Usuario",
+        correo:     usuarioParseado?.correo     || usuarioParseado?.email    || "",
+        rol:        usuarioParseado?.rol        || "",
+        foto:       usuarioParseado?.foto       || null,
+      };
 
-      setUsuario(usuarioParseado);
+      setUsuario(u);
 
-      const rol = normalizarRol(
-        usuarioParseado.rol
-      );
-
+      const rol = normalizarRol(u.rol);
       switch (rol) {
-
-        case "admin":
-          setVista("admin");
-          break;
-
+        case "admin":     setVista("admin");     break;
         case "contador":
-        case "contadora":
-          setVista("contadora");
-          break;
-
-        case "gerente":
-          setVista("gerente");
-          break;
-
-        case "mecanico":
-          setVista("mecanico");
-          break;
-
-        default:
-          setVista("home");
+        case "contadora": setVista("contadora"); break;
+        case "gerente":   setVista("gerente");   break;
+        case "mecanico":  setVista("mecanico");  break;
+        default:          setVista("login");
       }
-
     } else {
-
       setVista("login");
-
     }
+  } catch {
+    localStorage.removeItem("usuario");
+    setVista("login");
+  }
 
-    setCargando(false);
-
-  }, []);
-
+  setCargando(false);
+}, []);
   // =========================================
   // PANTALLA CARGANDO
   // =========================================
@@ -147,22 +135,12 @@ case "gerente":
     </>
   );
 case "mecanico":
-
-  if (!usuario) {
-    return (
-      <div className="d-flex justify-content-center align-items-center vh-100">
-        <h4>Cargando usuario...</h4>
-      </div>
-    );
-  }
-
-  return (
+  return (                          // ← quita el if (!usuario)
     <>
       <SessionTimeout
         setVista={setVista}
         setUsuario={setUsuario}
       />
-
       <MecanicoDashboard
         usuario={usuario}
         setVista={setVista}
