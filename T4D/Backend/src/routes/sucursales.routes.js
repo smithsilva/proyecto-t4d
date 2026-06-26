@@ -6,17 +6,38 @@ const {
   obtenerSucursalPorId,
   crearSucursal,
   actualizarSucursal,
+  actualizarParcialSucursal,
   eliminarSucursal,
 } = require("../controllers/sucursales.controller");
 
-router.get("/", obtenerSucursales);
+router.get(
+  "/",
+  obtenerSucursales
+);
 
-router.get("/:id", obtenerSucursalPorId);
+router.get(
+  "/:id",
+  obtenerSucursalPorId
+);
 
-router.post("/", crearSucursal);
+router.post(
+  "/",
+  crearSucursal
+);
 
-router.put("/:id", actualizarSucursal);
+router.put(
+  "/:id",
+  actualizarSucursal
+);
 
-router.delete("/:id", eliminarSucursal);
+router.patch(
+  "/:id",
+  actualizarParcialSucursal
+);
+
+router.delete(
+  "/:id",
+  eliminarSucursal
+);
 
 module.exports = router;

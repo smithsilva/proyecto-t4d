@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import {
-  Eye, Pencil, Trash2, Plus, CreditCard, CheckCircle, XCircle,
-  Banknote, Building2, X, Save, Filter, Search, Link,
+  Eye, CreditCard, CheckCircle, XCircle,
+  Banknote, Building2, X, Filter, Search, Link,
 } from "lucide-react";
 import { supabase } from "../../supabase/supabaseClient";
 
@@ -26,14 +26,6 @@ const inferirTipo = (nombre) => {
   return "Transferencia";
 };
 
-const INPUT_STYLE = {
-  width: "100%", border: "1.5px solid #e5e7eb", borderRadius: 8,
-  padding: "9px 12px", fontSize: 13, outline: "none",
-  boxSizing: "border-box", marginBottom: 10, background: "#fafafa", color: "#111827",
-};
-const LABEL_STYLE = { fontSize: 12, fontWeight: 600, color: "#374151", marginBottom: 4, display: "block" };
-const FORM_VACIO  = { nombre_metodo: "", tipo: "Efectivo", descripcion: "", permite_online: false };
-
 const fmtFecha = (f) => {
   if (!f) return "—";
   const [y, m, d] = f.split("-");
@@ -41,16 +33,12 @@ const fmtFecha = (f) => {
 };
 
 export default function MetodosPago() {
-  const [metodos, setMetodos]               = useState([]);
-  const [asignaciones, setAsignaciones]     = useState([]);
-  const [cargando, setCargando]             = useState(true);
-  const [busqueda, setBusqueda]             = useState("");
-  const [tipoFiltro, setTipoFiltro]         = useState("");
-  const [verMetodo, setVerMetodo]           = useState(null);
-  const [editarMetodo, setEditarMetodo]     = useState(null);
-  const [mostrarAgregar, setMostrarAgregar] = useState(false);
-  const [eliminarId, setEliminarId]         = useState(null);
-  const [form, setForm]                     = useState(FORM_VACIO);
+  const [metodos, setMetodos]           = useState([]);
+  const [asignaciones, setAsignaciones] = useState([]);
+  const [cargando, setCargando]         = useState(true);
+  const [busqueda, setBusqueda]         = useState("");
+  const [tipoFiltro, setTipoFiltro]     = useState("");
+  const [verMetodo, setVerMetodo]       = useState(null);
 
   // ─── CARGAR ───────────────────────────────────────────────
   const cargarMetodos = async () => {
@@ -98,66 +86,12 @@ export default function MetodosPago() {
     );
   }, [metodos, busqueda, tipoFiltro]);
 
-  // ─── CRUD ─────────────────────────────────────────────────
-  const guardarNuevo = async () => {
-    if (!form.nombre_metodo.trim()) return;
-    const { error } = await supabase.from("metodos_pago").insert([{
-      nombre_metodo:  form.nombre_metodo,
-      descripcion:    form.descripcion,
-      permite_online: form.permite_online,
-    }]);
-    if (error) { alert("Error al guardar: " + error.message); return; }
-    setMostrarAgregar(false);
-    setForm(FORM_VACIO);
-    cargarMetodos();
-  };
-
-  const guardarEdicion = async () => {
-    const { error } = await supabase
-      .from("metodos_pago")
-      .update({ nombre_metodo: form.nombre_metodo, descripcion: form.descripcion, permite_online: form.permite_online })
-      .eq("id_metodo_pago", editarMetodo.id_metodo_pago);
-    if (error) { alert("Error al actualizar: " + error.message); return; }
-    setEditarMetodo(null);
-    cargarMetodos();
-  };
-
-  const confirmarEliminar = async () => {
-    const { error } = await supabase.from("metodos_pago").delete().eq("id_metodo_pago", eliminarId);
-    if (error) { alert("Error al eliminar: " + error.message); return; }
-    setEliminarId(null);
-    cargarMetodos();
-  };
-
-  const abrirEditar  = (m) => { setForm({ ...m }); setEditarMetodo(m); };
-  const fieldChange  = (key, val) => setForm((f) => ({ ...f, [key]: val }));
-
-  const FormFields = () => (
-    <>
-      <label style={LABEL_STYLE}>Nombre</label>
-      <input style={INPUT_STYLE} placeholder="Ej: PSE, PayPal..."
-        value={form.nombre_metodo} onChange={(e) => fieldChange("nombre_metodo", e.target.value)} />
-      <label style={LABEL_STYLE}>Tipo</label>
-      <select style={INPUT_STYLE} value={form.tipo} onChange={(e) => fieldChange("tipo", e.target.value)}>
-        <option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option>
-      </select>
-      <label style={LABEL_STYLE}>Descripción</label>
-      <input style={INPUT_STYLE} placeholder="Descripción breve..."
-        value={form.descripcion || ""} onChange={(e) => fieldChange("descripcion", e.target.value)} />
-      <label style={LABEL_STYLE}>Permite pago online</label>
-      <select style={INPUT_STYLE} value={form.permite_online ? "true" : "false"}
-        onChange={(e) => fieldChange("permite_online", e.target.value === "true")}>
-        <option value="true">Sí</option><option value="false">No</option>
-      </select>
-    </>
-  );
-
   const totalAsignaciones = asignaciones.length;
   const statCards = [
-    { label: "Total Métodos",      valor: metodos.length,      sublabel: "métodos configurados",          color: DORADO,        border: DORADO,       Icon: CreditCard  },
-    { label: "Activos",            valor: metodos.length,      sublabel: "disponibles para uso",          color: "#1a1a1a",     border: "#9ca3af",    Icon: CheckCircle },
-    { label: "Inactivos",          valor: 0,                   sublabel: "temporalmente deshabilitados",  color: DORADO_OSCURO, border: DORADO_CLARO, Icon: XCircle     },
-    { label: "Total Asignaciones", valor: totalAsignaciones,   sublabel: "vinculadas a un método",        color: "#185FA5",     border: "#85B7EB",    Icon: Link        },
+    { label: "Total Métodos",      valor: metodos.length,    sublabel: "métodos configurados",         color: DORADO,        border: DORADO,       Icon: CreditCard  },
+    { label: "Activos",            valor: metodos.length,    sublabel: "disponibles para uso",         color: "#1a1a1a",     border: "#9ca3af",    Icon: CheckCircle },
+    { label: "Inactivos",          valor: 0,                 sublabel: "temporalmente deshabilitados", color: DORADO_OSCURO, border: DORADO_CLARO, Icon: XCircle     },
+    { label: "Total Asignaciones", valor: totalAsignaciones, sublabel: "vinculadas a un método",       color: "#185FA5",     border: "#85B7EB",    Icon: Link        },
   ];
 
   // ─── RENDER ───────────────────────────────────────────────
@@ -180,15 +114,6 @@ export default function MetodosPago() {
             <span style={{ height: "2px", width: "70px", background: `linear-gradient(to left, transparent, ${DORADO})`, display: "inline-block" }} />
           </div>
         </div>
-        <button className="btn d-flex align-items-center gap-2 fw-semibold"
-          onClick={() => { setForm(FORM_VACIO); setMostrarAgregar(true); }}
-          style={{ background: `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`, color: "#fff", borderRadius: "8px", padding: "8px 18px 8px 8px", border: "none", boxShadow: "0 3px 12px rgba(140,107,63,0.55)" }}>
-          <span className="d-flex align-items-center justify-content-center rounded-circle"
-            style={{ width: "24px", height: "24px", backgroundColor: "rgba(255,255,255,0.25)" }}>
-            <Plus size={14} />
-          </span>
-          Agregar Método
-        </button>
       </div>
 
       {/* STATS */}
@@ -280,8 +205,6 @@ export default function MetodosPago() {
                         </span>
                       </td>
                       <td style={{ fontSize: 12, color: "#6b7280" }}>{m.descripcion || "—"}</td>
-
-                      {/* ← COLUMNA NUEVA */}
                       <td>
                         <span
                           onClick={() => count > 0 && setVerMetodo({ ...m, verAsignaciones: true })}
@@ -298,12 +221,9 @@ export default function MetodosPago() {
                           {count} asignación{count !== 1 ? "es" : ""}
                         </span>
                       </td>
-
                       <td>
-                        <div className="d-flex justify-content-center gap-3">
+                        <div className="d-flex justify-content-center">
                           <Eye size={19} style={{ cursor: "pointer", color: "#555" }} onClick={() => setVerMetodo({ ...m, verAsignaciones: false })} />
-                          <Pencil size={19} style={{ cursor: "pointer", color: DORADO_OSCURO }} onClick={() => abrirEditar(m)} />
-                          <Trash2 size={19} style={{ cursor: "pointer", color: "#c0392b" }} onClick={() => setEliminarId(m.id_metodo_pago)} />
                         </div>
                       </td>
                     </tr>
@@ -387,75 +307,6 @@ export default function MetodosPago() {
             </div>
 
             <button onClick={() => setVerMetodo(null)} className="btn btn-secondary w-100 mt-3">Cerrar</button>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL EDITAR */}
-      {editarMetodo && (
-        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-          style={{ background: "rgba(0,0,0,0.5)", zIndex: 1050 }} onClick={() => setEditarMetodo(null)}>
-          <div className="bg-white p-4 rounded-4 shadow"
-            style={{ width: 420, maxHeight: "90vh", overflowY: "auto", position: "relative" }} onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setEditarMetodo(null)}
-              style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: "#9ca3af" }}>
-              <X size={18} />
-            </button>
-            <h5 className="fw-bold mb-1">Editar Método</h5>
-            <div style={{ width: 40, height: 3, background: DORADO, borderRadius: 10, marginBottom: 20 }} />
-            <FormFields />
-            <div className="d-flex gap-2">
-              <button onClick={() => setEditarMetodo(null)} className="btn btn-secondary flex-fill">Cancelar</button>
-              <button onClick={guardarEdicion} className="btn flex-fill fw-semibold"
-                style={{ background: `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`, color: "#fff", border: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                <Save size={15} /> Guardar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL AGREGAR */}
-      {mostrarAgregar && (
-        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-          style={{ background: "rgba(0,0,0,0.5)", zIndex: 1050 }} onClick={() => setMostrarAgregar(false)}>
-          <div className="bg-white p-4 rounded-4 shadow"
-            style={{ width: 420, maxHeight: "90vh", overflowY: "auto", position: "relative" }} onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setMostrarAgregar(false)}
-              style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: "#9ca3af" }}>
-              <X size={18} />
-            </button>
-            <h5 className="fw-bold mb-1">Agregar Método</h5>
-            <div style={{ width: 40, height: 3, background: DORADO, borderRadius: 10, marginBottom: 20 }} />
-            <FormFields />
-            <div className="d-flex gap-2">
-              <button onClick={() => setMostrarAgregar(false)} className="btn btn-secondary flex-fill">Cancelar</button>
-              <button onClick={guardarNuevo} className="btn flex-fill fw-semibold"
-                style={{ background: `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`, color: "#fff", border: "none", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                <Plus size={15} /> Agregar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL ELIMINAR */}
-      {eliminarId && (
-        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-          style={{ background: "rgba(0,0,0,0.5)", zIndex: 1050 }} onClick={() => setEliminarId(null)}>
-          <div className="bg-white p-4 rounded-4 shadow" style={{ width: 380 }} onClick={(e) => e.stopPropagation()}>
-            <div className="text-center">
-              <div style={{ background: "#fbe2df", borderRadius: "50%", width: 52, height: 52, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
-                <Trash2 size={22} color="#c0392b" />
-              </div>
-              <h5 className="fw-bold mb-1">¿Eliminar método?</h5>
-              <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 20 }}>Esta acción no se puede deshacer.</p>
-              <div className="d-flex gap-2">
-                <button onClick={() => setEliminarId(null)} className="btn btn-secondary flex-fill">Cancelar</button>
-                <button onClick={confirmarEliminar} className="btn flex-fill"
-                  style={{ background: "#c0392b", color: "#fff", border: "none", fontWeight: 600 }}>Eliminar</button>
-              </div>
-            </div>
           </div>
         </div>
       )}

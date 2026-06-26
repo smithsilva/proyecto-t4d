@@ -60,6 +60,23 @@ const actualizarSucursalService =
     return data;
   };
 
+const actualizarParcialSucursalService =
+  async (
+    id,
+    datos
+  ) => {
+    const { data, error } =
+      await supabase
+        .from("sucursales")
+        .update(datos)
+        .eq("id_sucursal", id)
+        .select();
+
+    if (error) throw error;
+
+    return data;
+  };
+
 const eliminarSucursalService =
   async (id) => {
     const { error } =
@@ -78,5 +95,6 @@ module.exports = {
   obtenerSucursalPorIdService,
   crearSucursalService,
   actualizarSucursalService,
+  actualizarParcialSucursalService,
   eliminarSucursalService,
 };

@@ -3,10 +3,14 @@ const {
   obtenerSucursalPorIdService,
   crearSucursalService,
   actualizarSucursalService,
+  actualizarParcialSucursalService,
   eliminarSucursalService,
 } = require("../services/sucursales.service");
 
-const obtenerSucursales = async (req, res) => {
+const obtenerSucursales = async (
+  req,
+  res
+) => {
   try {
     const data =
       await obtenerSucursalesService();
@@ -74,6 +78,23 @@ const actualizarSucursal = async (
   }
 };
 
+const actualizarParcialSucursal =
+  async (req, res) => {
+    try {
+      const data =
+        await actualizarParcialSucursalService(
+          req.params.id,
+          req.body
+        );
+
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({
+        mensaje: error.message,
+      });
+    }
+  };
+
 const eliminarSucursal = async (
   req,
   res
@@ -99,5 +120,6 @@ module.exports = {
   obtenerSucursalPorId,
   crearSucursal,
   actualizarSucursal,
+  actualizarParcialSucursal,
   eliminarSucursal,
 };

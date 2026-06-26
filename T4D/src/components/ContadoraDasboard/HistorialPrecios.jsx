@@ -123,9 +123,6 @@ export default function HistorialPrecios({ usuario }) {
     { label:"Sin Cambio",      valor:sinCambio,         sublabel:"sin variación",         color:"#6b7280",     border:"#e5e7eb"    },
   ];
 
-  // Colores del badge por rol
-  const rolColor = { admin:"#13202e", gerente:"#1f4e79", contadora:"#3d5a3e" };
-
   // ── Guardar precio ─────────────────────────────────────────────────────────
   const guardarPrecio = async () => {
     if (!productoSel) return;
@@ -172,16 +169,6 @@ export default function HistorialPrecios({ usuario }) {
             Historial de Precios{" "}
             <span className="fw-normal text-muted" style={{ fontSize:"16px" }}>- Rastrea y analiza cambios de precios</span>
           </h4>
-          <div className="d-flex align-items-center gap-2 mb-2">
-            <span style={{ background: rolColor[rol] || "#333", color:DORADO_CLARO, fontSize:11, fontWeight:700, padding:"2px 10px", borderRadius:999 }}>
-              {rol.toUpperCase()}
-            </span>
-            <span style={{ color:"#9ca3af", fontSize:12 }}>
-              {puede.editar ? "Puedes editar precios" : "Solo lectura"}
-              {puede.eliminar ? " · Eliminar registros" : ""}
-              {puede.desactivar ? " · Desactivar productos" : ""}
-            </span>
-          </div>
           <div className="d-flex align-items-center" style={{ gap:"10px" }}>
             <span style={{ height:"2px", width:"70px", background:`linear-gradient(to right, transparent, ${DORADO})`, display:"inline-block" }} />
             <span style={{ color:DORADO, fontSize:"14px" }}>★</span>
