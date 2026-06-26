@@ -236,10 +236,73 @@ const actualizarParcialUsuario = async (
   }
 };
 
+// ======================================
+// PATCH USUARIO (actualización parcial)
+// ======================================
+
+const patchUsuario = async (req, res) => {
+  try {
+    const id = req.params.id;
+
+    // Solo toma los campos que realmente llegaron en el body
+    const camposPermitidos = ["username", "email", "id_rol", "activo", "codigo"];
+    const camposActualizar = {};
+
+    for (const campo of camposPermitidos) {
+      if (req.body[campo] !== undefined) {
+        camposActualizar[campo] = req.body[campo];
+      }
+    }
+
+    if (Object.keys(camposActualizar).length === 0) {
+      return res.status(400).json({
+        error: "No se enviaron campos válidos para actualizar",
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("usuarios")
+      .update(camposActualizar)
+      .eq("id_usuario", id)
+      .select(`
+        *,
+        roles (
+          id_rol,
+          nombre_rol,
+          descripcion,
+          nivel_acceso
+        )
+      `);
+
+    if (error) {
+      return res.status(400).json({
+        error: error.message,
+      });
+    }
+
+    if (!data || data.length === 0) {
+      return res.status(404).json({
+        error: "Usuario no encontrado",
+      });
+    }
+
+    res.json({
+      success: true,
+      data,
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   obtenerUsuarios,
   crearUsuario,
   editarUsuario,
+  patchUsuario,
   actualizarParcialUsuario,
   eliminarUsuario,
 };
