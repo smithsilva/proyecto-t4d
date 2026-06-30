@@ -12,7 +12,6 @@ function TopbarMecanico({ setVistaMecanico, usuario }) {
   const [mostrarMenu,    setMostrarMenu]    = useState(false);
   const [openNotif,      setOpenNotif]      = useState(false);
   const [notificaciones, setNotificaciones] = useState([]);
-  const [aceptando,      setAceptando]      = useState(null); // id de la notif que se está procesando
 
   const cargarNotificaciones = async () => {
     const { data, error } = await supabase
@@ -34,82 +33,6 @@ function TopbarMecanico({ setVistaMecanico, usuario }) {
     setNotificaciones((prev) =>
       prev.map((n) => n.id_notificacion === id ? { ...n, leido: true } : n)
     );
-  };
-
-  // ── Aceptar tarea desde la notificación ─────────────────────
-  const aceptarDesdeNotif = async (notif) => {
-    if (!notif.id_asignacion) return;
-    setAceptando(notif.id_notificacion);
-
-    try {
-      // 1. Leer la asignación completa
-      const { data: asig, error: errAsig } = await supabase
-        .from("asignaciones_tareas")
-        .select("id_asignacion, costo, id_sucursal, id_cliente, id_metodo_pago, metodos_pago(permite_online)")
-        .eq("id_asignacion", notif.id_asignacion)
-        .single();
-
-      if (errAsig || !asig) throw new Error("No se encontró la asignación");
-      if (asig.estado === "En proceso" || asig.estado === "Finalizada") {
-        Swal.fire({ icon: "info", title: "Esta tarea ya fue aceptada", timer: 1800, showConfirmButton: false });
-        await marcarLeida(notif.id_notificacion);
-        setAceptando(null);
-        return;
-      }
-
-      // 2. Cambiar estado de la asignación
-      const { error: errUpd } = await supabase
-        .from("asignaciones_tareas")
-        .update({ estado: "En proceso" })
-        .eq("id_asignacion", asig.id_asignacion);
-      if (errUpd) throw new Error(errUpd.message);
-
-      // 3. Calcular importes
-      const total    = Number(asig.costo) || 0;
-      const subtotal = +(total / 1.19).toFixed(2);
-      const iva      = +(total - subtotal).toFixed(2);
-
-      // 4. Crear mantenimiento
-      const { data: mant, error: errMant } = await supabase
-        .from("mantenimiento")
-        .insert([{
-          fecha_hora:            new Date().toISOString(),
-          tipo_de_mantenimiento: asig.metodos_pago?.permite_online ? "Online" : "Fisica",
-          estado:                "Pendiente",
-          id_sucursal:           asig.id_sucursal,
-          id_cliente:            asig.id_cliente,
-          id_empleado_cajero:    null,
-          subtotal, iva, total,
-          id_metodo_pago:        asig.id_metodo_pago,
-          id_asignacion:         asig.id_asignacion,
-        }])
-        .select("id_mantenimiento")
-        .single();
-      if (errMant) throw new Error(errMant.message);
-
-      // 5. Vincular mantenimiento a la asignación
-      await supabase
-        .from("asignaciones_tareas")
-        .update({ id_mantenimiento: mant.id_mantenimiento })
-        .eq("id_asignacion", asig.id_asignacion);
-
-      // 6. Marcar notificación como leída
-      await marcarLeida(notif.id_notificacion);
-
-      Swal.fire({ icon: "success", title: "Tarea aceptada", text: "Puedes verla en Mis Mantenimientos.", timer: 2000, showConfirmButton: false });
-
-      // 7. Navegar a mis mantenimientos
-    setOpenNotif(false);
-if (typeof setVistaMecanico === "function") {
-  setVistaMecanico("misMantenimientos");
-}
-
-
-    } catch (err) {
-      Swal.fire({ icon: "error", title: "Error", text: err.message });
-    }
-
-    setAceptando(null);
   };
 
   const cerrarSesion = () => {
@@ -188,28 +111,11 @@ if (typeof setVistaMecanico === "function") {
                     <p style={{ fontSize: 13, margin: "4px 0", color: "#ccc" }}>{n.descripcion}</p>
                     <small style={{ color: "#7b8a99", fontSize: 12 }}>{fmtFecha(n.fecha)}</small>
 
-                    {/* ✅ Botón Aceptar tarea: solo si tiene id_asignacion y no está leída */}
-                    {!n.leido && n.id_asignacion && (
-                      <button
-                        onClick={() => aceptarDesdeNotif(n)}
-                        disabled={aceptando === n.id_notificacion}
-                        style={{
-                          marginTop: 8, width: "100%",
-                          background: `linear-gradient(135deg, #c9941f, #8c6b3f)`,
-                          color: "#fff", border: "none", padding: "8px",
-                          borderRadius: "8px", fontSize: 12, cursor: "pointer",
-                          fontWeight: 600, opacity: aceptando === n.id_notificacion ? 0.7 : 1,
-                        }}
-                      >
-                        {aceptando === n.id_notificacion ? "Procesando..." : "✓ Aceptar tarea"}
-                      </button>
-                    )}
-
-                    {/* Botón Marcar como leída: solo si no está leída y no tiene asignación pendiente */}
+                    {/* Botón Marcar como leída */}
                     {!n.leido && (
                       <button
                         onClick={() => marcarLeida(n.id_notificacion)}
-                        style={{ marginTop: n.id_asignacion ? 6 : 8, width: "100%", background: NAVY_OSCURO, border: `1px solid ${DORADO}`, padding: "7px", borderRadius: "8px", fontSize: 12, cursor: "pointer", color: DORADO_SUAVE }}
+                        style={{ marginTop: 8, width: "100%", background: NAVY_OSCURO, border: `1px solid ${DORADO}`, padding: "7px", borderRadius: "8px", fontSize: 12, cursor: "pointer", color: DORADO_SUAVE }}
                       >
                         Marcar como leída
                       </button>

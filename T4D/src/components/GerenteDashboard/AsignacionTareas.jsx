@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "../../Supabase/SupabaseClient";
 import { Filter, Search, X, Plus } from "lucide-react";
 
@@ -48,6 +48,7 @@ const badgePrioridad = (prioridad) => {
 
 const FORM_EMPTY = {
   id_cliente:     "",
+  id_mecanico:    "",
   vehiculo:       "",
   tipo_trabajo:   "Mantenimiento",
   descripcion:    "",
@@ -79,6 +80,12 @@ export default function AsignacionTareas() {
   const [error,            setError]            = useState(null);
   const [modalNueva,       setModalNueva]       = useState(false);
   const [form,             setForm]             = useState(FORM_EMPTY);
+
+  // Guard "duro" anti doble-envío: a diferencia de un estado de React,
+  // un ref cambia de valor de forma inmediata y sincrónica, sin esperar
+  // un re-render. Esto evita que un doble clic (o un clic mientras
+  // guardando aún no se propagó al DOM) dispare el insert dos veces.
+  const enviandoRef = useRef(false);
 
   useEffect(() => { cargarAsignaciones(); }, []);
 
@@ -117,6 +124,7 @@ export default function AsignacionTareas() {
     setMetodosPago([]);
     setClientes([]);
     setSucursales([]);
+    enviandoRef.current = false;
   };
 
   const cargarMecanicos = async () => {
@@ -125,9 +133,22 @@ export default function AsignacionTareas() {
       .from("usuarios")
       .select("id_usuario, username")
       .eq("rol", "Mecanico")
-      .eq("activo", true);
-    setMecanicos(err ? [] : (data || []));
+      .eq("activo", true)
+      .order("username", { ascending: true });
+
+    // Deduplicar por id_usuario por si la consulta trae filas repetidas.
+    const unicos = Array.from(
+      new Map((data || []).map((m) => [m.id_usuario, m])).values()
+    );
+
+    setMecanicos(err ? [] : unicos);
     setCargandoMec(false);
+
+    // Si solo hay un mecánico activo, se preselecciona automáticamente
+    // para agilizar el formulario; si hay varios, el usuario elige.
+    if (!err && unicos.length === 1) {
+      setForm((f) => ({ ...f, id_mecanico: String(unicos[0].id_usuario) }));
+    }
   };
 
   const cargarMetodosPago = async () => {
@@ -169,73 +190,85 @@ export default function AsignacionTareas() {
     (c) => String(c.id_cliente) === String(form.id_cliente)
   );
 
+  const mecanicoSeleccionado = mecanicos.find(
+    (m) => String(m.id_usuario) === String(form.id_mecanico)
+  );
+
   const crearAsignacion = async () => {
+    // 1) Bloqueo inmediato contra doble clic / doble submit
+    if (enviandoRef.current) return;
+
     if (!form.vehiculo.trim())                                               return alert("El vehículo es obligatorio.");
+    if (!form.id_mecanico)                                                   return alert("Selecciona el mecánico a asignar.");
     if (!form.costo || isNaN(Number(form.costo)) || Number(form.costo) <= 0) return alert("Ingresa un costo válido.");
     if (!form.id_metodo_pago)                                                return alert("Selecciona un método de pago.");
     if (!form.id_sucursal)                                                   return alert("Selecciona la sucursal.");
-    if (mecanicos.length === 0)                                              return alert("No se encontraron mecánicos activos.");
 
+    enviandoRef.current = true;
     setGuardando(true);
 
-    const { data: asignadas, error: errInsert } = await supabase
-      .from("asignaciones_tareas")
-      .insert(
-        mecanicos.map((m) => ({
+    try {
+      // Insert único: una sola asignación, para el mecánico elegido.
+      const { data: asignada, error: errInsert } = await supabase
+        .from("asignaciones_tareas")
+        .insert([{
           id_cliente:     form.id_cliente ? Number(form.id_cliente) : null,
           vehiculo:       form.vehiculo.trim(),
           tipo_trabajo:   form.tipo_trabajo,
           descripcion:    form.descripcion.trim() || null,
-          id_mecanico:    m.id_usuario,
+          id_mecanico:    Number(form.id_mecanico),
           prioridad:      form.prioridad,
           fecha_limite:   form.fecha_limite || null,
           estado:         "Pendiente",
           costo:          Number(form.costo),
           id_metodo_pago: Number(form.id_metodo_pago),
           id_sucursal:    Number(form.id_sucursal),
-        }))
-      )
-      .select("id_asignacion, id_mecanico");
+        }])
+        .select("id_asignacion, id_mecanico")
+        .single();
 
-    if (errInsert) { alert("Error al guardar: " + errInsert.message); setGuardando(false); return; }
+      if (errInsert) {
+        alert("Error al guardar: " + errInsert.message);
+        return;
+      }
 
-    const parteCliente = clienteSeleccionado
-      ? ` | Cliente: ${clienteSeleccionado.nombre_completo} (${clienteSeleccionado.tipo_documento} ${clienteSeleccionado.numero_documento})`
-      : "";
+      const parteCliente = clienteSeleccionado
+        ? ` | Cliente: ${clienteSeleccionado.nombre_completo} (${clienteSeleccionado.tipo_documento} ${clienteSeleccionado.numero_documento})`
+        : "";
 
-    const conceptoContable = `${form.tipo_trabajo} — Vehículo: ${form.vehiculo.trim()}${
-      clienteSeleccionado ? ` — Cliente: ${clienteSeleccionado.nombre_completo}` : ""
-    }`;
+      const conceptoContable = `${form.tipo_trabajo} — Vehículo: ${form.vehiculo.trim()}${
+        clienteSeleccionado ? ` — Cliente: ${clienteSeleccionado.nombre_completo}` : ""
+      }`;
 
-   
-   // Movimientos contables
-await supabase.from("movimientos_contables").insert(
-  asignadas.map((a) => ({
-    tipo_movimiento:     "Egreso",
-    concepto:            conceptoContable,
-    id_asignacion:       a.id_asignacion,
-    id_mantenimiento:    null,
-    valor:               Number(form.costo),
-    fecha_movimiento:    new Date().toISOString().split("T")[0],
-    id_usuario_registro: null,
-  }))
-);
+      // Un solo movimiento contable para la única asignación creada.
+      const { error: errMov } = await supabase.from("movimientos_contables").insert([{
+        tipo_movimiento:     "Egreso",
+        concepto:            conceptoContable,
+        id_asignacion:       asignada.id_asignacion,
+        id_mantenimiento:    null,
+        valor:               Number(form.costo),
+        fecha_movimiento:    new Date().toISOString().split("T")[0],
+        id_usuario_registro: null,
+      }]);
+      if (errMov) console.error("Error creando movimiento contable:", errMov.message);
 
-    // Notificaciones
-    await supabase.from("notificaciones").insert(
-      asignadas.map((a) => ({
+      // Una sola notificación, para el mecánico asignado.
+      const { error: errNotif } = await supabase.from("notificaciones").insert([{
         titulo:        "Nueva asignación",
         descripcion:   `Nuevo trabajo de ${form.tipo_trabajo} — Vehículo: ${form.vehiculo.trim()}${parteCliente}`,
         leido:         false,
         rol_destino:   "Mecanico",
-        id_usuario:    a.id_mecanico,
-        id_asignacion: a.id_asignacion,
-      }))
-    );
+        id_usuario:    asignada.id_mecanico,
+        id_asignacion: asignada.id_asignacion,
+      }]);
+      if (errNotif) console.error("Error creando notificación:", errNotif.message);
 
-    await cargarAsignaciones();
-    cerrarModal();
-    setGuardando(false);
+      await cargarAsignaciones();
+      cerrarModal();
+    } finally {
+      setGuardando(false);
+      enviandoRef.current = false;
+    }
   };
 
   const filtradas = asignaciones.filter((a) => {
@@ -389,7 +422,7 @@ await supabase.from("movimientos_contables").insert(
                       <td style={{ padding: "12px 10px", fontSize: 13, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#6b7280" }} title={a.descripcion}>{a.descripcion || "—"}</td>
                       {/* Mecánico */}
                       <td style={{ padding: "12px 10px", fontSize: 13 }}>{a.usuarios?.username || "—"}</td>
-                      {/* ✅ Sucursal */}
+                      {/* Sucursal */}
                       <td style={{ padding: "12px 10px" }}>
                         {sucursal ? (
                           <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
@@ -444,15 +477,23 @@ await supabase.from("movimientos_contables").insert(
             </div>
             <div style={{ width: 40, height: 3, background: DORADO_OSCURO, borderRadius: 10, marginBottom: 16 }} />
 
-            {/* Banner mecánicos */}
-            <div style={{ marginBottom: 16, padding: "10px 14px", borderRadius: 10, background: "#faf7f2", border: `1px solid ${DORADO_CLARO}`, display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ color: DORADO_OSCURO }}><UsersIcon /></span>
+            {/* Selección de mecánico */}
+            <div style={{ marginBottom: 16, padding: "14px 16px", borderRadius: 10, background: "#faf7f2", border: `1px solid ${DORADO_CLARO}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+                <span style={{ color: DORADO_OSCURO }}><UsersIcon /></span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: DORADO_OSCURO }}>Mecánico asignado</span>
+              </div>
               {cargandoMec ? (
-                <span style={{ fontSize: 12, color: "#9ca3af" }}>Buscando mecánicos...</span>
-              ) : mecanicos.length > 0 ? (
-                <span style={{ fontSize: 12, color: "#6b7280" }}>Se notificará a <strong style={{ color: DORADO_OSCURO }}>{mecanicos.length} mecánico{mecanicos.length > 1 ? "s" : ""}</strong>: {mecanicos.map((m) => m.username).join(", ")}</span>
+                <div style={{ fontSize: 12, color: "#9ca3af", padding: "8px 0" }}>Buscando mecánicos...</div>
+              ) : mecanicos.length === 0 ? (
+                <div style={{ fontSize: 12, color: "#ef4444" }}>No se encontraron mecánicos activos</div>
               ) : (
-                <span style={{ fontSize: 12, color: "#ef4444" }}>No se encontraron mecánicos activos</span>
+                <select value={form.id_mecanico} onChange={(e) => setForm({ ...form, id_mecanico: e.target.value })} style={{ ...inputStyle, marginBottom: 0 }}>
+                  <option value="">— Selecciona mecánico —</option>
+                  {mecanicos.map((m) => (
+                    <option key={m.id_usuario} value={m.id_usuario}>{m.username}</option>
+                  ))}
+                </select>
               )}
             </div>
 
@@ -560,10 +601,14 @@ await supabase.from("movimientos_contables").insert(
               <button onClick={cerrarModal} disabled={guardando} style={{ padding: "8px 18px", borderRadius: 8, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 13, flex: 1 }}>Cancelar</button>
               <button
                 onClick={crearAsignacion}
-                disabled={guardando || cargandoMec || mecanicos.length === 0}
-                style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: (guardando || mecanicos.length === 0) ? "#d4b896" : `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`, color: "#fff", fontWeight: 600, cursor: (guardando || mecanicos.length === 0) ? "not-allowed" : "pointer", fontSize: 13, flex: 1 }}
+                disabled={guardando || cargandoMec || mecanicos.length === 0 || !form.id_mecanico}
+                style={{ padding: "8px 18px", borderRadius: 8, border: "none", background: (guardando || mecanicos.length === 0 || !form.id_mecanico) ? "#d4b896" : `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`, color: "#fff", fontWeight: 600, cursor: (guardando || mecanicos.length === 0 || !form.id_mecanico) ? "not-allowed" : "pointer", fontSize: 13, flex: 1 }}
               >
-                {guardando ? "Guardando..." : `Asignar a ${mecanicos.length} mecánico${mecanicos.length !== 1 ? "s" : ""}`}
+                {guardando
+                  ? "Guardando..."
+                  : mecanicoSeleccionado
+                    ? `Asignar a ${mecanicoSeleccionado.username}`
+                    : "Asignar tarea"}
               </button>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Swal from "sweetalert2";
 import {
   Search, Clock3, Wrench, Shield, CheckCircle, Eye, Check, X, Plus, Trash2, Filter,
@@ -25,6 +25,14 @@ function MisMantenimientos({ usuario }) {
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
   const [nuevoProducto,   setNuevoProducto]   = useState({ id_producto: "", cantidad: 1 });
   const [guardando,       setGuardando]       = useState(false);
+
+  // Guard anti doble-clic / doble-disparo: usamos un Set porque puede haber
+  // varias filas distintas en la tabla siendo procesadas "al mismo tiempo".
+  // procesandoRef es la verdad inmediata y sincrónica (evita la ventana de
+  // tiempo entre el clic y el re-render de React); procesando (estado) es
+  // solo para reflejar visualmente el bloqueo en los botones.
+  const procesandoRef = useRef(new Set());
+  const [procesando, setProcesando] = useState(new Set());
 
   const TIPOS = [
     "Mantenimiento", "Reparación", "Blindamiento", "Inspección",
@@ -94,7 +102,7 @@ function MisMantenimientos({ usuario }) {
   const abrirDetalle = async (m) => {
     setModalDetalle(m);
     setNuevoProducto({ id_producto: "", cantidad: 1 });
-    await cargarDetalle(m.id_asignacion); // ✅ corregido
+    await cargarDetalle(m.id_asignacion);
   };
 
   const agregarProducto = async () => {
@@ -109,20 +117,20 @@ function MisMantenimientos({ usuario }) {
     }
     setGuardando(true);
     const { error } = await supabase.from("detalle_asignacion").insert([{
-      id_asignacion: modalDetalle.id_asignacion, // ✅ corregido
+      id_asignacion: modalDetalle.id_asignacion,
       id_producto:   parseInt(nuevoProducto.id_producto),
       cantidad:      parseInt(nuevoProducto.cantidad),
     }]);
     if (error) { Swal.fire({ icon: "error", title: "Error", text: error.message }); setGuardando(false); return; }
     setNuevoProducto({ id_producto: "", cantidad: 1 });
-    await cargarDetalle(modalDetalle.id_asignacion); // ✅ corregido
+    await cargarDetalle(modalDetalle.id_asignacion);
     setGuardando(false);
   };
 
   const eliminarDetalle = async (id_detalle) => {
     const { error } = await supabase.from("detalle_asignacion").delete().eq("id_detalle", id_detalle);
     if (error) { Swal.fire({ icon: "error", title: "Error", text: error.message }); return; }
-    await cargarDetalle(modalDetalle.id_asignacion); // ✅ corregido
+    await cargarDetalle(modalDetalle.id_asignacion);
   };
 
   useEffect(() => {
@@ -152,77 +160,99 @@ function MisMantenimientos({ usuario }) {
 
   // ── Aceptar tarea: recibe el objeto completo ──────────────────
   const aceptarTarea = async (item) => {
-    // 1. Cambiar estado de la asignación
-    const { error: errUpd } = await supabase
-      .from("asignaciones_tareas")
-      .update({ estado: "En proceso" })
-      .eq("id_asignacion", item.id_asignacion); // ✅ corregido
-    if (errUpd) { Swal.fire({ icon: "error", title: "Error", text: errUpd.message }); return; }
+    const id = item.id_asignacion;
 
-    // 2. Calcular subtotal e IVA
-    const total    = Number(item.costo) || 0;
-    const subtotal = +(total / 1.19).toFixed(2);
-    const iva      = +(total - subtotal).toFixed(2);
+    // Candado sincrónico anti doble-clic / doble-disparo
+    if (procesandoRef.current.has(id)) return;
+    procesandoRef.current.add(id);
+    setProcesando((prev) => new Set(prev).add(id));
 
-    // 3. Crear el mantenimiento real
-    const { data: mant, error: errMant } = await supabase
-      .from("mantenimiento")
-      .insert([{
-        fecha_hora:            new Date().toISOString(),
-        tipo_de_mantenimiento: item.metodo_pago?.permite_online ? "Online" : "Fisica", // ✅ respeta el CHECK
-        estado:                "Pendiente",
-        id_sucursal:           item.id_sucursal,
-        id_cliente:            item.id_cliente,
-        id_empleado_cajero:    null,
-        subtotal, iva, total,
-        id_metodo_pago:        item.id_metodo_pago,
-        id_asignacion:         item.id_asignacion, // ✅ corregido
-      }])
-      .select("id_mantenimiento")
-      .single();
+    try {
+      // 1. Cambiar estado de la asignación
+      const { error: errUpd } = await supabase
+        .from("asignaciones_tareas")
+        .update({ estado: "En proceso" })
+        .eq("id_asignacion", id);
+      if (errUpd) { Swal.fire({ icon: "error", title: "Error", text: errUpd.message }); return; }
 
-    if (errMant) { Swal.fire({ icon: "error", title: "Error creando mantenimiento", text: errMant.message }); return; }
+      // 2. Calcular subtotal e IVA
+      const total    = Number(item.costo) || 0;
+      const subtotal = +(total / 1.19).toFixed(2);
+      const iva      = +(total - subtotal).toFixed(2);
 
-    // 4. Vincular el mantenimiento creado a la asignación
-    await supabase
-      .from("asignaciones_tareas")
-      .update({ id_mantenimiento: mant.id_mantenimiento })
-      .eq("id_asignacion", item.id_asignacion); // ✅ corregido
+      // 3. Crear el mantenimiento real
+      const { data: mant, error: errMant } = await supabase
+        .from("mantenimiento")
+        .insert([{
+          fecha_hora:            new Date().toISOString(),
+          tipo_de_mantenimiento: item.metodo_pago?.permite_online ? "Online" : "Fisica", // respeta el CHECK
+          estado:                "Pendiente",
+          id_sucursal:           item.id_sucursal,
+          id_cliente:            item.id_cliente,
+          id_empleado_cajero:    null,
+          subtotal, iva, total,
+          id_metodo_pago:        item.id_metodo_pago,
+          id_asignacion:         id,
+        }])
+        .select("id_mantenimiento")
+        .single();
 
-    setData((prev) => prev.map((d) =>
-      d.id_asignacion === item.id_asignacion
-        ? { ...d, estado: "En proceso", id_mantenimiento_real: mant.id_mantenimiento }
-        : d
-    ));
+      if (errMant) { Swal.fire({ icon: "error", title: "Error creando mantenimiento", text: errMant.message }); return; }
 
-    // 5. Cerrar modal si está abierto con esta asignación
-    if (modalDetalle?.id_asignacion === item.id_asignacion) {
-      setModalDetalle((prev) => ({ ...prev, estado: "En proceso" }));
+      // 4. Vincular el mantenimiento creado a la asignación
+      await supabase
+        .from("asignaciones_tareas")
+        .update({ id_mantenimiento: mant.id_mantenimiento })
+        .eq("id_asignacion", id);
+
+      setData((prev) => prev.map((d) =>
+        d.id_asignacion === id
+          ? { ...d, estado: "En proceso", id_mantenimiento_real: mant.id_mantenimiento }
+          : d
+      ));
+
+      // 5. Cerrar/actualizar modal si está abierto con esta asignación
+      if (modalDetalle?.id_asignacion === id) {
+        setModalDetalle((prev) => ({ ...prev, estado: "En proceso" }));
+      }
+
+      Swal.fire({ icon: "success", title: "Tarea aceptada", text: "Se agregó a tus mantenimientos.", timer: 1800, showConfirmButton: false });
+    } finally {
+      procesandoRef.current.delete(id);
+      setProcesando((prev) => { const s = new Set(prev); s.delete(id); return s; });
     }
-
-    Swal.fire({ icon: "success", title: "Tarea aceptada", text: "Se agregó a tus mantenimientos.", timer: 1800, showConfirmButton: false });
   };
 
   // ── Finalizar tarea ───────────────────────────────────────────
   const finalizarTarea = async (id_asignacion) => {
-    const { error } = await supabase
-      .from("asignaciones_tareas")
-      .update({ estado: "Finalizada" })
-      .eq("id_asignacion", id_asignacion); // ✅ corregido
-    if (error) { Swal.fire({ icon: "error", title: "Error", text: error.message }); return; }
+    // Mismo candado, por id de asignación
+    if (procesandoRef.current.has(id_asignacion)) return;
+    procesandoRef.current.add(id_asignacion);
+    setProcesando((prev) => new Set(prev).add(id_asignacion));
 
-    // Cierra también el mantenimiento vinculado
-    const { error: errMant } = await supabase
-      .from("mantenimiento")
-      .update({ estado: "Completada" })
-      .eq("id_asignacion", id_asignacion); // ✅ corregido
-    if (errMant) { Swal.fire({ icon: "error", title: "Error actualizando mantenimiento", text: errMant.message }); return; }
+    try {
+      const { error } = await supabase
+        .from("asignaciones_tareas")
+        .update({ estado: "Finalizada" })
+        .eq("id_asignacion", id_asignacion);
+      if (error) { Swal.fire({ icon: "error", title: "Error", text: error.message }); return; }
 
-    setData((prev) => prev.map((d) => d.id_asignacion === id_asignacion ? { ...d, estado: "Finalizada" } : d));
-    if (modalDetalle?.id_asignacion === id_asignacion)
-      setModalDetalle((prev) => ({ ...prev, estado: "Finalizada" }));
+      // Cierra también el mantenimiento vinculado
+      const { error: errMant } = await supabase
+        .from("mantenimiento")
+        .update({ estado: "Completada" })
+        .eq("id_asignacion", id_asignacion);
+      if (errMant) { Swal.fire({ icon: "error", title: "Error actualizando mantenimiento", text: errMant.message }); return; }
 
-    Swal.fire({ icon: "success", title: "Trabajo finalizado", timer: 1800, showConfirmButton: false });
+      setData((prev) => prev.map((d) => d.id_asignacion === id_asignacion ? { ...d, estado: "Finalizada" } : d));
+      if (modalDetalle?.id_asignacion === id_asignacion)
+        setModalDetalle((prev) => ({ ...prev, estado: "Finalizada" }));
+
+      Swal.fire({ icon: "success", title: "Trabajo finalizado", timer: 1800, showConfirmButton: false });
+    } finally {
+      procesandoRef.current.delete(id_asignacion);
+      setProcesando((prev) => { const s = new Set(prev); s.delete(id_asignacion); return s; });
+    }
   };
 
   const TipoBadge = ({ tipo }) => (
@@ -357,35 +387,36 @@ function MisMantenimientos({ usuario }) {
                       {data.length === 0 ? "No tienes asignaciones aún" : "Sin resultados"}
                     </td>
                   </tr>
-                ) : filtered.map((d) => (
-                  // ✅ key e ID usan id_asignacion
-                  <tr key={d.id_asignacion} style={{ fontSize: "13px", borderBottom: "1px solid #ece4d3" }}>
-                    <td className="ps-3 fw-bold" style={{ color: DORADO_OSCURO }}>#{d.id_asignacion}</td>
-                    <td style={{ fontSize: 12, color: "#6b7280" }}>{d.fecha_hora}</td>
-                    <td><TipoBadge tipo={d.tipo_de_mantenimiento} /></td>
-                    <td style={{ minWidth: 160 }}><ClienteBadge cliente={d.cliente} /></td>
-                    <td style={{ fontWeight: 600 }}>{d.vehiculo || "—"}</td>
-                    <td><EstadoBadge estado={d.estado} /></td>
-                    <td>
-                      <div className="d-flex gap-3 justify-content-center align-items-center">
-                        <Eye size={18} style={{ cursor: "pointer", color: "#555" }} onClick={() => abrirDetalle(d)} />
-                        {/* ✅ Se pasa el objeto completo d, no solo el ID */}
-                        {d.estado === "Pendiente" && (
-                          <button onClick={() => aceptarTarea(d)} className="btn btn-sm"
-                            style={{ background: `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`, color: "#fff", border: "none", borderRadius: "20px", fontSize: "11px", fontWeight: 600 }}>
-                            <Check size={14} />
-                          </button>
-                        )}
-                        {d.estado === "En proceso" && (
-                          <button onClick={() => finalizarTarea(d.id_asignacion)} className="btn btn-sm"
-                            style={{ backgroundColor: "#1f9d55", color: "#fff", border: "none", borderRadius: "20px", fontSize: "11px", fontWeight: 600 }}>
-                            <Check size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                ) : filtered.map((d) => {
+                  const bloqueado = procesando.has(d.id_asignacion);
+                  return (
+                    <tr key={d.id_asignacion} style={{ fontSize: "13px", borderBottom: "1px solid #ece4d3" }}>
+                      <td className="ps-3 fw-bold" style={{ color: DORADO_OSCURO }}>#{d.id_asignacion}</td>
+                      <td style={{ fontSize: 12, color: "#6b7280" }}>{d.fecha_hora}</td>
+                      <td><TipoBadge tipo={d.tipo_de_mantenimiento} /></td>
+                      <td style={{ minWidth: 160 }}><ClienteBadge cliente={d.cliente} /></td>
+                      <td style={{ fontWeight: 600 }}>{d.vehiculo || "—"}</td>
+                      <td><EstadoBadge estado={d.estado} /></td>
+                      <td>
+                        <div className="d-flex gap-3 justify-content-center align-items-center">
+                          <Eye size={18} style={{ cursor: "pointer", color: "#555" }} onClick={() => abrirDetalle(d)} />
+                          {d.estado === "Pendiente" && (
+                            <button onClick={() => aceptarTarea(d)} disabled={bloqueado} className="btn btn-sm"
+                              style={{ background: `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`, color: "#fff", border: "none", borderRadius: "20px", fontSize: "11px", fontWeight: 600, opacity: bloqueado ? 0.6 : 1, cursor: bloqueado ? "not-allowed" : "pointer" }}>
+                              <Check size={14} />
+                            </button>
+                          )}
+                          {d.estado === "En proceso" && (
+                            <button onClick={() => finalizarTarea(d.id_asignacion)} disabled={bloqueado} className="btn btn-sm"
+                              style={{ backgroundColor: "#1f9d55", color: "#fff", border: "none", borderRadius: "20px", fontSize: "11px", fontWeight: 600, opacity: bloqueado ? 0.6 : 1, cursor: bloqueado ? "not-allowed" : "pointer" }}>
+                              <Check size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -445,17 +476,15 @@ function MisMantenimientos({ usuario }) {
             ))}
 
             <div className="d-flex gap-2 mt-3 mb-4">
-              {/* ✅ Se pasa el objeto completo modalDetalle */}
               {modalDetalle.estado === "Pendiente" && (
-                <button onClick={() => aceptarTarea(modalDetalle)} className="btn btn-sm"
-                  style={{ background: `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`, color: "#fff", border: "none", borderRadius: 20, fontWeight: 600, fontSize: 12 }}>
+                <button onClick={() => aceptarTarea(modalDetalle)} disabled={procesando.has(modalDetalle.id_asignacion)} className="btn btn-sm"
+                  style={{ background: `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`, color: "#fff", border: "none", borderRadius: 20, fontWeight: 600, fontSize: 12, opacity: procesando.has(modalDetalle.id_asignacion) ? 0.6 : 1, cursor: procesando.has(modalDetalle.id_asignacion) ? "not-allowed" : "pointer" }}>
                   <Check size={13} /> Aceptar tarea
                 </button>
               )}
-              {/* ✅ Se pasa id_asignacion */}
               {modalDetalle.estado === "En proceso" && (
-                <button onClick={() => finalizarTarea(modalDetalle.id_asignacion)} className="btn btn-sm"
-                  style={{ backgroundColor: "#1f9d55", color: "#fff", border: "none", borderRadius: 20, fontWeight: 600, fontSize: 12 }}>
+                <button onClick={() => finalizarTarea(modalDetalle.id_asignacion)} disabled={procesando.has(modalDetalle.id_asignacion)} className="btn btn-sm"
+                  style={{ backgroundColor: "#1f9d55", color: "#fff", border: "none", borderRadius: 20, fontWeight: 600, fontSize: 12, opacity: procesando.has(modalDetalle.id_asignacion) ? 0.6 : 1, cursor: procesando.has(modalDetalle.id_asignacion) ? "not-allowed" : "pointer" }}>
                   <Check size={13} /> Finalizar tarea
                 </button>
               )}
