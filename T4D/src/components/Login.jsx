@@ -1,9 +1,7 @@
 import { useState } from "react";
 import Swal from "sweetalert2";
-import { supabase } from "../supabase/supabaseClient";
 import imagen3 from "../assets/imagen10.png";
 import escudoLogo from "../assets/escudo1.png";
-import SessionTimeout from "../components/SessionTimeout";
 
 const C = {
   cardBg:      "rgba(14,22,33,0.45)",
@@ -18,6 +16,9 @@ const C = {
   placeholder: "#4e6080",
   labelTxt:    "#9ab0c8",
 };
+
+const API_URL = "http://localhost:5000";
+const API_KEY = "pollo"; // idealmente mover a variable de entorno del frontend (VITE_API_KEY, etc.)
 
 function Login({ setVista, setUsuario }) {
   const [correo,   setCorreo]   = useState("");
@@ -34,17 +35,22 @@ function Login({ setVista, setUsuario }) {
       return Swal.fire({ icon: "warning", title: "Campos vacíos", text: "Completa todos los campos" });
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email: correo, password });
-      if (error) return Swal.fire({ icon: "error", title: "Error", text: "Correo o contraseña incorrectos" });
+      const res = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": API_KEY,
+        },
+        body: JSON.stringify({ email: correo, password, codigo }),
+      });
 
-      const { data: usuarioBD, error: errorUsuario } = await supabase
-        .from("usuarios").select("*").eq("email", correo).single();
-      if (errorUsuario || !usuarioBD)
-        return Swal.fire({ icon: "error", title: "Error", text: "Usuario no encontrado" });
-      if (!usuarioBD.activo)
-        return Swal.fire({ icon: "warning", title: "Cuenta deshabilitada", text: "Contacta al administrador" });
-      if (usuarioBD.codigo !== codigo)
-        return Swal.fire({ icon: "error", title: "Código incorrecto", text: "El código de verificación no coincide" });
+      const data = await res.json();
+
+      if (!res.ok) {
+        return Swal.fire({ icon: "error", title: "Error", text: data.error || "No fue posible iniciar sesión" });
+      }
+
+      const { usuario: usuarioBD, token } = data;
 
       let rolReal = "";
       switch (usuarioBD.id_rol) {
@@ -55,10 +61,17 @@ function Login({ setVista, setUsuario }) {
         default: rolReal = usuarioBD.rol || "Usuario";
       }
       const rolFinal = normalizarRol(rolReal) || "usuario";
-      const usuarioAdaptado = { ...usuarioBD, nombre: usuarioBD.username || "Usuario", correo: usuarioBD.email || "", rol: rolFinal, id_usuario: usuarioBD.id_usuario, username: usuarioBD.username };
+      const usuarioAdaptado = {
+        ...usuarioBD,
+        nombre: usuarioBD.username || "Usuario",
+        correo: usuarioBD.email || "",
+        rol: rolFinal,
+        id_usuario: usuarioBD.id_usuario,
+        username: usuarioBD.username,
+      };
 
       localStorage.setItem("usuario", JSON.stringify(usuarioAdaptado));
-      localStorage.setItem("token", data.session.access_token);
+      localStorage.setItem("token", token);
       if (setUsuario) setUsuario(usuarioAdaptado);
 
       await Swal.fire({ icon: "success", title: "Inicio exitoso", text: `Bienvenido ${usuarioBD.username}`, timer: 1500, showConfirmButton: false });
@@ -71,7 +84,7 @@ function Login({ setVista, setUsuario }) {
 
     } catch (err) {
       console.error(err);
-      Swal.fire({ icon: "error", title: "Error de conexión", text: "No conecta con Supabase" });
+      Swal.fire({ icon: "error", title: "Error de conexión", text: "No se pudo conectar con el servidor" });
     }
   };
 

@@ -12,23 +12,9 @@ import HistorialPrecios from "../components/ContadoraDasboard/HistorialPrecios";
 import MetodosPago from "../components/ContadoraDasboard/MetodosPago";
 import Sucursales from "../components/ContadoraDasboard/Sucursales";
 
-
-function ContadoraDashboard() {
+function ContadoraDashboard({ usuario, setVista, setUsuario }) {
 
   const [vistaContadora, setVistaContadora] = useState("movimientoscontables");
-
-  const [usuario, setUsuario] = useState(() => {
-    const guardado = localStorage.getItem("usuario");
-
-    return guardado
-      ? JSON.parse(guardado)
-      : {
-          nombre: "Nicol Zuñiga",
-          correo: "contadora@gmail.com",
-          rol: "Contadora",
-          foto: null,
-        };
-  });
 
   const [notificaciones, setNotificaciones] = useState([
     {
@@ -67,31 +53,27 @@ function ContadoraDashboard() {
           setVistaContadora={setVistaContadora}
           notificaciones={notificaciones}
           usuario={usuario}
+          setUsuario={setUsuario}
+          setVista={setVista}
         />
 
         <main className="p-4">
 
           {vistaContadora === "inventario" && <Inventario />}
-
-    
-
           {vistaContadora === "reportes" && <Reportes />}
-
-
 
           {vistaContadora === "perfil" && (
             <PerfilUsuario
               usuario={usuario}
               setUsuario={setUsuario}
-            
             />
-            )}
-            {vistaContadora === "movimientoscontables" && <MovimientosContables />}
-            {vistaContadora === "empleados" && <Empleados />}
-            {vistaContadora === "proveedores" && <Proveedores />}
-            {vistaContadora === "historialprecios" && <HistorialPrecios usuario={usuario} />}
-            {vistaContadora === "metodospago" && <MetodosPago />}
-            {vistaContadora === "sucursales" && <Sucursales />}
+          )}
+          {vistaContadora === "movimientoscontables" && <MovimientosContables />}
+          {vistaContadora === "empleados" && <Empleados />}
+          {vistaContadora === "proveedores" && <Proveedores />}
+          {vistaContadora === "historialprecios" && <HistorialPrecios usuario={usuario} />}
+          {vistaContadora === "metodospago" && <MetodosPago />}
+          {vistaContadora === "sucursales" && <Sucursales />}
         </main>
 
       </div>

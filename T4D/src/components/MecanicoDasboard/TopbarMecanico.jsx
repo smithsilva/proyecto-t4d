@@ -2,13 +2,12 @@ import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import { supabase } from "../../supabase/supabaseClient";
 
-// Paleta Defensa Élite
 const NAVY         = "#0d1b2a";
 const NAVY_OSCURO  = "#091420";
 const DORADO       = "#c9a25a";
 const DORADO_SUAVE = "#b89b6a";
 
-function TopbarMecanico({ setVistaMecanico, usuario }) {
+function TopbarMecanico({ setVistaMecanico, usuario, setUsuario, setVista }) {
   const [mostrarMenu,    setMostrarMenu]    = useState(false);
   const [openNotif,      setOpenNotif]      = useState(false);
   const [notificaciones, setNotificaciones] = useState([]);
@@ -37,8 +36,14 @@ function TopbarMecanico({ setVistaMecanico, usuario }) {
 
   const cerrarSesion = () => {
     localStorage.removeItem("usuario");
+    localStorage.removeItem("token");
+
     Swal.fire({ icon: "success", title: "Sesión cerrada", timer: 1500, showConfirmButton: false });
-    setTimeout(() => { window.location.href = "/"; }, 1500);
+
+    setTimeout(() => {
+      if (setUsuario) setUsuario(null);
+      if (setVista) setVista("login");
+    }, 1500);
   };
 
   const noLeidas = notificaciones.filter((n) => !n.leido).length;
@@ -59,7 +64,6 @@ function TopbarMecanico({ setVistaMecanico, usuario }) {
         position:       "relative",
       }}
     >
-      {/* ══ IZQUIERDA ══ */}
       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
         <div style={{ width: "3px", height: "32px", background: DORADO, borderRadius: "2px" }} />
         <div>
@@ -72,10 +76,8 @@ function TopbarMecanico({ setVistaMecanico, usuario }) {
         </div>
       </div>
 
-      {/* ══ DERECHA ══ */}
       <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
 
-        {/* 🔔 Campana */}
         <div style={{ position: "relative" }}>
           <button
             onClick={() => { setOpenNotif(!openNotif); if (!openNotif) cargarNotificaciones(); }}
@@ -111,7 +113,6 @@ function TopbarMecanico({ setVistaMecanico, usuario }) {
                     <p style={{ fontSize: 13, margin: "4px 0", color: "#ccc" }}>{n.descripcion}</p>
                     <small style={{ color: "#7b8a99", fontSize: 12 }}>{fmtFecha(n.fecha)}</small>
 
-                    {/* Botón Marcar como leída */}
                     {!n.leido && (
                       <button
                         onClick={() => marcarLeida(n.id_notificacion)}
@@ -125,7 +126,7 @@ function TopbarMecanico({ setVistaMecanico, usuario }) {
               )}
 
               <button
-               onClick={() => { setOpenNotif(false); if (typeof setVistaMecanico === "function") setVistaMecanico("notificaciones"); }}
+                onClick={() => { setOpenNotif(false); if (typeof setVistaMecanico === "function") setVistaMecanico("notificaciones"); }}
                 style={{ width: "100%", background: DORADO, color: "#1a1a1a", fontWeight: 600, border: "none", padding: "11px", borderRadius: "10px", marginTop: "6px", cursor: "pointer", fontSize: 14 }}
               >
                 Ver todas
@@ -134,7 +135,6 @@ function TopbarMecanico({ setVistaMecanico, usuario }) {
           )}
         </div>
 
-        {/* 👤 Perfil */}
         <div style={{ position: "relative" }}>
           <div
             onClick={() => setMostrarMenu(!mostrarMenu)}

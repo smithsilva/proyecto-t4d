@@ -1,10 +1,8 @@
 const express = require("express");
 const router = express.Router();
+const verificarRol = require("../middlewares/verificarRol");
 const { obtenerRoles } = require("../controllers/roles.controller");
 
-// ======================================
-// GET ROLES
-// ======================================
-router.get("/", obtenerRoles);
+router.get("/", verificarRol([1]), obtenerRoles); // Solo Admin
 
 module.exports = router;

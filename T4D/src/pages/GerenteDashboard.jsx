@@ -10,22 +10,9 @@ import DireccionesCliente from "../components/GerenteDashboard/DireccionesClient
 import PerfilUsuario from "../components/AdminDasboard/PerfilUsuario";
 import HistorialPrecios from "../components/GerenteDashboard/HistorialPrecios";
 
-function GerenteDashboard() {
+function GerenteDashboard({ usuario, setVista, setUsuario }) {
 
   const [vistaGerente, setVistaGerente] = useState("inventario");
-
-  const [usuario, setUsuario] = useState(() => {
-    const guardado = localStorage.getItem("usuario");
-
-    return guardado
-      ? JSON.parse(guardado)
-      : {
-          nombre: "Carlos Ramirez",
-          correo: "gerente@gmail.com",
-          rol: "Gerente",
-          foto: null,
-        };
-  });
 
   const [notificaciones, setNotificaciones] = useState([
     {
@@ -64,6 +51,8 @@ function GerenteDashboard() {
           setVistaGerente={setVistaGerente}
           notificaciones={notificaciones}
           usuario={usuario}
+          setUsuario={setUsuario}
+          setVista={setVista}
         />
 
         <main className="p-4">
@@ -74,7 +63,6 @@ function GerenteDashboard() {
           {vistaGerente === "asignacion-tareas" && <AsignacionTareas />}
           {vistaGerente === "cliente" && <Clientes />}
           {vistaGerente === "direcciones-cliente" && <DireccionesCliente />}
-
 
           {vistaGerente === "notificaciones" && (
             <Notificaciones

@@ -1,5 +1,6 @@
 const express = require("express");
 const cors    = require("cors");
+require("dotenv").config();
 
 const app  = express();
 const PORT = process.env.PORT || 5000;
@@ -16,15 +17,20 @@ app.use((req, res, next) => {
   next();
 });
 
-// ── RUTAS ──
-app.use("/productos",              require("./src/routes/productos.routes"));
-app.use("/usuarios",               require("./src/routes/usuarios.routes"));
-app.use("/reportes",               require("./src/routes/reportes.routes"));
-app.use("/asignaciones",           require("./src/routes/asignaciones.routes"));
-app.use("/proveedores",            require("./src/routes/proveedores.routes"));
-app.use("/sucursales",             require("./src/routes/sucursales.routes"));
-app.use("/roles",                  require("./src/routes/roles.routes"));
-app.use("/movimientos",            require("./src/routes/movimientos.routes"));
+const verificarToken = require("./src/middlewares/auth.middleware");
+
+// ── RUTA DE LOGIN (sin verificarToken, todavía no hay token) ──
+app.use("/auth", require("./src/routes/auth.routes"));
+
+// ── RUTAS PROTEGIDAS ──
+app.use("/productos",    verificarToken, require("./src/routes/productos.routes"));
+app.use("/usuarios",     verificarToken, require("./src/routes/usuarios.routes"));
+app.use("/reportes",     verificarToken, require("./src/routes/reportes.routes"));
+app.use("/asignaciones", verificarToken, require("./src/routes/asignaciones.routes"));
+app.use("/proveedores",  verificarToken, require("./src/routes/proveedores.routes"));
+app.use("/sucursales",   verificarToken, require("./src/routes/sucursales.routes"));
+app.use("/roles",        verificarToken, require("./src/routes/roles.routes"));
+app.use("/movimientos",  verificarToken, require("./src/routes/movimientos.routes"));
 
 app.get("/", (req, res) => {
   res.json({ status: "ok", message: "Servidor T4D corriendo 🚀" });

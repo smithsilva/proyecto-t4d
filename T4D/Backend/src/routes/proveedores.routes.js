@@ -1,7 +1,6 @@
 const express = require("express");
-
-const router =
-  express.Router();
+const router = express.Router();
+const verificarRol = require("../middlewares/verificarRol");
 
 const {
   getProveedores,
@@ -9,38 +8,12 @@ const {
   putProveedor,
   patchProveedor,
   deleteProveedor,
-} = require(
-  "../controllers/proveedores.controller"
-);
+} = require("../controllers/proveedores.controller");
 
-// GET
-router.get(
-  "/",
-  getProveedores
-);
-
-// POST
-router.post(
-  "/",
-  postProveedor
-);
-
-// PUT
-router.put(
-  "/:id",
-  putProveedor
-);
-
-// PATCH
-router.patch(
-  "/:id",
-  patchProveedor
-);
-
-// DELETE
-router.delete(
-  "/:id",
-  deleteProveedor
-);
+router.get("/", getProveedores); // Todos los autenticados
+router.post("/", verificarRol([1, 2]), postProveedor); // Admin, Contador
+router.put("/:id", verificarRol([1, 2]), putProveedor); // Admin, Contador
+router.patch("/:id", verificarRol([1, 2]), patchProveedor); // Admin, Contador
+router.delete("/:id", verificarRol([1, 2]), deleteProveedor); // Admin, Contador
 
 module.exports = router;
