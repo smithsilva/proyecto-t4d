@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-require("dotenv").config(); // ⚠️ agrégalo si no lo tienes
+require("dotenv").config();
 
 const verificarApiKey = require("./middlewares/apiKey");
 const verificarToken   = require("./middlewares/auth.middleware");

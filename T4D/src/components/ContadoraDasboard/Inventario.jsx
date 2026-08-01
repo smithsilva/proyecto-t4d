@@ -219,13 +219,7 @@ function Inventario() {
             <span style={{ height: "2px", width: "70px", background: `linear-gradient(to left, transparent, ${DORADO})`, display: "inline-block" }} />
           </div>
         </div>
-        <button className="btn d-flex align-items-center gap-2 fw-semibold" onClick={() => setMostrarCrear(true)}
-          style={{ background: `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`, color: "#fff", borderRadius: "8px", padding: "8px 18px 8px 8px", border: "none", boxShadow: "0 3px 12px rgba(140,107,63,0.55)" }}>
-          <span className="d-flex align-items-center justify-content-center rounded-circle" style={{ width: "24px", height: "24px", backgroundColor: "rgba(255,255,255,0.25)" }}>
-            <Plus size={14} />
-          </span>
-          Agregar Producto
-        </button>
+       
       </div>
 
       {/* FILTROS */}
