@@ -2,6 +2,7 @@ const {
   obtenerProveedores,
   agregarProveedor,
   actualizarProveedor,
+  actualizarParcialProveedor,
   eliminarProveedor,
 } = require("../services/proveedores.service");
 
@@ -13,20 +14,15 @@ const getProveedores = async (
   req,
   res
 ) => {
-
   try {
-
     const proveedores =
       await obtenerProveedores();
 
     res.json(proveedores);
-
   } catch (error) {
-
     res.status(500).json({
       error: error.message,
     });
-
   }
 };
 
@@ -38,9 +34,7 @@ const postProveedor = async (
   req,
   res
 ) => {
-
   try {
-
     const proveedor =
       await agregarProveedor(
         req.body
@@ -49,13 +43,10 @@ const postProveedor = async (
     res.status(201).json(
       proveedor
     );
-
   } catch (error) {
-
     res.status(500).json({
       error: error.message,
     });
-
   }
 };
 
@@ -67,9 +58,7 @@ const putProveedor = async (
   req,
   res
 ) => {
-
   try {
-
     const id = req.params.id;
 
     const proveedor =
@@ -79,49 +68,75 @@ const putProveedor = async (
       );
 
     res.json(proveedor);
-
   } catch (error) {
-
     res.status(500).json({
       error: error.message,
     });
-
   }
 };
+
+// =====================================
+// PATCH
+// =====================================
+
+const patchProveedor =
+  async (
+    req,
+    res
+  ) => {
+    try {
+      const id =
+        req.params.id;
+
+      const proveedor =
+        await actualizarParcialProveedor(
+          id,
+          req.body
+        );
+
+      res.json(proveedor);
+    } catch (error) {
+      res.status(500).json({
+        error:
+          error.message,
+      });
+    }
+  };
 
 // =====================================
 // DELETE
 // =====================================
 
-const deleteProveedor = async (
-  req,
-  res
-) => {
+const deleteProveedor =
+  async (
+    req,
+    res
+  ) => {
+    try {
+      const id =
+        req.params.id;
 
-  try {
+      await eliminarProveedor(
+        id
+      );
 
-    const id = req.params.id;
-
-    await eliminarProveedor(id);
-
-    res.json({
-      success: true,
-      message:
-        "Proveedor eliminado",
-    });
-
-  } catch (error) {
-
-    res.status(500).json({
-      error: error.message,
-    });
-
-  }
-};
+      res.json({
+        success: true,
+        message:
+          "Proveedor eliminado",
+      });
+    } catch (error) {
+      res.status(500).json({
+        error:
+          error.message,
+      });
+    }
+  };
 
 module.exports = {
   getProveedores,
   postProveedor,
   putProveedor,
+  patchProveedor,
   deleteProveedor,
 };

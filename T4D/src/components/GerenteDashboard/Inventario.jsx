@@ -3,138 +3,128 @@ import { Eye, Package, X, Plus, Filter, Search } from "lucide-react";
 import { supabase } from "../../supabase/supabaseClient";
 
 function Inventario() {
-  const [busqueda, setBusqueda] = useState("");
-  const [filtroEstado, setFiltroEstado] = useState("todos");
+  const [busqueda,        setBusqueda]        = useState("");
+  const [filtroEstado,    setFiltroEstado]    = useState("todos");
   const [filtroCategoria, setFiltroCategoria] = useState("todas");
-  const [filtroRol, setFiltroRol] = useState("todos");
-  const [filtroUnidad, setFiltroUnidad] = useState("todas");
-  const [productos, setProductos] = useState([]);
-  const [categorias, setCategorias] = useState([]);
-  const [verProducto, setVerProducto] = useState(null);
-  const [cargando, setCargando] = useState(false);
-  const [mostrarCrear, setMostrarCrear] = useState(false);
-  const [formNuevo, setFormNuevo] = useState({
+  const [filtroRol,       setFiltroRol]       = useState("todos");
+  const [filtroUnidad,    setFiltroUnidad]    = useState("todas");
+  const [filtroProveedor, setFiltroProveedor] = useState("todos");
+  const [productos,       setProductos]       = useState([]);
+  const [categorias,      setCategorias]      = useState([]);
+  const [proveedores,     setProveedores]     = useState([]);
+  const [verProducto,     setVerProducto]     = useState(null);
+  const [cargando,        setCargando]        = useState(false);
+  const [mostrarCrear,    setMostrarCrear]    = useState(false);
+  const [formNuevo,       setFormNuevo]       = useState({
     nombre_producto: "",
-    descripcion: "",
-    precio_actual: "",
-    stock_actual: "",
-    unidad_medida: "",
-    codigo_barras: "",
+    descripcion:     "",
+    precio_actual:   "",
+    stock_actual:    "",
+    unidad_medida:   "",
+    codigo_barras:   "",
+    id_categoria:    "",
+    id_proveedor:    "",
   });
   const [creando, setCreando] = useState(false);
 
-  // Paleta tomada de la imagen de referencia
-  const DORADO = "#d4a743";
-  const DORADO_OSCURO = "#8c6b3f";
-  const DORADO_CLARO = "#e7c98a";
-  const FONDO = "#f7f1e3";
-  const ENCABEZADO = "#13202e";
+  const DORADO           = "#d4a743";
+  const DORADO_OSCURO    = "#8c6b3f";
+  const DORADO_CLARO     = "#e7c98a";
+  const FONDO            = "#f7f1e3";
+  const ENCABEZADO       = "#13202e";
   const TEXTO_ENCABEZADO = "#e7c98a";
 
   useEffect(() => {
     recargar();
     obtenerCategorias();
+    obtenerProveedores();
   }, []);
 
   const recargar = async () => {
     setCargando(true);
-    const { data, error } = await supabase
-      .from("productos")
-      .select(`*, usuarios (id_usuario, username, rol)`)
-      .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Error al cargar productos:", error);
-      setCargando(false);
-      return;
-    }
-    setProductos(data || []);
+    const [{ data: prods, error }, { data: provs }] = await Promise.all([
+      supabase
+        .from("productos")
+        .select(`*, usuarios(id_usuario, username, rol)`)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("proveedores")
+        .select("id_proveedor, nombre_proveedor, nit"),
+    ]);
+
+    if (error) { console.error("Error al cargar productos:", error); setCargando(false); return; }
+
+    const provsMap = Object.fromEntries(
+      (provs || []).map((p) => [p.id_proveedor, p])
+    );
+
+    setProductos(
+      (prods || []).map((p) => ({
+        ...p,
+        proveedores: provsMap[p.id_proveedor] || null,
+      }))
+    );
+
     setCargando(false);
   };
 
   const obtenerCategorias = async () => {
     const { data, error } = await supabase.from("categorias").select("*");
-    if (error) {
-      console.error("Error al cargar categorías:", error);
-      return;
-    }
+    if (error) { console.error("Error al cargar categorías:", error); return; }
     setCategorias(data || []);
+  };
+
+  const obtenerProveedores = async () => {
+    const { data, error } = await supabase
+      .from("proveedores")
+      .select("id_proveedor, nombre_proveedor, nit")
+      .order("nombre_proveedor");
+    if (error) { console.error("Error al cargar proveedores:", error); return; }
+    setProveedores(data || []);
   };
 
   const calcularEstado = (producto) => {
     const actual = parseInt(producto.stock_actual) || 0;
     const minimo = parseInt(producto.stock_minimo) || 10;
     if (actual > minimo * 1.5) return "alto";
-    if (actual > minimo) return "medio";
+    if (actual > minimo)       return "medio";
     return "bajo";
   };
 
-  // Badge de Estado con el mismo estilo (píldora suave) que la imagen de referencia
   const getBadgeEstado = (producto) => {
     const estado = calcularEstado(producto);
     const estilos = {
-      alto: { texto: "Stock Alto", color: "#1f9d55", fondo: "#e3f7e9" },
+      alto:  { texto: "Stock Alto",  color: "#1f9d55", fondo: "#e3f7e9" },
       medio: { texto: "Stock Medio", color: "#b8860b", fondo: "#fdf3da" },
-      bajo: { texto: "Stock Bajo", color: "#c0392b", fondo: "#fbe2df" },
+      bajo:  { texto: "Stock Bajo",  color: "#c0392b", fondo: "#fbe2df" },
     };
     const e = estilos[estado];
     return (
-      <span
-        style={{
-          backgroundColor: e.fondo,
-          color: e.color,
-          fontSize: "12px",
-          fontWeight: 600,
-          padding: "4px 12px",
-          borderRadius: "12px",
-          display: "inline-block",
-        }}
-      >
+      <span style={{ backgroundColor: e.fondo, color: e.color, fontSize: "12px", fontWeight: 600, padding: "4px 12px", borderRadius: "12px", display: "inline-block" }}>
         {e.texto}
       </span>
     );
   };
 
-  // Badge de Stock con los mismos colores que el badge de Estado
   const getBadgeStock = (producto) => {
     const estado = calcularEstado(producto);
     const colores = {
-      alto: { color: "#1f9d55", fondo: "#e3f7e9" },
+      alto:  { color: "#1f9d55", fondo: "#e3f7e9" },
       medio: { color: "#b8860b", fondo: "#fdf3da" },
-      bajo: { color: "#c0392b", fondo: "#fbe2df" },
+      bajo:  { color: "#c0392b", fondo: "#fbe2df" },
     };
     const c = colores[estado];
     return (
-      <span
-        style={{
-          backgroundColor: c.fondo,
-          color: c.color,
-          fontSize: "12px",
-          fontWeight: 700,
-          padding: "4px 12px",
-          borderRadius: "12px",
-          display: "inline-block",
-        }}
-      >
+      <span style={{ backgroundColor: c.fondo, color: c.color, fontSize: "12px", fontWeight: 700, padding: "4px 12px", borderRadius: "12px", display: "inline-block" }}>
         {producto.stock_actual}
       </span>
     );
   };
 
-  // Rol mostrado como texto plano negro, sin píldora
   const getBadgeRol = (rol) => {
     if (!rol) return <span className="text-muted">—</span>;
-    return (
-      <span
-        style={{
-          color: "#1a1a1a",
-          fontSize: "13px",
-          textTransform: "capitalize",
-        }}
-      >
-        {rol}
-      </span>
-    );
+    return <span style={{ color: "#1a1a1a", fontSize: "13px", textTransform: "capitalize" }}>{rol}</span>;
   };
 
   const normalizar = (texto = "") =>
@@ -149,196 +139,107 @@ function Inventario() {
       normalizar(p.codigo_barras || "").includes(texto);
 
     const estado = calcularEstado(p);
-    const matchEstado = filtroEstado === "todos" || estado === filtroEstado;
+    const matchEstado    = filtroEstado    === "todos" || estado === filtroEstado;
     const matchCategoria = filtroCategoria === "todas" || String(p.id_categoria) === String(filtroCategoria);
-    const matchRol = filtroRol === "todos" || normalizar(p.usuarios?.rol || "") === normalizar(filtroRol);
-    const matchUnidad = filtroUnidad === "todas" || normalizar(p.unidad_medida || "") === normalizar(filtroUnidad);
+    const matchRol       = filtroRol       === "todos" || normalizar(p.usuarios?.rol || "") === normalizar(filtroRol);
+    const matchUnidad    = filtroUnidad    === "todas" || normalizar(p.unidad_medida || "") === normalizar(filtroUnidad);
+    const matchProveedor = filtroProveedor === "todos" || String(p.id_proveedor) === String(filtroProveedor);
 
-    return matchTexto && matchEstado && matchCategoria && matchRol && matchUnidad;
+    return matchTexto && matchEstado && matchCategoria && matchRol && matchUnidad && matchProveedor;
   });
 
-  // Unidades únicas presentes en los productos, para poblar el select dinámicamente
-  const unidadesDisponibles = Array.from(
-    new Set(productos.map((p) => p.unidad_medida).filter(Boolean))
-  );
+  const unidadesDisponibles = Array.from(new Set(productos.map((p) => p.unidad_medida).filter(Boolean)));
 
   const nombreCategoria = (id) =>
     categorias.find((c) => c.id_categoria == id)?.nombre_categoria || "Sin categoría";
 
   const crearProducto = async () => {
-    if (!formNuevo.nombre_producto.trim()) {
-      alert("El nombre del producto es obligatorio.");
-      return;
-    }
+    if (!formNuevo.nombre_producto.trim()) { alert("El nombre del producto es obligatorio."); return; }
     setCreando(true);
-    const { data, error } = await supabase
-      .from("productos")
-      .insert([
-        {
-          nombre_producto: formNuevo.nombre_producto,
-          descripcion: formNuevo.descripcion,
-          precio_actual: formNuevo.precio_actual,
-          stock_actual: formNuevo.stock_actual,
-          unidad_medida: formNuevo.unidad_medida,
-          codigo_barras: formNuevo.codigo_barras,
-        },
-      ])
-      .select();
+    const payload = {
+      nombre_producto: formNuevo.nombre_producto,
+      descripcion:     formNuevo.descripcion  || null,
+      precio_actual:   formNuevo.precio_actual || null,
+      stock_actual:    formNuevo.stock_actual  || null,
+      unidad_medida:   formNuevo.unidad_medida || null,
+      codigo_barras:   formNuevo.codigo_barras || null,
+      id_categoria:    formNuevo.id_categoria  ? parseInt(formNuevo.id_categoria) : null,
+      id_proveedor:    formNuevo.id_proveedor  ? parseInt(formNuevo.id_proveedor) : null,
+    };
 
+    const { data, error } = await supabase.from("productos").insert([payload]).select();
     setCreando(false);
 
-    if (error) {
-      console.error("Error al crear producto:", error);
-      alert("No se pudo crear el producto.");
-      return;
-    }
+    if (error) { console.error("Error al crear producto:", error); alert("No se pudo crear el producto."); return; }
 
-    if (data && data.length > 0) {
-      setProductos((prev) => [data[0], ...prev]);
-    } else {
-      recargar();
-    }
+    if (data && data.length > 0) setProductos((prev) => [data[0], ...prev]);
+    else recargar();
 
-    setFormNuevo({
-      nombre_producto: "",
-      descripcion: "",
-      precio_actual: "",
-      stock_actual: "",
-      unidad_medida: "",
-      codigo_barras: "",
-    });
+    setFormNuevo({ nombre_producto: "", descripcion: "", precio_actual: "", stock_actual: "", unidad_medida: "", codigo_barras: "", id_categoria: "", id_proveedor: "" });
     setMostrarCrear(false);
   };
 
-  // Estilo reutilizable para los labels pequeños encima de cada filtro
-  const labelFiltro = {
-    fontSize: "12px",
-    fontWeight: 600,
-    color: DORADO_OSCURO,
-    marginBottom: "4px",
-    display: "block",
-  };
+  const labelFiltro = { fontSize: "12px", fontWeight: 600, color: DORADO_OSCURO, marginBottom: "4px", display: "block" };
+  const selectStyle = { width: "100%", padding: "9px 12px", marginBottom: 12, borderRadius: 8, border: "1.5px solid #e5e7eb", fontSize: 13, outline: "none", background: "#fafafa", color: "#111827" };
+  const inputStyle  = { ...selectStyle };
+  const labelStyle  = { fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 4 };
 
   return (
-    <div
-      className="p-4"
-      style={{
-        margin: 0,
-        backgroundColor: FONDO,
-        minHeight: "100vh",
-        width: "100%",
-      }}
-    >
+    <div className="p-4" style={{ margin: 0, backgroundColor: FONDO, minHeight: "100vh", width: "100%" }}>
+
       {/* ENCABEZADO */}
-      <div
-        className="d-flex justify-content-between align-items-start flex-wrap mb-4 gap-2 p-4 rounded-4"
-        style={{
-          backgroundColor: "#fffdf8",
-          border: `1px solid ${DORADO_CLARO}`,
-          boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
-        }}
-      >
+      <div className="d-flex justify-content-between align-items-start flex-wrap mb-4 gap-2 p-4 rounded-4"
+        style={{ backgroundColor: "#fffdf8", border: `1px solid ${DORADO_CLARO}`, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}>
         <div>
           <h4 className="fw-bold mb-2" style={{ color: "#1a1a1a" }}>
             Gestión de Inventario{" "}
-            <span className="fw-normal text-muted" style={{ fontSize: "16px" }}>
-              - Administra productos de vehículos blindados
-            </span>
+            <span className="fw-normal text-muted" style={{ fontSize: "16px" }}>- Administra productos de vehículos blindados</span>
           </h4>
-          {/* Línea decorativa con estrella, igual a la imagen de referencia */}
           <div className="d-flex align-items-center" style={{ gap: "10px" }}>
-            <span
-              style={{
-                height: "2px",
-                width: "70px",
-                background: `linear-gradient(to right, transparent, ${DORADO})`,
-                display: "inline-block",
-              }}
-            />
+            <span style={{ height: "2px", width: "70px", background: `linear-gradient(to right, transparent, ${DORADO})`, display: "inline-block" }} />
             <span style={{ color: DORADO, fontSize: "14px" }}>★</span>
-            <span
-              style={{
-                height: "2px",
-                width: "70px",
-                background: `linear-gradient(to left, transparent, ${DORADO})`,
-                display: "inline-block",
-              }}
-            />
+            <span style={{ height: "2px", width: "70px", background: `linear-gradient(to left, transparent, ${DORADO})`, display: "inline-block" }} />
           </div>
         </div>
-        <button
-          className="btn d-flex align-items-center gap-2 fw-semibold"
-          onClick={() => setMostrarCrear(true)}
-          style={{
-            background: `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`,
-            color: "#fff",
-            borderRadius: "8px",
-            padding: "8px 18px 8px 8px",
-            border: "none",
-            boxShadow: "0 3px 12px rgba(140, 107, 63, 0.55)",
-          }}
-        >
-          <span
-            className="d-flex align-items-center justify-content-center rounded-circle"
-            style={{ width: "24px", height: "24px", backgroundColor: "rgba(255,255,255,0.25)" }}
-          >
-            <Plus size={14} />
-          </span>
-          Agregar Producto
-        </button>
+     
       </div>
 
       {/* FILTROS */}
-      <div
-        className="p-4 rounded-4 shadow-sm mb-4"
-        style={{ backgroundColor: "#fffdf8", border: `1px solid ${DORADO_CLARO}` }}
-      >
+      <div className="p-4 rounded-4 shadow-sm mb-4" style={{ backgroundColor: "#fffdf8", border: `1px solid ${DORADO_CLARO}` }}>
         <div className="d-flex align-items-center gap-2 mb-3">
           <Filter size={18} color={DORADO_OSCURO} />
-          <h6 className="fw-bold mb-0" style={{ color: "#1a1a1a", fontSize: "16px" }}>
-            Filtros y Búsqueda
-          </h6>
+          <h6 className="fw-bold mb-0" style={{ color: "#1a1a1a", fontSize: "16px" }}>Filtros y Búsqueda</h6>
         </div>
 
         <div className="mb-3 position-relative">
-          <Search
-            size={16}
-            style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#999" }}
-          />
-          <input
-            type="text"
-            className="form-control rounded-pill"
+          <Search size={16} style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#999" }} />
+          <input type="text" className="form-control rounded-pill"
             style={{ paddingLeft: "36px", paddingTop: "10px", paddingBottom: "10px" }}
             placeholder="Buscar por producto, código o descripción..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
+            value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
         </div>
 
         <div className="d-flex gap-3 flex-wrap align-items-end">
           <div style={{ minWidth: "150px", flex: "1 1 150px" }}>
             <label style={labelFiltro}>Categoría</label>
-            <select
-              className="form-select rounded-pill"
-              value={filtroCategoria}
-              onChange={(e) => setFiltroCategoria(e.target.value)}
-            >
+            <select className="form-select rounded-pill" value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)}>
               <option value="todas">Todas</option>
-              {categorias.map((cat) => (
-                <option key={cat.id_categoria} value={cat.id_categoria}>
-                  {cat.nombre_categoria}
-                </option>
-              ))}
+              {categorias.map((cat) => <option key={cat.id_categoria} value={cat.id_categoria}>{cat.nombre_categoria}</option>)}
+            </select>
+          </div>
+
+          {/* ── FILTRO PROVEEDOR ── */}
+          <div style={{ minWidth: "150px", flex: "1 1 150px" }}>
+            <label style={labelFiltro}>Proveedor</label>
+            <select className="form-select rounded-pill" value={filtroProveedor} onChange={(e) => setFiltroProveedor(e.target.value)}>
+              <option value="todos">Todos</option>
+              {proveedores.map((pv) => <option key={pv.id_proveedor} value={pv.id_proveedor}>{pv.nombre_proveedor}</option>)}
             </select>
           </div>
 
           <div style={{ minWidth: "150px", flex: "1 1 150px" }}>
             <label style={labelFiltro}>Estado</label>
-            <select
-              className="form-select rounded-pill"
-              value={filtroEstado}
-              onChange={(e) => setFiltroEstado(e.target.value)}
-            >
+            <select className="form-select rounded-pill" value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
               <option value="todos">Todos</option>
               <option value="alto">Stock Alto</option>
               <option value="medio">Stock Medio</option>
@@ -348,27 +249,15 @@ function Inventario() {
 
           <div style={{ minWidth: "150px", flex: "1 1 150px" }}>
             <label style={labelFiltro}>Unidad</label>
-            <select
-              className="form-select rounded-pill"
-              value={filtroUnidad}
-              onChange={(e) => setFiltroUnidad(e.target.value)}
-            >
+            <select className="form-select rounded-pill" value={filtroUnidad} onChange={(e) => setFiltroUnidad(e.target.value)}>
               <option value="todas">Todas</option>
-              {unidadesDisponibles.map((unidad) => (
-                <option key={unidad} value={unidad}>
-                  {unidad}
-                </option>
-              ))}
+              {unidadesDisponibles.map((unidad) => <option key={unidad} value={unidad}>{unidad}</option>)}
             </select>
           </div>
 
           <div style={{ minWidth: "150px", flex: "1 1 150px" }}>
             <label style={labelFiltro}>Usuario</label>
-            <select
-              className="form-select rounded-pill"
-              value={filtroRol}
-              onChange={(e) => setFiltroRol(e.target.value)}
-            >
+            <select className="form-select rounded-pill" value={filtroRol} onChange={(e) => setFiltroRol(e.target.value)}>
               <option value="todos">Todos</option>
               <option value="mecanico">Mecánico</option>
               <option value="admin">Admin</option>
@@ -377,25 +266,10 @@ function Inventario() {
             </select>
           </div>
 
-          <button
-            className="btn d-flex align-items-center gap-1 fw-semibold"
-            style={{
-              color: DORADO_OSCURO,
-              border: `1px solid ${DORADO_OSCURO}`,
-              borderRadius: "20px",
-              padding: "8px 16px",
-              whiteSpace: "nowrap",
-            }}
-            onClick={() => {
-              setBusqueda("");
-              setFiltroEstado("todos");
-              setFiltroCategoria("todas");
-              setFiltroRol("todos");
-              setFiltroUnidad("todas");
-            }}
-          >
-            <X size={14} />
-            Limpiar Filtros
+          <button className="btn d-flex align-items-center gap-1 fw-semibold"
+            style={{ color: DORADO_OSCURO, border: `1px solid ${DORADO_OSCURO}`, borderRadius: "20px", padding: "8px 16px", whiteSpace: "nowrap" }}
+            onClick={() => { setBusqueda(""); setFiltroEstado("todos"); setFiltroCategoria("todas"); setFiltroRol("todos"); setFiltroUnidad("todas"); setFiltroProveedor("todos"); }}>
+            <X size={14} /> Limpiar Filtros
           </button>
         </div>
       </div>
@@ -411,19 +285,20 @@ function Inventario() {
           </div>
         ) : (
           <div className="table-responsive">
-            <table className="table align-middle mb-0" style={{ minWidth: "1100px", backgroundColor: "#fffdf8" }}>
+            <table className="table align-middle mb-0" style={{ minWidth: "1250px", backgroundColor: "#fffdf8" }}>
               <thead>
                 <tr style={{ backgroundColor: ENCABEZADO }}>
-                  <th className="ps-3" style={{ width: "60px", backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none", padding: "12px 8px" }}>ID</th>
+                  <th className="ps-3" style={{ width: "60px",  backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none", padding: "12px 8px" }}>ID</th>
                   <th style={{ width: "130px", backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Cód. Barras</th>
                   <th style={{ minWidth: "160px", backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Producto</th>
                   <th style={{ minWidth: "130px", backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Descripción</th>
                   <th style={{ width: "110px", backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Categoría</th>
+                  <th style={{ width: "140px", backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Proveedor</th>
                   <th style={{ width: "100px", backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Usuario</th>
-                  <th style={{ width: "90px", backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Rol</th>
-                  <th style={{ width: "80px", backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Unidad</th>
-                  <th style={{ width: "75px", backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Stock</th>
-                  <th style={{ width: "95px", backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Precio</th>
+                  <th style={{ width: "90px",  backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Rol</th>
+                  <th style={{ width: "80px",  backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Unidad</th>
+                  <th style={{ width: "75px",  backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Stock</th>
+                  <th style={{ width: "95px",  backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Precio</th>
                   <th style={{ width: "105px", backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Estado</th>
                   <th className="text-center" style={{ width: "70px", backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none" }}>Ver</th>
                 </tr>
@@ -436,38 +311,39 @@ function Inventario() {
                     <td>
                       <div className="d-flex align-items-center gap-2">
                         {p.imagen ? (
-                          <img
-                            src={p.imagen}
-                            alt=""
-                            style={{ width: "35px", height: "35px", borderRadius: "8px", objectFit: "cover", flexShrink: 0 }}
-                          />
+                          <img src={p.imagen} alt="" style={{ width: "35px", height: "35px", borderRadius: "8px", objectFit: "cover", flexShrink: 0 }} />
                         ) : (
-                          <div
-                            style={{ width: "35px", height: "35px", borderRadius: "8px", background: "#f0ece4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
-                          >
+                          <div style={{ width: "35px", height: "35px", borderRadius: "8px", background: "#f0ece4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                             <Package size={16} color={DORADO_OSCURO} />
                           </div>
                         )}
                         <span className="fw-semibold" style={{ fontSize: "13px" }}>{p.nombre_producto}</span>
                       </div>
                     </td>
-                    <td className="text-muted small text-truncate" style={{ maxWidth: "130px" }}>
-                      {p.descripcion || "—"}
-                    </td>
+                    <td className="text-muted small text-truncate" style={{ maxWidth: "130px" }}>{p.descripcion || "—"}</td>
                     <td style={{ fontSize: "13px" }}>{nombreCategoria(p.id_categoria)}</td>
+
+                    {/* ── COLUMNA PROVEEDOR ── */}
+                    <td style={{ fontSize: "13px" }}>
+                      {p.proveedores ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                          <span style={{ fontWeight: 600, color: "#1a1a1a" }}>{p.proveedores.nombre_proveedor}</span>
+                          <span style={{ fontSize: 11, color: "#6b7280" }}>{p.proveedores.nit}</span>
+                        </div>
+                      ) : (
+                        <span style={{ color: "#9ca3af", fontStyle: "italic", fontSize: 12 }}>Sin proveedor</span>
+                      )}
+                    </td>
+
                     <td style={{ fontSize: "13px" }}>{p.usuarios?.username || "—"}</td>
                     <td>{getBadgeRol(p.usuarios?.rol)}</td>
                     <td className="text-muted small">{p.unidad_medida || "—"}</td>
-                    <td className="fw-bold" style={{ fontSize: "13px" }}>{getBadgeStock(p)}</td>
+                    <td>{getBadgeStock(p)}</td>
                     <td className="fw-bold" style={{ fontSize: "13px" }}>{p.precio_actual ? `$${p.precio_actual}` : "—"}</td>
                     <td>{getBadgeEstado(p)}</td>
                     <td>
                       <div className="d-flex justify-content-center">
-                        <Eye
-                          size={19}
-                          style={{ cursor: "pointer", color: "#555" }}
-                          onClick={() => setVerProducto(p)}
-                        />
+                        <Eye size={19} style={{ cursor: "pointer", color: "#555" }} onClick={() => setVerProducto(p)} />
                       </div>
                     </td>
                   </tr>
@@ -480,16 +356,10 @@ function Inventario() {
 
       {/* MODAL VER DETALLE */}
       {verProducto && (
-        <div
-          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-          style={{ background: "rgba(0,0,0,0.5)", zIndex: 1050 }}
-          onClick={() => setVerProducto(null)}
-        >
-          <div
-            className="bg-white p-4 rounded-4 shadow"
-            style={{ width: "360px", maxHeight: "90vh", overflowY: "auto" }}
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+          style={{ background: "rgba(0,0,0,0.5)", zIndex: 1050 }} onClick={() => setVerProducto(null)}>
+          <div className="bg-white p-4 rounded-4 shadow" style={{ width: "360px", maxHeight: "90vh", overflowY: "auto" }}
+            onClick={(e) => e.stopPropagation()}>
             <div className="d-flex justify-content-between align-items-center mb-3">
               <h5 className="fw-bold mb-0">Detalle del Producto</h5>
               <X size={20} style={{ cursor: "pointer" }} onClick={() => setVerProducto(null)} />
@@ -498,25 +368,25 @@ function Inventario() {
             {verProducto.imagen ? (
               <img src={verProducto.imagen} alt="" style={{ width: "100%", borderRadius: "10px", marginBottom: "12px" }} />
             ) : (
-              <div
-                style={{ width: "100%", height: "120px", borderRadius: "10px", background: "#f0ece4", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "12px" }}
-              >
+              <div style={{ width: "100%", height: "120px", borderRadius: "10px", background: "#f0ece4", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "12px" }}>
                 <Package size={40} color={DORADO_OSCURO} />
               </div>
             )}
 
             {[
-              ["ID", `#${verProducto.id_producto}`],
-              ["Cód. Barras", verProducto.codigo_barras || "—"],
-              ["Nombre", verProducto.nombre_producto],
-              ["Descripción", verProducto.descripcion || "—"],
-              ["Categoría", nombreCategoria(verProducto.id_categoria)],
-              ["Usuario", verProducto.usuarios?.username || "—"],
-              ["Rol", verProducto.usuarios?.rol || "—"],
-              ["Unidad", verProducto.unidad_medida || "—"],
-              ["Precio", verProducto.precio_actual ? `$${verProducto.precio_actual}` : "—"],
+              ["ID",           `#${verProducto.id_producto}`],
+              ["Cód. Barras",  verProducto.codigo_barras || "—"],
+              ["Nombre",       verProducto.nombre_producto],
+              ["Descripción",  verProducto.descripcion || "—"],
+              ["Categoría",    nombreCategoria(verProducto.id_categoria)],
+              ["Proveedor",    verProducto.proveedores?.nombre_proveedor || "Sin proveedor"],
+              ["NIT",          verProducto.proveedores?.nit || "—"],
+              ["Usuario",      verProducto.usuarios?.username || "—"],
+              ["Rol",          verProducto.usuarios?.rol || "—"],
+              ["Unidad",       verProducto.unidad_medida || "—"],
+              ["Precio",       verProducto.precio_actual ? `$${verProducto.precio_actual}` : "—"],
               ["Stock actual", verProducto.stock_actual],
-              ["Activo", verProducto.activo ? "Sí" : "No"],
+              ["Activo",       verProducto.activo ? "Sí" : "No"],
             ].map(([label, val]) => (
               <p key={label} className="mb-1">
                 <strong>{label}:</strong> {val}
@@ -527,25 +397,17 @@ function Inventario() {
               <strong>Estado:</strong> {getBadgeEstado(verProducto)}
             </p>
 
-            <button onClick={() => setVerProducto(null)} className="btn btn-secondary w-100 mt-3">
-              Cerrar
-            </button>
+            <button onClick={() => setVerProducto(null)} className="btn btn-secondary w-100 mt-3">Cerrar</button>
           </div>
         </div>
       )}
 
       {/* MODAL CREAR PRODUCTO */}
       {mostrarCrear && (
-        <div
-          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-          style={{ background: "rgba(0,0,0,0.5)", zIndex: 1050 }}
-          onClick={() => setMostrarCrear(false)}
-        >
-          <div
-            className="bg-white p-4 rounded-4 shadow"
-            style={{ width: "380px", maxHeight: "90vh", overflowY: "auto" }}
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+          style={{ background: "rgba(0,0,0,0.5)", zIndex: 1050 }} onClick={() => setMostrarCrear(false)}>
+          <div className="bg-white p-4 rounded-4 shadow" style={{ width: "380px", maxHeight: "90vh", overflowY: "auto" }}
+            onClick={(e) => e.stopPropagation()}>
             <div className="d-flex justify-content-between align-items-center mb-3">
               <h5 className="fw-bold mb-0">Agregar Producto</h5>
               <X size={20} style={{ cursor: "pointer" }} onClick={() => setMostrarCrear(false)} />
@@ -553,81 +415,73 @@ function Inventario() {
 
             <div className="mb-2">
               <label className="form-label small fw-semibold mb-1">Nombre *</label>
-              <input
-                type="text"
-                className="form-control"
-                value={formNuevo.nombre_producto}
-                onChange={(e) => setFormNuevo({ ...formNuevo, nombre_producto: e.target.value })}
-              />
+              <input type="text" className="form-control" value={formNuevo.nombre_producto}
+                onChange={(e) => setFormNuevo({ ...formNuevo, nombre_producto: e.target.value })} />
             </div>
 
             <div className="mb-2">
               <label className="form-label small fw-semibold mb-1">Código de barras</label>
-              <input
-                type="text"
-                className="form-control"
-                value={formNuevo.codigo_barras}
-                onChange={(e) => setFormNuevo({ ...formNuevo, codigo_barras: e.target.value })}
-              />
+              <input type="text" className="form-control" value={formNuevo.codigo_barras}
+                onChange={(e) => setFormNuevo({ ...formNuevo, codigo_barras: e.target.value })} />
             </div>
 
             <div className="mb-2">
               <label className="form-label small fw-semibold mb-1">Descripción</label>
-              <textarea
-                className="form-control"
-                rows={2}
-                value={formNuevo.descripcion}
-                onChange={(e) => setFormNuevo({ ...formNuevo, descripcion: e.target.value })}
-              />
+              <textarea className="form-control" rows={2} value={formNuevo.descripcion}
+                onChange={(e) => setFormNuevo({ ...formNuevo, descripcion: e.target.value })} />
+            </div>
+
+            {/* ── CATEGORÍA ── */}
+            <div className="mb-2">
+              <label className="form-label small fw-semibold mb-1">Categoría</label>
+              <select className="form-select" value={formNuevo.id_categoria}
+                onChange={(e) => setFormNuevo({ ...formNuevo, id_categoria: e.target.value })}>
+                <option value="">Sin categoría</option>
+                {categorias.map((cat) => (
+                  <option key={cat.id_categoria} value={cat.id_categoria}>{cat.nombre_categoria}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* ── PROVEEDOR ── */}
+            <div className="mb-2">
+              <label className="form-label small fw-semibold mb-1">Proveedor</label>
+              <select className="form-select" value={formNuevo.id_proveedor}
+                onChange={(e) => setFormNuevo({ ...formNuevo, id_proveedor: e.target.value })}>
+                <option value="">Sin proveedor</option>
+                {proveedores.map((pv) => (
+                  <option key={pv.id_proveedor} value={pv.id_proveedor}>
+                    {pv.nombre_proveedor} — {pv.nit}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="mb-2">
               <label className="form-label small fw-semibold mb-1">Precio</label>
-              <input
-                type="number"
-                className="form-control"
-                value={formNuevo.precio_actual}
-                onChange={(e) => setFormNuevo({ ...formNuevo, precio_actual: e.target.value })}
-              />
+              <input type="number" className="form-control" value={formNuevo.precio_actual}
+                onChange={(e) => setFormNuevo({ ...formNuevo, precio_actual: e.target.value })} />
             </div>
 
             <div className="mb-2">
               <label className="form-label small fw-semibold mb-1">Stock inicial</label>
-              <input
-                type="number"
-                className="form-control"
-                value={formNuevo.stock_actual}
-                onChange={(e) => setFormNuevo({ ...formNuevo, stock_actual: e.target.value })}
-              />
+              <input type="number" className="form-control" value={formNuevo.stock_actual}
+                onChange={(e) => setFormNuevo({ ...formNuevo, stock_actual: e.target.value })} />
             </div>
 
             <div className="mb-3">
               <label className="form-label small fw-semibold mb-1">Unidad de medida</label>
-              <input
-                type="text"
-                className="form-control"
-                value={formNuevo.unidad_medida}
-                onChange={(e) => setFormNuevo({ ...formNuevo, unidad_medida: e.target.value })}
-              />
+              <input type="text" className="form-control" value={formNuevo.unidad_medida}
+                onChange={(e) => setFormNuevo({ ...formNuevo, unidad_medida: e.target.value })} />
             </div>
 
             <div className="d-flex gap-2">
-              <button
-                onClick={() => setMostrarCrear(false)}
-                className="btn btn-secondary flex-fill"
-                disabled={creando}
-              >
+              <button onClick={() => setMostrarCrear(false)} className="btn btn-secondary flex-fill" disabled={creando}>
                 Cancelar
               </button>
-              <button
-                onClick={crearProducto}
-                className="btn flex-fill fw-semibold"
-                style={{
-                  background: `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`,
-                  color: "#fff",
-                }}
-                disabled={creando}
-              >
+              <button onClick={crearProducto} className="btn flex-fill fw-semibold"
+                style={{ background: `linear-gradient(135deg, #c9941f, ${DORADO_OSCURO})`, color: "#fff" }}
+                disabled={creando}>
                 {creando ? "Guardando..." : "Crear"}
               </button>
             </div>

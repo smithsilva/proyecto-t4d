@@ -35,13 +35,15 @@ function MecanicoDashboard({
 
         <TopbarMecanico
           setVista={setVistaMecanico}
+          setVistaMecanico={setVistaMecanico}
           usuario={usuario}
+          setUsuario={setUsuario}
         />
 
         <main className="p-4">
 
           {vistaMecanico === "inventario" && (
-            <Inventario />
+            <Inventario usuario={usuario} />
           )}
 
           {vistaMecanico === "mantenimientos" && (

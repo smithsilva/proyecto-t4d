@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { User, Mail, Shield, Camera, Check, X, LogOut, Info } from "lucide-react";
 
-// ─── Paleta ───────────────────────────────────────────────────────
-const DORADO_OSCURO      = "#8c6b3f";
-const DORADO_CLARO       = "#e7c98a";
-const FONDO              = "#f7f1e3";
-const GRADIENTE_DORADO   = "linear-gradient(135deg, #c9941f, #8c6b3f)";
+const DORADO_OSCURO    = "#8c6b3f";
+const DORADO_CLARO     = "#e7c98a";
+const FONDO            = "#f7f1e3";
+const GRADIENTE_DORADO = "linear-gradient(135deg, #c9941f, #8c6b3f)";
 
 const btnOutline = (activo = false) => ({
   border: `1.5px solid ${DORADO_OSCURO}`,
@@ -30,6 +29,7 @@ function PerfilAdmin({ usuario, setUsuario }) {
   };
 
   const guardarCambios = () => {
+    // ← FIX: spread completo de usuario para no perder id_usuario ni otros campos
     const actualizado = { ...usuario, nombre: nombreEditado };
     setUsuario(actualizado);
     localStorage.setItem("usuario", JSON.stringify(actualizado));
@@ -42,7 +42,6 @@ function PerfilAdmin({ usuario, setUsuario }) {
       className="p-3"
       style={{ maxWidth: "1600px", margin: "0 auto", maxHeight: "90vh", overflowY: "auto", backgroundColor: FONDO }}
     >
-
       {/* HEADER */}
       <div
         className="d-flex justify-content-between align-items-center mb-3 p-3 rounded-4"
@@ -94,7 +93,6 @@ function PerfilAdmin({ usuario, setUsuario }) {
                 )}
               </div>
 
-              {/* Botón cámara superpuesto */}
               <label
                 title="Cambiar foto"
                 style={{
@@ -113,7 +111,6 @@ function PerfilAdmin({ usuario, setUsuario }) {
             <h6 className="fw-bold mb-0" style={{ color: "#1a1a1a" }}>{usuario.nombre}</h6>
             <p className="text-muted small mb-2">{usuario.correo}</p>
 
-            {/* ROL */}
             <span
               className="badge rounded-pill px-2 py-1 mb-2"
               style={{ background: GRADIENTE_DORADO, color: "#fff", fontSize: "11px", boxShadow: "0 3px 10px rgba(140,107,63,0.4)" }}
@@ -121,7 +118,6 @@ function PerfilAdmin({ usuario, setUsuario }) {
               {usuario.rol}
             </span>
 
-            {/* CAMBIAR FOTO */}
             <label
               className="btn btn-sm rounded-pill w-100 mb-2 d-flex align-items-center justify-content-center gap-2 fw-semibold"
               style={{ ...btnOutline(), cursor: "pointer" }}
@@ -135,7 +131,6 @@ function PerfilAdmin({ usuario, setUsuario }) {
 
             <hr className="my-2" style={{ borderColor: DORADO_CLARO }} />
 
-            {/* ESTADO */}
             <div className="text-start" style={{ fontSize: "12px" }}>
               <div className="d-flex justify-content-between align-items-center mb-1">
                 <strong>Estado</strong>
@@ -182,7 +177,6 @@ function PerfilAdmin({ usuario, setUsuario }) {
 
             {tab === "info" ? (
               <>
-                {/* NOMBRE */}
                 <div className="mb-2">
                   <label className="form-label small fw-semibold">Nombre completo</label>
                   <div className="input-group input-group-sm">
@@ -198,7 +192,6 @@ function PerfilAdmin({ usuario, setUsuario }) {
                   </div>
                 </div>
 
-                {/* CORREO */}
                 <div className="mb-2">
                   <label className="form-label small fw-semibold">Correo electrónico</label>
                   <div className="input-group input-group-sm">
@@ -218,7 +211,6 @@ function PerfilAdmin({ usuario, setUsuario }) {
                   </small>
                 </div>
 
-                {/* ROL */}
                 <div className="mb-3">
                   <label className="form-label small fw-semibold">Rol del sistema</label>
                   <div className="input-group input-group-sm">
@@ -235,7 +227,6 @@ function PerfilAdmin({ usuario, setUsuario }) {
                   </div>
                 </div>
 
-                {/* BOTONES */}
                 <div className="d-flex justify-content-end gap-2 pt-2" style={{ borderTop: `1px solid ${DORADO_CLARO}` }}>
                   <button
                     className="btn btn-sm rounded-pill px-3 d-flex align-items-center gap-2 fw-semibold"

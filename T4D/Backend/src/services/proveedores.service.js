@@ -7,7 +7,6 @@ const supabase =
 
 const obtenerProveedores =
   async () => {
-
     const { data, error } =
       await supabase
         .from("proveedores")
@@ -32,7 +31,6 @@ const obtenerProveedores =
 
 const agregarProveedor =
   async (proveedor) => {
-
     const { data, error } =
       await supabase
         .from("proveedores")
@@ -55,11 +53,36 @@ const actualizarProveedor =
     id,
     proveedor
   ) => {
-
     const { data, error } =
       await supabase
         .from("proveedores")
         .update(proveedor)
+        .eq(
+          "id_proveedor",
+          id
+        )
+        .select();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  };
+
+// =====================================
+// PATCH
+// =====================================
+
+const actualizarParcialProveedor =
+  async (
+    id,
+    datos
+  ) => {
+    const { data, error } =
+      await supabase
+        .from("proveedores")
+        .update(datos)
         .eq(
           "id_proveedor",
           id
@@ -79,7 +102,6 @@ const actualizarProveedor =
 
 const eliminarProveedor =
   async (id) => {
-
     const { error } =
       await supabase
         .from("proveedores")
@@ -98,5 +120,6 @@ module.exports = {
   obtenerProveedores,
   agregarProveedor,
   actualizarProveedor,
+  actualizarParcialProveedor,
   eliminarProveedor,
 };

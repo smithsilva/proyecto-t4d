@@ -1,18 +1,10 @@
-export const obtenerMovimientosApi =
-  async () => {
+import { getHeaders } from "./authHeader";
 
-    const response =
-      await fetch(
-        "http://localhost:5000/movimientos",
-        {
-          headers: {
-            "x-api-key": "pollo",
-          },
-        }
-      );
+export const obtenerMovimientosApi = async () => {
+  const response = await fetch("http://localhost:5000/movimientos", {
+    headers: getHeaders(),
+  });
 
-    const data =
-      await response.json();
-
-    return data.movimientos;
+  const data = await response.json();
+  return data.movimientos;
 };

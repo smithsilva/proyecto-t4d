@@ -2,13 +2,12 @@ import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import { supabase } from "../../supabase/supabaseClient";
 
-// Paleta Defensa Élite
 const NAVY         = "#0d1b2a";
 const NAVY_OSCURO  = "#091420";
 const DORADO       = "#c9a25a";
 const DORADO_SUAVE = "#b89b6a";
 
-function TopbarAdmin({ setVistaAdmin, usuario }) {
+function TopbarAdmin({ setVistaAdmin, usuario, setUsuario, setVista }) {
   const [mostrarMenu,    setMostrarMenu]    = useState(false);
   const [openNotif,      setOpenNotif]      = useState(false);
   const [notificaciones, setNotificaciones] = useState([]);
@@ -37,8 +36,14 @@ function TopbarAdmin({ setVistaAdmin, usuario }) {
 
   const cerrarSesion = () => {
     localStorage.removeItem("usuario");
+    localStorage.removeItem("token");
+
     Swal.fire({ icon: "success", title: "Sesión cerrada", timer: 1500, showConfirmButton: false });
-    setTimeout(() => { window.location.href = "/"; }, 1500);
+
+    setTimeout(() => {
+      if (setUsuario) setUsuario(null);
+      if (setVista) setVista("login");
+    }, 1500);
   };
 
   const noLeidas = notificaciones.filter((n) => !n.leido).length;
@@ -51,15 +56,13 @@ function TopbarAdmin({ setVistaAdmin, usuario }) {
         borderBottom:   `2px solid ${DORADO}`,
         display:        "flex",
         alignItems:     "center",
-        justifyContent: "space-between",   
+        justifyContent: "space-between",
         padding:        "0 28px",
         height:         "72px",
         position:       "relative",
       }}
     >
-      {/* ══ IZQUIERDA: título Panel de Administrador ══ */}
       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-        {/* Línea decorativa dorada */}
         <div style={{ width: "3px", height: "32px", background: DORADO, borderRadius: "2px" }} />
         <div>
           <div style={{ color: DORADO, fontSize: "11px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", lineHeight: 1 }}>
@@ -71,10 +74,8 @@ function TopbarAdmin({ setVistaAdmin, usuario }) {
         </div>
       </div>
 
-      {/* ══ DERECHA: campana + perfil ══ */}
       <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
 
-        {/* 🔔 Campana */}
         <div style={{ position: "relative" }}>
           <button
             onClick={() => { setOpenNotif(!openNotif); if (!openNotif) cargarNotificaciones(); }}
@@ -124,7 +125,6 @@ function TopbarAdmin({ setVistaAdmin, usuario }) {
           )}
         </div>
 
-        {/* 👤 Perfil — avatar ícono + nombre + rol + flecha */}
         <div style={{ position: "relative" }}>
           <div
             onClick={() => setMostrarMenu(!mostrarMenu)}
@@ -132,7 +132,6 @@ function TopbarAdmin({ setVistaAdmin, usuario }) {
             onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(201,162,90,0.10)")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           >
-            {/* Avatar circular con ícono de persona */}
             <div style={{ width: "42px", height: "42px", borderRadius: "50%", background: `${DORADO}22`, border: `1.5px solid ${DORADO}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               {usuario?.foto ? (
                 <img src={usuario.foto} alt="perfil" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
@@ -144,7 +143,6 @@ function TopbarAdmin({ setVistaAdmin, usuario }) {
               )}
             </div>
 
-            {/* Nombre + Rol */}
             <div style={{ lineHeight: 1.25 }}>
               <div style={{ color: "#fff", fontWeight: 700, fontSize: "14px", whiteSpace: "nowrap" }}>
                 {usuario?.nombre || "Usuario"}
@@ -154,13 +152,11 @@ function TopbarAdmin({ setVistaAdmin, usuario }) {
               </div>
             </div>
 
-            {/* Flecha desplegable */}
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={DORADO_SUAVE} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="6 9 12 15 18 9"/>
             </svg>
           </div>
 
-          {/* Dropdown perfil */}
           {mostrarMenu && (
             <div style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", width: "240px", zIndex: 1000, background: NAVY_OSCURO, border: `1px solid ${DORADO}`, borderRadius: "12px", padding: "18px", color: "#fff", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
               <div style={{ textAlign: "center", marginBottom: "12px" }}>

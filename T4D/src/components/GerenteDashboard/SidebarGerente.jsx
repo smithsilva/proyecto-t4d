@@ -33,7 +33,7 @@ function SidebarGerente({ setVistaGerente, vistaGerente }) {
   const menuItems = [
     { key: "inventario",          icon: "bi-box-seam",        label: "Inventario"           },
     { key: "movimientos",         icon: "bi-arrow-left-right", label: "Movimientos"          },
-    { key: "notificaciones",      icon: "bi-bell",             label: "Notificaciones"       },
+    { key: "historialprecios", icon: "bi-clock-history", label: "Historial de Precios" },
     { key: "asignacion-tareas",   icon: "bi-clipboard-check",  label: "Asignación de Tareas" },
     { key: "cliente",             icon: "bi-person",           label: "Cliente"              },
     { key: "direcciones-cliente", icon: "bi-geo-alt",          label: "Direcciones Cliente"  },

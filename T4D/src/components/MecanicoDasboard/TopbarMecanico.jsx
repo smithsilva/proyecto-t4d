@@ -2,13 +2,12 @@ import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import { supabase } from "../../supabase/supabaseClient";
 
-// Paleta Defensa Élite
 const NAVY         = "#0d1b2a";
 const NAVY_OSCURO  = "#091420";
 const DORADO       = "#c9a25a";
 const DORADO_SUAVE = "#b89b6a";
 
-function TopbarMecanico({ setVistaMecanico, usuario }) {
+function TopbarMecanico({ setVistaMecanico, usuario, setUsuario, setVista }) {
   const [mostrarMenu,    setMostrarMenu]    = useState(false);
   const [openNotif,      setOpenNotif]      = useState(false);
   const [notificaciones, setNotificaciones] = useState([]);
@@ -37,12 +36,20 @@ function TopbarMecanico({ setVistaMecanico, usuario }) {
 
   const cerrarSesion = () => {
     localStorage.removeItem("usuario");
+    localStorage.removeItem("token");
+
     Swal.fire({ icon: "success", title: "Sesión cerrada", timer: 1500, showConfirmButton: false });
-    setTimeout(() => { window.location.href = "/"; }, 1500);
+
+    setTimeout(() => {
+      if (setUsuario) setUsuario(null);
+      if (setVista) setVista("login");
+    }, 1500);
   };
 
-  const noLeidas    = notificaciones.filter((n) => !n.leido).length;
-  const fmtFecha    = (f) => f ? new Date(f).toLocaleDateString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+  const noLeidas = notificaciones.filter((n) => !n.leido).length;
+  const fmtFecha = (f) => f
+    ? new Date(f).toLocaleDateString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
+    : "";
 
   return (
     <header
@@ -51,16 +58,13 @@ function TopbarMecanico({ setVistaMecanico, usuario }) {
         borderBottom:   `2px solid ${DORADO}`,
         display:        "flex",
         alignItems:     "center",
-        justifyContent: "space-between",  
+        justifyContent: "space-between",
         padding:        "0 28px",
         height:         "72px",
         position:       "relative",
       }}
     >
-
-  {/* ══ IZQUIERDA: título Panel de Administrador ══ */}
       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-        {/* Línea decorativa dorada */}
         <div style={{ width: "3px", height: "32px", background: DORADO, borderRadius: "2px" }} />
         <div>
           <div style={{ color: DORADO, fontSize: "11px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase", lineHeight: 1 }}>
@@ -72,17 +76,8 @@ function TopbarMecanico({ setVistaMecanico, usuario }) {
         </div>
       </div>
 
-
-
-
-
-
-
-
-      {/* ══ DERECHA: campana + perfil ══ */}
       <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
 
-        {/* 🔔 Campana */}
         <div style={{ position: "relative" }}>
           <button
             onClick={() => { setOpenNotif(!openNotif); if (!openNotif) cargarNotificaciones(); }}
@@ -100,15 +95,16 @@ function TopbarMecanico({ setVistaMecanico, usuario }) {
           </button>
 
           {openNotif && (
-            <div style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", width: "340px", zIndex: 1000, background: NAVY_OSCURO, border: `1px solid ${DORADO}`, borderRadius: "12px", padding: "18px", color: "#fff", maxHeight: "440px", overflowY: "auto", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
+            <div style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", width: "360px", zIndex: 1000, background: NAVY_OSCURO, border: `1px solid ${DORADO}`, borderRadius: "12px", padding: "18px", color: "#fff", maxHeight: "480px", overflowY: "auto", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <strong style={{ fontSize: 15 }}>Notificaciones</strong>
                 {noLeidas > 0 && <span style={{ fontSize: 12, color: DORADO }}>{noLeidas} sin leer</span>}
               </div>
+
               {notificaciones.length === 0 ? (
                 <div style={{ textAlign: "center", color: "#aaa", fontSize: 14, padding: "20px 0" }}>No hay notificaciones</div>
               ) : (
-                notificaciones.slice(0, 5).map((n) => (
+                notificaciones.slice(0, 6).map((n) => (
                   <div key={n.id_notificacion} style={{ background: NAVY, padding: "12px", borderRadius: "10px", marginBottom: 10, border: `1px solid ${n.leido ? "#1c2a3a" : DORADO}`, opacity: n.leido ? 0.6 : 1 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
                       <strong style={{ color: DORADO_SUAVE, fontSize: 14 }}>{n.titulo}</strong>
@@ -116,23 +112,29 @@ function TopbarMecanico({ setVistaMecanico, usuario }) {
                     </div>
                     <p style={{ fontSize: 13, margin: "4px 0", color: "#ccc" }}>{n.descripcion}</p>
                     <small style={{ color: "#7b8a99", fontSize: 12 }}>{fmtFecha(n.fecha)}</small>
+
                     {!n.leido && (
-                      <button onClick={() => marcarLeida(n.id_notificacion)} style={{ marginTop: 8, width: "100%", background: NAVY_OSCURO, border: `1px solid ${DORADO}`, padding: "7px", borderRadius: "8px", fontSize: 12, cursor: "pointer", color: DORADO_SUAVE }}>
+                      <button
+                        onClick={() => marcarLeida(n.id_notificacion)}
+                        style={{ marginTop: 8, width: "100%", background: NAVY_OSCURO, border: `1px solid ${DORADO}`, padding: "7px", borderRadius: "8px", fontSize: 12, cursor: "pointer", color: DORADO_SUAVE }}
+                      >
                         Marcar como leída
                       </button>
                     )}
                   </div>
                 ))
               )}
-              <button onClick={() => { setVistaMecanico("notificaciones"); setOpenNotif(false); }}
-                style={{ width: "100%", background: DORADO, color: "#1a1a1a", fontWeight: 600, border: "none", padding: "11px", borderRadius: "10px", marginTop: "6px", cursor: "pointer", fontSize: 14 }}>
+
+              <button
+                onClick={() => { setOpenNotif(false); if (typeof setVistaMecanico === "function") setVistaMecanico("notificaciones"); }}
+                style={{ width: "100%", background: DORADO, color: "#1a1a1a", fontWeight: 600, border: "none", padding: "11px", borderRadius: "10px", marginTop: "6px", cursor: "pointer", fontSize: 14 }}
+              >
                 Ver todas
               </button>
             </div>
           )}
         </div>
 
-        {/* 👤 Perfil — avatar ícono + nombre + rol + flecha */}
         <div style={{ position: "relative" }}>
           <div
             onClick={() => setMostrarMenu(!mostrarMenu)}
@@ -140,20 +142,16 @@ function TopbarMecanico({ setVistaMecanico, usuario }) {
             onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(201,162,90,0.10)")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           >
-            {/* Avatar circular con ícono de persona */}
             <div style={{ width: "42px", height: "42px", borderRadius: "50%", background: `${DORADO}22`, border: `1.5px solid ${DORADO}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               {usuario?.foto ? (
                 <img src={usuario.foto} alt="perfil" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
               ) : (
-                /* Ícono persona SVG igual al de la imagen de referencia */
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={DORADO} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                   <circle cx="12" cy="7" r="4"/>
                 </svg>
               )}
             </div>
-
-            {/* Nombre + Rol */}
             <div style={{ lineHeight: 1.25 }}>
               <div style={{ color: "#fff", fontWeight: 700, fontSize: "14px", whiteSpace: "nowrap" }}>
                 {usuario?.nombre || "Usuario"}
@@ -162,14 +160,11 @@ function TopbarMecanico({ setVistaMecanico, usuario }) {
                 {usuario?.rol || "Mecanico"}
               </div>
             </div>
-
-            {/* Flecha desplegable */}
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={DORADO_SUAVE} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="6 9 12 15 18 9"/>
             </svg>
           </div>
 
-          {/* Dropdown perfil */}
           {mostrarMenu && (
             <div style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", width: "240px", zIndex: 1000, background: NAVY_OSCURO, border: `1px solid ${DORADO}`, borderRadius: "12px", padding: "18px", color: "#fff", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
               <div style={{ textAlign: "center", marginBottom: "12px" }}>
