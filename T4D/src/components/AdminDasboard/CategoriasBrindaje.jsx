@@ -1,7 +1,12 @@
 import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
-import { Shield, CheckCircle, XCircle, Search, Filter } from "lucide-react";
-import { obtenerCategoriasApi } from "../../api/Categoriasapi";
+import { Shield, CheckCircle, XCircle, Pencil, Trash2, Plus, Search, Filter } from "lucide-react";
+import {
+  obtenerCategoriasApi,
+  agregarCategoriaApi,
+  editarCategoriaApi,
+  eliminarCategoriaApi,
+} from "../../api/categoriasApi";
 
 // ─── PALETA (igual a Inventario) ─────────────────────────────────────────────
 const DORADO        = "#d4a743";
@@ -10,8 +15,9 @@ const DORADO_CLARO  = "#e7c98a";
 const FONDO         = "#f7f1e3";
 const ENCABEZADO    = "#13202e";
 const TEXTO_ENC     = "#e7c98a";
+const BTN_GRAD      = "linear-gradient(135deg, #c9941f, #8c6b3f)";
 
-function CategoriasMecanico() {
+function GestionCategorias() {
   const [busqueda, setBusqueda] = useState("");
   const [categorias, setCategorias] = useState([]);
 
@@ -39,6 +45,90 @@ function CategoriasMecanico() {
     }
   };
 
+  const nuevaCategoria = async () => {
+    const { value: formValues } = await Swal.fire({
+      title: "Nueva Categoría",
+      html: `
+        <input id="swal-nombre" class="swal2-input" placeholder="Nombre de categoría" />
+        <input id="swal-descripcion" class="swal2-input" placeholder="Descripción" />
+      `,
+      focusConfirm: false,
+      confirmButtonText: "Crear",
+      confirmButtonColor: DORADO_OSCURO,
+      preConfirm: () => ({
+        nombre: document.getElementById("swal-nombre").value,
+        descripcion: document.getElementById("swal-descripcion").value,
+      }),
+    });
+
+    if (!formValues) return;
+
+    const resultado = await agregarCategoriaApi({
+      nombre_categoria: formValues.nombre,
+      descripcion: formValues.descripcion,
+      activo: true,
+    });
+
+    if (resultado?.error) {
+      Swal.fire("Error", "No se pudo crear la categoría", "error");
+      return;
+    }
+    Swal.fire("Creada", "Categoría creada correctamente", "success");
+    obtenerCategorias();
+  };
+
+  const editarCategoria = async (categoria) => {
+    const { value: formValues } = await Swal.fire({
+      title: "Editar Categoría",
+      html: `
+        <input id="swal-nombre" class="swal2-input" placeholder="Nombre" value="${categoria.nombre}" />
+        <input id="swal-descripcion" class="swal2-input" placeholder="Descripción" value="${categoria.descripcion}" />
+      `,
+      focusConfirm: false,
+      confirmButtonColor: DORADO_OSCURO,
+      preConfirm: () => ({
+        nombre: document.getElementById("swal-nombre").value,
+        descripcion: document.getElementById("swal-descripcion").value,
+      }),
+    });
+
+    if (!formValues) return;
+
+    const resultado = await editarCategoriaApi(categoria.id, {
+      nombre_categoria: formValues.nombre,
+      descripcion: formValues.descripcion,
+    });
+
+    if (resultado?.error) {
+      Swal.fire("Error", "No se pudo actualizar la categoría", "error");
+      return;
+    }
+    Swal.fire("Actualizada", "Categoría actualizada correctamente", "success");
+    obtenerCategorias();
+  };
+
+  const eliminarCategoria = async (id) => {
+    const resultado = await Swal.fire({
+      title: "¿Eliminar categoría?",
+      text: "Esta acción no se puede deshacer",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Sí, eliminar",
+    });
+    if (!resultado.isConfirmed) return;
+
+    const respuesta = await eliminarCategoriaApi(id);
+
+    if (respuesta?.error) {
+      Swal.fire("Error", "No se pudo eliminar la categoría", "error");
+      return;
+    }
+    Swal.fire("Eliminada", "Categoría eliminada correctamente", "success");
+    obtenerCategorias();
+  };
+
   const normalizar = (texto) =>
     texto?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
@@ -63,7 +153,7 @@ function CategoriasMecanico() {
   return (
     <div className="p-5" style={{ background: FONDO, minHeight: "100vh" }}>
 
-      {/* HEADER (sin botón de agregar) */}
+      {/* HEADER */}
       <div
         className="d-flex justify-content-between align-items-start flex-wrap mb-4 gap-2 p-4 rounded-4"
         style={{ backgroundColor: "#fffdf8", border: `1px solid ${DORADO_CLARO}`, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}
@@ -71,7 +161,7 @@ function CategoriasMecanico() {
         <div>
           <h4 className="fw-bold mb-2" style={{ color: "#1a1a1a" }}>
             Categorías de Blindaje{" "}
-            <span className="fw-normal text-muted" style={{ fontSize: "16px" }}>- Consulta de niveles de protección balística</span>
+            <span className="fw-normal text-muted" style={{ fontSize: "16px" }}>- Gestión de niveles de protección balística</span>
           </h4>
           <div className="d-flex align-items-center" style={{ gap: "10px" }}>
             <span style={{ height: "2px", width: "70px", background: `linear-gradient(to right, transparent, ${DORADO})`, display: "inline-block" }} />
@@ -79,6 +169,16 @@ function CategoriasMecanico() {
             <span style={{ height: "2px", width: "70px", background: `linear-gradient(to left, transparent, ${DORADO})`, display: "inline-block" }} />
           </div>
         </div>
+        <button
+          className="btn d-flex align-items-center gap-2 fw-semibold"
+          onClick={nuevaCategoria}
+          style={{ background: BTN_GRAD, color: "#fff", borderRadius: "8px", padding: "8px 18px 8px 8px", border: "none", boxShadow: "0 3px 12px rgba(140,107,63,0.55)" }}
+        >
+          <span className="d-flex align-items-center justify-content-center rounded-circle" style={{ width: "24px", height: "24px", backgroundColor: "rgba(255,255,255,0.25)" }}>
+            <Plus size={14} />
+          </span>
+          Nueva Categoría
+        </button>
       </div>
 
       {/* STAT CARDS */}
@@ -117,7 +217,7 @@ function CategoriasMecanico() {
         </div>
       </div>
 
-      {/* TABLA (sin columna de Acciones) */}
+      {/* TABLA */}
       <div className="rounded-4 shadow-sm overflow-hidden" style={{ background: "#fffdf8", border: `1px solid ${DORADO_CLARO}` }}>
         <div className="d-flex justify-content-between align-items-center p-3">
           <h6 className="fw-bold mb-0" style={{ color: "#1a1a1a" }}>Categorías Registradas</h6>
@@ -128,7 +228,7 @@ function CategoriasMecanico() {
           <table className="table align-middle mb-0">
             <thead>
               <tr style={{ backgroundColor: ENCABEZADO }}>
-                {["ID", "Nombre Categoría", "Descripción", "Estado"].map((col) => (
+                {["ID", "Nombre Categoría", "Descripción", "Estado", "Acciones"].map((col) => (
                   <th key={col} style={{ fontSize: 13, backgroundColor: ENCABEZADO, color: TEXTO_ENC, border: "none", padding: "12px 8px" }}>{col}</th>
                 ))}
               </tr>
@@ -136,7 +236,7 @@ function CategoriasMecanico() {
             <tbody>
               {filtradas.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="text-center py-4" style={{ color: "#9ca3af", fontSize: 13 }}>
+                  <td colSpan={5} className="text-center py-4" style={{ color: "#9ca3af", fontSize: 13 }}>
                     No se encontraron categorías
                   </td>
                 </tr>
@@ -162,6 +262,22 @@ function CategoriasMecanico() {
                         {c.estado}
                       </span>
                     </td>
+                    <td>
+                      <div className="d-flex gap-3">
+                        <button
+                          style={{ width: 34, height: 34, borderRadius: 10, border: `1px solid ${DORADO_CLARO}`, background: "#f7f1e3", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+                          onClick={() => editarCategoria(c)}
+                        >
+                          <Pencil size={15} color={DORADO_OSCURO} />
+                        </button>
+                        <button
+                          style={{ width: 34, height: 34, borderRadius: 10, border: "1px solid #fecaca", background: "#fef2f2", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+                          onClick={() => eliminarCategoria(c.id)}
+                        >
+                          <Trash2 size={15} color="#dc2626" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}
@@ -173,4 +289,4 @@ function CategoriasMecanico() {
   );
 }
 
-export default CategoriasMecanico;
+export default GestionCategorias;

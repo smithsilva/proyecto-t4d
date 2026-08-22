@@ -26,6 +26,7 @@ app.use("/auth", authRoutes);
 
 // Rutas protegidas por JWT (capa 2)
 app.use("/productos",    verificarToken, productosRoutes);
+app.use("/categorias",   verificarToken, categoriasRoutes);
 app.use("/movimientos",  verificarToken, movimientosRoutes);
 app.use("/proveedores",  verificarToken, proveedoresRoutes);
 app.use("/asignaciones", verificarToken, asignacionesRoutes);
