@@ -62,6 +62,73 @@ function TopbarAdmin({ setVistaAdmin, usuario, setUsuario, setVista }) {
         position:       "relative",
       }}
     >
+      {/* ============ ESTILOS DE INTERACTIVIDAD (HOVER) ============ */}
+      <style>{`
+        /* Botón de campana de notificaciones: círculo gris oscuro al pasar el mouse */
+        .t4d-topbar-icon-btn {
+          border-radius: 50%;
+          transition: background-color 0.15s ease, transform 0.15s ease;
+        }
+        .t4d-topbar-icon-btn:hover {
+          background-color: rgba(255,255,255,0.08) !important;
+          transform: scale(1.06);
+        }
+        .t4d-topbar-icon-btn:active {
+          background-color: rgba(255,255,255,0.14) !important;
+          transform: scale(0.98);
+        }
+
+        /* Tarjeta de cada notificación dentro del panel */
+        .t4d-notif-card {
+          transition: background-color 0.15s ease, border-color 0.15s ease;
+        }
+        .t4d-notif-card:hover {
+          background-color: #101f30 !important;
+          border-color: ${DORADO} !important;
+        }
+
+        /* Botón "Marcar como leída" */
+        .t4d-notif-marcar:hover {
+          background-color: ${DORADO} !important;
+          color: #1a1a1a !important;
+        }
+
+        /* Botón "Ver todas" */
+        .t4d-notif-vertodas {
+          transition: filter 0.15s ease, transform 0.15s ease;
+        }
+        .t4d-notif-vertodas:hover {
+          filter: brightness(1.08);
+          transform: translateY(-1px);
+        }
+
+        /* Contenedor del usuario (avatar + nombre) */
+        .t4d-user-toggle {
+          transition: background-color 0.15s ease;
+        }
+        .t4d-user-toggle:hover {
+          background-color: rgba(201,162,90,0.14) !important;
+        }
+
+        /* Botón "Mi Perfil" */
+        .t4d-menu-perfil {
+          transition: background-color 0.15s ease, border-color 0.15s ease;
+        }
+        .t4d-menu-perfil:hover {
+          background-color: #101f30 !important;
+          border-color: ${DORADO} !important;
+        }
+
+        /* Botón "Cerrar sesión" */
+        .t4d-menu-logout {
+          transition: background-color 0.15s ease, transform 0.15s ease;
+        }
+        .t4d-menu-logout:hover {
+          background-color: #a54848 !important;
+          transform: translateY(-1px);
+        }
+      `}</style>
+
       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
         <div style={{ width: "3px", height: "32px", background: DORADO, borderRadius: "2px" }} />
         <div>
@@ -78,6 +145,7 @@ function TopbarAdmin({ setVistaAdmin, usuario, setUsuario, setVista }) {
 
         <div style={{ position: "relative" }}>
           <button
+            className="t4d-topbar-icon-btn"
             onClick={() => { setOpenNotif(!openNotif); if (!openNotif) cargarNotificaciones(); }}
             style={{ background: "transparent", border: "none", cursor: "pointer", padding: "8px", color: DORADO_SUAVE, display: "flex", alignItems: "center", position: "relative" }}
           >
@@ -102,7 +170,7 @@ function TopbarAdmin({ setVistaAdmin, usuario, setUsuario, setVista }) {
                 <div style={{ textAlign: "center", color: "#aaa", fontSize: 14, padding: "20px 0" }}>No hay notificaciones</div>
               ) : (
                 notificaciones.slice(0, 5).map((n) => (
-                  <div key={n.id_notificacion} style={{ background: NAVY, padding: "12px", borderRadius: "10px", marginBottom: 10, border: `1px solid ${n.leido ? "#1c2a3a" : DORADO}`, opacity: n.leido ? 0.6 : 1 }}>
+                  <div key={n.id_notificacion} className="t4d-notif-card" style={{ background: NAVY, padding: "12px", borderRadius: "10px", marginBottom: 10, border: `1px solid ${n.leido ? "#1c2a3a" : DORADO}`, opacity: n.leido ? 0.6 : 1 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
                       <strong style={{ color: DORADO_SUAVE, fontSize: 14 }}>{n.titulo}</strong>
                       {!n.leido && <span style={{ width: 8, height: 8, borderRadius: "50%", background: DORADO_SUAVE, display: "inline-block", flexShrink: 0, marginTop: 3 }} />}
@@ -110,7 +178,7 @@ function TopbarAdmin({ setVistaAdmin, usuario, setUsuario, setVista }) {
                     <p style={{ fontSize: 13, margin: "4px 0", color: "#ccc" }}>{n.descripcion}</p>
                     <small style={{ color: "#7b8a99", fontSize: 12 }}>{fmtFecha(n.fecha)}</small>
                     {!n.leido && (
-                      <button onClick={() => marcarLeida(n.id_notificacion)} style={{ marginTop: 8, width: "100%", background: NAVY_OSCURO, border: `1px solid ${DORADO}`, padding: "7px", borderRadius: "8px", fontSize: 12, cursor: "pointer", color: DORADO_SUAVE }}>
+                      <button onClick={() => marcarLeida(n.id_notificacion)} className="t4d-notif-marcar" style={{ marginTop: 8, width: "100%", background: NAVY_OSCURO, border: `1px solid ${DORADO}`, padding: "7px", borderRadius: "8px", fontSize: 12, cursor: "pointer", color: DORADO_SUAVE, transition: "background-color 0.15s ease, color 0.15s ease" }}>
                         Marcar como leída
                       </button>
                     )}
@@ -118,6 +186,7 @@ function TopbarAdmin({ setVistaAdmin, usuario, setUsuario, setVista }) {
                 ))
               )}
               <button onClick={() => { setVistaAdmin("notificaciones"); setOpenNotif(false); }}
+                className="t4d-notif-vertodas"
                 style={{ width: "100%", background: DORADO, color: "#1a1a1a", fontWeight: 600, border: "none", padding: "11px", borderRadius: "10px", marginTop: "6px", cursor: "pointer", fontSize: 14 }}>
                 Ver todas
               </button>
@@ -127,10 +196,9 @@ function TopbarAdmin({ setVistaAdmin, usuario, setUsuario, setVista }) {
 
         <div style={{ position: "relative" }}>
           <div
+            className="t4d-user-toggle"
             onClick={() => setMostrarMenu(!mostrarMenu)}
-            style={{ display: "flex", alignItems: "center", gap: "11px", cursor: "pointer", padding: "6px 14px", borderRadius: "36px", border: `1px solid ${DORADO}44`, transition: "background 0.2s" }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(201,162,90,0.10)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            style={{ display: "flex", alignItems: "center", gap: "11px", cursor: "pointer", padding: "6px 14px", borderRadius: "36px", border: `1px solid ${DORADO}44` }}
           >
             <div style={{ width: "42px", height: "42px", borderRadius: "50%", background: `${DORADO}22`, border: `1.5px solid ${DORADO}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               {usuario?.foto ? (
@@ -165,10 +233,12 @@ function TopbarAdmin({ setVistaAdmin, usuario, setUsuario, setVista }) {
               </div>
               <hr style={{ borderColor: "#1c2a3a", margin: "10px 0" }} />
               <button onClick={() => { setVistaAdmin("perfil"); setMostrarMenu(false); }}
+                className="t4d-menu-perfil"
                 style={{ width: "100%", background: NAVY, color: "#fff", border: "1px solid #1c2a3a", padding: "10px", borderRadius: "10px", cursor: "pointer", fontSize: "14px", marginBottom: "8px" }}>
                 Mi Perfil
               </button>
               <button onClick={cerrarSesion}
+                className="t4d-menu-logout"
                 style={{ width: "100%", background: "#8c3f3f", color: "#fff", border: "none", padding: "10px", borderRadius: "10px", cursor: "pointer", fontSize: "14px" }}>
                 Cerrar sesión
               </button>
