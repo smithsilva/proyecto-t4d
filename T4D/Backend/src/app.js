@@ -7,6 +7,7 @@ const verificarToken   = require("./middlewares/auth.middleware");
 
 const authRoutes         = require("./routes/auth.routes");
 const productosRoutes    = require("./routes/productos.routes");
+const categroiasRoutes   = require("./routes/categorias.routes")
 const movimientosRoutes  = require("./routes/movimientos.routes");
 const proveedoresRoutes  = require("./routes/proveedores.routes");
 const asignacionesRoutes = require("./routes/asignaciones.routes");
