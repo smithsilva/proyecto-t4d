@@ -1,96 +1,54 @@
 import axios from "axios";
+import { getHeaders } from "./authHeader";
 
 const API_URL = "http://localhost:5000/usuarios";
 
-// ==========================================
-// OBTENER USUARIOS
-// ==========================================
-
 export const obtenerUsuarios = async () => {
-
   try {
-
-    const response = await axios.get(API_URL);
-
+    const response = await axios.get(API_URL, { headers: getHeaders() });
     return response.data;
-
   } catch (error) {
-
     console.log("Error obteniendo usuarios:", error);
-
     throw error;
-
   }
-
 };
-
-// ==========================================
-// CREAR USUARIO
-// ==========================================
 
 export const crearUsuario = async (usuario) => {
-
   try {
-
-    const response = await axios.post(API_URL, usuario);
-
+    const response = await axios.post(API_URL, usuario, { headers: getHeaders(true) });
     return response.data;
-
   } catch (error) {
-
     console.log("Error creando usuario:", error);
-
     throw error;
-
   }
-
 };
-
-// ==========================================
-// EDITAR USUARIO
-// ==========================================
 
 export const editarUsuario = async (id, usuario) => {
-
   try {
-
-    const response = await axios.put(
-      `${API_URL}/${id}`,
-      usuario
-    );
-
+    const response = await axios.put(`${API_URL}/${id}`, usuario, { headers: getHeaders(true) });
     return response.data;
-
   } catch (error) {
-
     console.log("Error editando usuario:", error);
-
     throw error;
-
   }
-
 };
 
-// ==========================================
-// ELIMINAR USUARIO
-// ==========================================
-
 export const eliminarUsuario = async (id) => {
-
   try {
-
-    const response = await axios.delete(
-      `${API_URL}/${id}`
-    );
-
+    const response = await axios.delete(`${API_URL}/${id}`, { headers: getHeaders() });
     return response.data;
-
   } catch (error) {
-
     console.log("Error eliminando usuario:", error);
-
     throw error;
-
   }
+};
 
+export const actualizarParcialUsuario = async (id, datos) => {
+  try {
+    const response = await axios.patch(`${API_URL}/${id}`, datos, { headers: getHeaders(true) });
+    return response.data;
+  } catch (error) {
+    console.log("Error actualizando parcialmente usuario:", error);
+    throw error;
+  }
 };

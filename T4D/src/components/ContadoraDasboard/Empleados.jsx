@@ -1,52 +1,35 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { supabase } from "../../Supabase/SupabaseClient";
 import {
   Search,
-  Plus,
-  Pencil,
-  Trash2,
   Users,
   DollarSign,
   BadgeCheck,
   CalendarDays,
-  Save,
+  Eye,
   X,
+  Filter,
 } from "lucide-react";
 
-const EMPLEADOS_INICIALES = [
-  {
-    id: "EMP-001",
-    nombre: "General Roberto Vásquez",
-    cargo: "Administrador",
-    salario: 15000000,
-    fecha_contratacion: "2020-01-15",
-  },
-  {
-    id: "EMP-002",
-    nombre: "General Carlos Mendoza",
-    cargo: "Gerente",
-    salario: 12000000,
-    fecha_contratacion: "2020-03-10",
-  },
-  {
-    id: "EMP-003",
-    nombre: "Sargento Miguel Rodríguez",
-    cargo: "Mecánico Senior",
-    salario: 4500000,
-    fecha_contratacion: "2021-06-20",
-  },
-  {
-    id: "EMP-004",
-    nombre: "Licenciada Patricia Ramírez",
-    cargo: "Contador",
-    salario: 5500000,
-    fecha_contratacion: "2020-08-05",
-  },
-];
+// =========================================
+// PALETA (misma que Inventario)
+// =========================================
+const DORADO         = "#d4a743";
+const DORADO_OSCURO   = "#8c6b3f";
+const DORADO_CLARO    = "#e7c98a";
+const FONDO            = "#f7f1e3";
+const ENCABEZADO       = "#13202e"; // navy
+const TEXTO_ENCABEZADO = "#e7c98a";
+
+// =========================================
+// UTILIDADES
+// =========================================
 
 const fmt = (n) =>
-  "$ " + n.toLocaleString("es-CO", { minimumFractionDigits: 0 });
+  "$ " + Number(n).toLocaleString("es-CO", { minimumFractionDigits: 0 });
 
 function formatFecha(iso) {
+  if (!iso) return "—";
   const [y, m, d] = iso.split("-");
   const meses = [
     "enero","febrero","marzo","abril","mayo","junio",
@@ -55,234 +38,258 @@ function formatFecha(iso) {
   return `${parseInt(d)} de ${meses[parseInt(m) - 1]} de ${y}`;
 }
 
-export default function Empleados() {
-  const [empleados, setEmpleados] = useState(EMPLEADOS_INICIALES);
-  const [busqueda, setBusqueda] = useState("");
-  const [mostrarModal, setMostrarModal] = useState(false);
-  const [modoEdicion, setModoEdicion] = useState(false);
-  const [empleadoEditar, setEmpleadoEditar] = useState(null);
-  const [nuevoEmpleado, setNuevoEmpleado] = useState({
-    nombre: "",
-    cargo: "",
-    salario: "",
-    fecha_contratacion: "",
-  });
+// =========================================
+// COMPONENTE PRINCIPAL
+// =========================================
 
+export default function Empleados() {
+
+  const [empleados,   setEmpleados]   = useState([]);
+  const [busqueda,    setBusqueda]    = useState("");
+  const [verEmpleado, setVerEmpleado] = useState(null);
+  const [cargando,    setCargando]    = useState(true);
+  const [error,       setError]       = useState(null);
+
+  useEffect(() => { cargarEmpleados(); }, []);
+
+  // ── CARGAR ───────────────────────────────
+  const cargarEmpleados = async () => {
+    setCargando(true);
+    setError(null);
+    try {
+      const { data, error } = await supabase
+        .from("empleados")
+        .select("*")
+        .order("id_empleado", { ascending: true });
+
+      if (error) throw error;
+      setEmpleados(data || []);
+    } catch (err) {
+      console.error("Error al cargar empleados:", err.message);
+      setError(err.message);
+    }
+    setCargando(false);
+  };
+
+  // ── FILTRO ───────────────────────────────
   const filtrados = useMemo(() => {
     const q = busqueda.toLowerCase();
     if (!q) return empleados;
     return empleados.filter(
       (e) =>
-        e.nombre.toLowerCase().includes(q) ||
-        e.cargo.toLowerCase().includes(q)
+        e.nombre_completo?.toLowerCase().includes(q) ||
+        e.cargo?.toLowerCase().includes(q)
     );
   }, [empleados, busqueda]);
 
-  const nominaMensual = empleados.reduce((acc, e) => acc + e.salario, 0);
-  const salarioPromedio = Math.round(nominaMensual / empleados.length);
+  // ── MÉTRICAS ─────────────────────────────
+  const nominaMensual  = empleados.reduce((acc, e) => acc + Number(e.salario), 0);
+  const salarioPromedio = empleados.length > 0
+    ? Math.round(nominaMensual / empleados.length)
+    : 0;
 
-  const guardarEmpleado = (e) => {
-    e.preventDefault();
-    if (modoEdicion) {
-      setEmpleados((prev) =>
-        prev.map((emp) =>
-          emp.id === empleadoEditar.id
-            ? { ...nuevoEmpleado, id: empleadoEditar.id, salario: Number(nuevoEmpleado.salario) }
-            : emp
-        )
-      );
-    } else {
-      const nuevo = {
-        ...nuevoEmpleado,
-        id: `EMP-00${empleados.length + 1}`,
-        salario: Number(nuevoEmpleado.salario),
-      };
-      setEmpleados([...empleados, nuevo]);
-    }
-    setMostrarModal(false);
-    setModoEdicion(false);
-    setNuevoEmpleado({ nombre: "", cargo: "", salario: "", fecha_contratacion: "" });
-  };
+  const statCards = [
+    { label: "Total Empleados",  valor: empleados.length,        sublabel: "personal activo",   color: DORADO,        border: DORADO,       Icon: Users },
+    { label: "Nómina Mensual",   valor: fmt(nominaMensual),      sublabel: "costo total",        color: "#1a1a1a",     border: "#9ca3af",    Icon: DollarSign },
+    { label: "Salario Promedio", valor: fmt(salarioPromedio),    sublabel: "por empleado",       color: DORADO_OSCURO, border: DORADO_CLARO, Icon: BadgeCheck },
+  ];
 
-  const editarEmpleado = (empleado) => {
-    setModoEdicion(true);
-    setEmpleadoEditar(empleado);
-    setNuevoEmpleado(empleado);
-    setMostrarModal(true);
-  };
-
-  const eliminarEmpleado = (id) => {
-    const confirmar = window.confirm("¿Eliminar empleado?");
-    if (!confirmar) return;
-    setEmpleados((prev) => prev.filter((e) => e.id !== id));
-  };
-
+  // ── RENDER ───────────────────────────────
   return (
-    <div
-      className="p-5"
-      style={{ background: "#fff", minHeight: "100vh" }}
-    >
-      {/* HEADER */}
-      <div className="d-flex justify-content-between align-items-center mb-3">
+    <div className="p-4" style={{ margin: 0, backgroundColor: FONDO, minHeight: "100vh", width: "100%" }}>
+
+      {/* ENCABEZADO */}
+      <div
+        className="d-flex justify-content-between align-items-start flex-wrap mb-4 gap-2 p-4 rounded-4"
+        style={{ backgroundColor: "#fffdf8", border: `1px solid ${DORADO_CLARO}`, boxShadow: "0 2px 10px rgba(0,0,0,0.05)" }}
+      >
         <div>
-          <h4 className="fw-bold mb-1">Gestión de Empleados</h4>
-          <div
-            style={{
-              width: "60px",
-              height: "3px",
-              backgroundColor: "#B89B6A",
-              borderRadius: "10px",
-              marginBottom: "5px",
-            }}
-          />
-          <p style={{ color: "#6b7280", fontSize: "13px", margin: 0 }}>
-            Administra el personal de la empresa
-          </p>
+          <h4 className="fw-bold mb-2" style={{ color: "#1a1a1a" }}>
+            Gestión de Empleados{" "}
+            <span className="fw-normal text-muted" style={{ fontSize: "16px" }}>
+              - Administra el personal de la empresa
+            </span>
+          </h4>
+          <div className="d-flex align-items-center" style={{ gap: "10px" }}>
+            <span style={{ height: "2px", width: "70px", background: `linear-gradient(to right, transparent, ${DORADO})`, display: "inline-block" }} />
+            <span style={{ color: DORADO, fontSize: "14px" }}>★</span>
+            <span style={{ height: "2px", width: "70px", background: `linear-gradient(to left, transparent, ${DORADO})`, display: "inline-block" }} />
+          </div>
         </div>
-        <button
-          onClick={() => { setModoEdicion(false); setMostrarModal(true); }}
-          className="btn rounded-pill btn-sm"
-          style={{ backgroundColor: "#B89B6A", color: "#000", border: "none" }}
-        >
-          <Plus size={16} className="me-1" />
-          Agregar Empleado
-        </button>
       </div>
 
-      {/* CARDS */}
-      <div className="row g-3 mb-4">
-        <div className="col-md-4">
-          <div className="card p-3 rounded-4 shadow-sm" style={{ border: "1px solid #e5e7eb" }}>
-            <div className="d-flex justify-content-between align-items-center mb-2">
-              <span style={{ fontSize: "13px", color: "#6b7280", fontWeight: 500 }}>Total Empleados</span>
-              <div style={{ width: 34, height: 34, borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", color: "#B89B6A" }}>
-                <Users size={18} />
-              </div>
+      {/* TARJETAS */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 24 }}>
+        {statCards.map((card, i) => (
+          <div key={i} className="rounded-4 shadow-sm"
+            style={{ backgroundColor: "#fffdf8", padding: "18px 20px", border: `1.5px solid ${card.border}`, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <small style={{ color: card.color, fontSize: "13px", fontWeight: 600 }}>{card.label}</small>
+              <h3 style={{ fontSize: "26px", fontWeight: "bold", color: card.color, margin: "4px 0" }}>{card.valor}</h3>
+              <small style={{ color: "#6b7280", fontSize: "12px" }}>{card.sublabel}</small>
             </div>
-            <div style={{ fontSize: "26px", fontWeight: 700, color: "#B89B6A" }}>{empleados.length}</div>
-            <div style={{ fontSize: "12px", color: "#9ca3af", marginTop: 4 }}>personal activo</div>
+            <card.Icon size={20} color={card.color} />
           </div>
-        </div>
-        <div className="col-md-4">
-          <div className="card p-3 rounded-4 shadow-sm" style={{ border: "1px solid #e5e7eb" }}>
-            <div className="d-flex justify-content-between align-items-center mb-2">
-              <span style={{ fontSize: "13px", color: "#6b7280", fontWeight: 500 }}>Nómina Mensual</span>
-              <div style={{ width: 34, height: 34, borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", color: "#374151" }}>
-                <DollarSign size={18} />
-              </div>
-            </div>
-            <div style={{ fontSize: "26px", fontWeight: 700, color: "#374151" }}>{fmt(nominaMensual)}</div>
-            <div style={{ fontSize: "12px", color: "#9ca3af", marginTop: 4 }}>costo total</div>
-          </div>
-        </div>
-        <div className="col-md-4">
-          <div className="card p-3 rounded-4 shadow-sm" style={{ border: "1px solid #e5e7eb" }}>
-            <div className="d-flex justify-content-between align-items-center mb-2">
-              <span style={{ fontSize: "13px", color: "#6b7280", fontWeight: 500 }}>Salario Promedio</span>
-              <div style={{ width: 34, height: 34, borderRadius: 10, background: "#f3f4f6", display: "flex", alignItems: "center", justifyContent: "center", color: "#1f2937" }}>
-                <BadgeCheck size={18} />
-              </div>
-            </div>
-            <div style={{ fontSize: "26px", fontWeight: 700, color: "#1f2937" }}>{fmt(salarioPromedio)}</div>
-            <div style={{ fontSize: "12px", color: "#9ca3af", marginTop: 4 }}>por empleado</div>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* BÚSQUEDA */}
-      <div className="card p-3 rounded-4 shadow-sm mb-4" style={{ border: "1px solid #e5e7eb" }}>
-        <h6 className="fw-bold mb-2" style={{ color: "#B89B6A" }}>Filtros y Búsqueda</h6>
+      <div className="p-4 rounded-4 shadow-sm mb-4" style={{ backgroundColor: "#fffdf8", border: `1px solid ${DORADO_CLARO}` }}>
+        <div className="d-flex align-items-center gap-2 mb-3">
+          <Filter size={18} color={DORADO_OSCURO} />
+          <h6 className="fw-bold mb-0" style={{ color: "#1a1a1a", fontSize: "16px" }}>Filtros y Búsqueda</h6>
+        </div>
         <div style={{ position: "relative" }}>
-          <Search size={16} color="#9ca3af" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
+          <Search size={16} color="#999" style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)" }} />
           <input
             type="text"
             className="form-control rounded-pill"
             placeholder="Buscar por nombre o cargo..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            style={{ paddingLeft: "38px" }}
+            style={{ paddingLeft: "36px", paddingTop: "10px", paddingBottom: "10px" }}
           />
         </div>
       </div>
 
+      {/* ERROR */}
+      {error && (
+        <div className="alert alert-danger rounded-4" style={{ fontSize: 13 }}>
+          ⚠️ Error al conectar con la base de datos: <strong>{error}</strong>
+        </div>
+      )}
+
       {/* TABLA */}
-      <div className="card p-3 rounded-4 shadow-sm">
-        <table className="table align-middle">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Nombre</th>
-              <th>Cargo</th>
-              <th>Salario</th>
-              <th>Fecha</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtrados.map((e) => (
-              <tr key={e.id}>
-                <td style={{ color: "#6b7280", fontWeight: 600, letterSpacing: "1.5px", fontSize: "13px" }}>{e.id}</td>
-                <td style={{ fontWeight: 600, color: "#111827" }}>{e.nombre}</td>
-                <td>
-                  <span style={{ background: "#f3f4f6", color: "#374151", borderRadius: 999, padding: "5px 12px", fontSize: 12, fontWeight: 600 }}>
-                    {e.cargo}
-                  </span>
-                </td>
-                <td style={{ fontWeight: 700, color: "#B89B6A" }}>{fmt(e.salario)}</td>
-                <td>
-                  <div className="d-flex align-items-center gap-2" style={{ color: "#374151", fontSize: "13px" }}>
-                    <CalendarDays size={15} color="#6b7280" />
-                    {formatFecha(e.fecha_contratacion)}
-                  </div>
-                </td>
-                <td>
-                  <div className="d-flex gap-2">
-                    <button
-                      onClick={() => editarEmpleado(e)}
-                      style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #e8d5b7", background: "#fdf8f2", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                    >
-                      <Pencil size={15} color="#B89B6A" />
-                    </button>
-                    <button
-                      onClick={() => eliminarEmpleado(e.id)}
-                      style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #fecaca", background: "#fef2f2", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                    >
-                      <Trash2 size={15} color="#dc2626" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="rounded-4 shadow-sm overflow-hidden" style={{ backgroundColor: "#fffdf8", border: `1px solid ${DORADO_CLARO}` }}>
+        {cargando ? (
+          <div className="text-center py-5 text-muted">Cargando empleados...</div>
+        ) : filtrados.length === 0 ? (
+          <div className="text-center py-5 text-muted">
+            <Users size={40} className="mb-2 opacity-50" />
+            <p>No se encontraron empleados.</p>
+          </div>
+        ) : (
+          <div className="table-responsive">
+            <table className="table align-middle mb-0" style={{ minWidth: 900, backgroundColor: "#fffdf8" }}>
+              <thead>
+                <tr style={{ backgroundColor: ENCABEZADO }}>
+                  {["ID", "Cédula", "Nombre", "Cargo", "Tipo Contrato", "Salario", "F. Contratación", "F. Terminación", "Acciones"].map((h, i) => (
+                    <th key={h} className={i === 0 ? "ps-3" : ""} style={{ backgroundColor: ENCABEZADO, color: TEXTO_ENCABEZADO, fontSize: "13px", border: "none", padding: "12px 8px" }}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtrados.map((e) => (
+                  <tr key={e.id_empleado} style={{ borderBottom: "1px solid #ece4d3", backgroundColor: "#fffdf8" }}>
+
+                    {/* ID */}
+                    <td className="ps-3 fw-bold" style={{ fontSize: 13, color: DORADO_OSCURO }}>
+                      #{e.id_empleado}
+                    </td>
+
+                    {/* Cédula */}
+                    <td style={{ fontSize: 13, color: "#374151" }}>{e.cedula}</td>
+
+                    {/* Nombre */}
+                    <td style={{ fontWeight: 600, color: "#111827", fontSize: 13 }}>{e.nombre_completo}</td>
+
+                    {/* Cargo */}
+                    <td>
+                      <span style={{ background: "#f0ece4", color: "#374151", borderRadius: 999, padding: "5px 12px", fontSize: 12, fontWeight: 600 }}>
+                        {e.cargo}
+                      </span>
+                    </td>
+
+                    {/* Tipo contrato */}
+                    <td>
+                      <span style={{ background: "#fdf3da", color: DORADO_OSCURO, borderRadius: 999, padding: "5px 12px", fontSize: 11, fontWeight: 600, border: `1px solid ${DORADO_CLARO}` }}>
+                        {e.tipo_contrato}
+                      </span>
+                    </td>
+
+                    {/* Salario */}
+                    <td style={{ fontWeight: 700, color: DORADO_OSCURO }}>{fmt(e.salario)}</td>
+
+                    {/* F. Contratación */}
+                    <td>
+                      <div className="d-flex align-items-center gap-2" style={{ color: "#374151", fontSize: 13 }}>
+                        <CalendarDays size={15} color="#6b7280" />
+                        {formatFecha(e.fecha_contratacion)}
+                      </div>
+                    </td>
+
+                    {/* F. Terminación */}
+                    <td style={{ fontSize: 13, color: "#374151" }}>{formatFecha(e.fecha_terminacion)}</td>
+
+                    {/* Acciones */}
+                    <td>
+                      <div className="d-flex justify-content-center">
+                        <Eye
+                          size={19}
+                          style={{ cursor: "pointer", color: "#555" }}
+                          onClick={() => setVerEmpleado(e)}
+                        />
+                      </div>
+                    </td>
+
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* MODAL */}
-      {mostrarModal && (
+      {/* MODAL VER */}
+      {verEmpleado && (
         <div
           className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-          style={{ background: "rgba(0,0,0,0.5)", zIndex: 1000 }}
+          style={{ background: "rgba(0,0,0,0.5)", zIndex: 1050 }}
+          onClick={() => setVerEmpleado(null)}
         >
-          <div className="bg-white p-4 rounded-4 shadow" style={{ width: "400px" }}>
-            <h5 className="fw-bold mb-3">{modoEdicion ? "Editar Empleado" : "Agregar Empleado"}</h5>
-            <form onSubmit={guardarEmpleado}>
-              <input type="text" className="form-control mb-2" placeholder="Nombre" value={nuevoEmpleado.nombre} onChange={(e) => setNuevoEmpleado({ ...nuevoEmpleado, nombre: e.target.value })} />
-              <input type="text" className="form-control mb-2" placeholder="Cargo" value={nuevoEmpleado.cargo} onChange={(e) => setNuevoEmpleado({ ...nuevoEmpleado, cargo: e.target.value })} />
-              <input type="number" className="form-control mb-2" placeholder="Salario" value={nuevoEmpleado.salario} onChange={(e) => setNuevoEmpleado({ ...nuevoEmpleado, salario: e.target.value })} />
-              <input type="date" className="form-control mb-3" value={nuevoEmpleado.fecha_contratacion} onChange={(e) => setNuevoEmpleado({ ...nuevoEmpleado, fecha_contratacion: e.target.value })} />
-              <div className="d-flex justify-content-end gap-2">
-                <button type="button" onClick={() => setMostrarModal(false)} className="btn btn-secondary">
-                  <X size={16} />
-                </button>
-                <button type="submit" className="btn" style={{ backgroundColor: "#B89B6A", color: "#000", border: "none" }}>
-                  <Save size={16} className="me-1" />
-                  Guardar
-                </button>
+          <div
+            className="bg-white p-4 rounded-4 shadow"
+            style={{ width: 420, maxHeight: "90vh", overflowY: "auto", position: "relative" }}
+            onClick={(ev) => ev.stopPropagation()}
+          >
+            <button
+              onClick={() => setVerEmpleado(null)}
+              style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", cursor: "pointer", color: "#9ca3af" }}
+            >
+              <X size={18} />
+            </button>
+
+            <h5 className="fw-bold mb-1">Detalle del Empleado</h5>
+            <div style={{ width: 40, height: 3, background: DORADO, borderRadius: 10, marginBottom: 20 }} />
+
+            {[
+              ["ID",                  `#${verEmpleado.id_empleado}`],
+              ["Cédula",              verEmpleado.cedula],
+              ["Nombre Completo",     verEmpleado.nombre_completo],
+              ["Cargo",               verEmpleado.cargo],
+              ["Tipo de Contrato",    verEmpleado.tipo_contrato?.replace(/_/g, " ")],
+              ["Salario",             fmt(verEmpleado.salario)],
+              ["Fecha Contratación",  formatFecha(verEmpleado.fecha_contratacion)],
+              ["Fecha Terminación",   formatFecha(verEmpleado.fecha_terminacion)],
+            ].map(([label, valor]) => (
+              <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #f3f4f6", fontSize: 13 }}>
+                <span style={{ color: "#6b7280", fontWeight: 500 }}>{label}</span>
+                <span style={{ color: "#111827", fontWeight: 600 }}>{valor}</span>
               </div>
-            </form>
+            ))}
+
+            <button
+              onClick={() => setVerEmpleado(null)}
+              className="btn btn-secondary w-100 mt-3"
+            >
+              Cerrar
+            </button>
           </div>
         </div>
       )}
+
     </div>
   );
 }
