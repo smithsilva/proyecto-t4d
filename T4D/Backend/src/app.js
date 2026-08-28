@@ -7,6 +7,7 @@ const verificarToken   = require("./middlewares/auth.middleware");
 
 const authRoutes         = require("./routes/auth.routes");
 const productosRoutes    = require("./routes/productos.routes");
+const categroiasRoutes   = require("./routes/categorias.routes")
 const movimientosRoutes  = require("./routes/movimientos.routes");
 const proveedoresRoutes  = require("./routes/proveedores.routes");
 const asignacionesRoutes = require("./routes/asignaciones.routes");
@@ -26,6 +27,7 @@ app.use("/auth", authRoutes);
 
 // Rutas protegidas por JWT (capa 2)
 app.use("/productos",    verificarToken, productosRoutes);
+app.use("/categorias",   verificarToken, categoriasRoutes);
 app.use("/movimientos",  verificarToken, movimientosRoutes);
 app.use("/proveedores",  verificarToken, proveedoresRoutes);
 app.use("/asignaciones", verificarToken, asignacionesRoutes);
