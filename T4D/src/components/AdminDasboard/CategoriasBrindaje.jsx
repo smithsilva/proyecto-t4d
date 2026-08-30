@@ -6,7 +6,7 @@ import {
   agregarCategoriaApi,
   editarCategoriaApi,
   eliminarCategoriaApi,
-} from "../../api/categoriasApi";
+} from "../../api/Categoriasapi";
 
 // ─── PALETA (igual a Inventario) ─────────────────────────────────────────────
 const DORADO        = "#d4a743";

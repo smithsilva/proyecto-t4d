@@ -28,17 +28,32 @@ app.use("/auth", require("./src/routes/auth.routes"));
 
 // ── RUTAS PROTEGIDAS ──
 app.use("/productos", verificarToken, require("./src/routes/productos.routes"));
+
 app.use("/usuarios", verificarToken, require("./src/routes/usuarios.routes"));
+
 app.use("/reportes", verificarToken, require("./src/routes/reportes.routes"));
+
 app.use("/asignaciones", verificarToken, require("./src/routes/asignaciones.routes"));
+
 app.use("/proveedores", verificarToken, require("./src/routes/proveedores.routes"));
+
 app.use("/sucursales", verificarToken, require("./src/routes/sucursales.routes"));
+
 app.use("/roles", verificarToken, require("./src/routes/roles.routes"));
+
 app.use("/movimientos", verificarToken, require("./src/routes/movimientos.routes"));
 
 // ── CATEGORÍAS ──
 app.use("/categorias", verificarToken, require("./src/routes/categorias.routes"));
 
+// ── HISTORIAL DE PRECIOS ──
+app.use(
+  "/historial-precios",
+  verificarToken,
+  require("./src/routes/historialprecios.routes")
+);
+
+// ── RUTA PRINCIPAL ──
 app.get("/", (req, res) => {
   res.json({
     status: "ok",
@@ -46,6 +61,7 @@ app.get("/", (req, res) => {
   });
 });
 
+// ── INICIAR SERVIDOR ──
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
