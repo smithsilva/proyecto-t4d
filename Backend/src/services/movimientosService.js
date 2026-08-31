@@ -12,6 +12,7 @@ const obtenerMovimientosService = async () => {
       fecha_movimiento,
       tipo_movimiento,
       cantidad,
+      observacion,
 
       productos:productos!movimientos_inventario_id_producto_fkey (
         id_producto,
