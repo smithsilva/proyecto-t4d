@@ -1,31 +1,45 @@
-import { supabase } from "../Supabase/supabaseClient";
+import { supabase } from "../../Supabase/SupabaseClient";
 
 /**
- * Envía una notificación insertándola en la tabla de notificaciones de Supabase.
+ * Envía una notificación a uno o varios roles insertándola en la tabla
+ * `notificaciones`. Coincide con las columnas reales de la tabla:
+ * titulo | descripcion | fecha | leido | rol_destino | id_usuario | id_asignacion
+ *
  * @param {Object} params
- * @param {string} params.destinatario_id - UUID del usuario destinatario
- * @param {string} params.mensaje - Contenido de la notificación
- * @param {string} [params.tipo] - Tipo de notificación (ej: "info", "alerta", "sistema")
- * @param {string} [params.remitente_id] - UUID del usuario que envía (opcional)
+ * @param {string} params.titulo - Título/asunto de la notificación.
+ * @param {string} params.descripcion - Contenido del mensaje.
+ * @param {string[]} params.roles - Roles destino, ej: ["Admin", "Gerente"].
+ *   Se inserta una fila por cada rol (broadcast).
+ * @param {number} [params.id_usuario] - Opcional: usuario específico destino.
+ * @param {number} [params.id_asignacion] - Opcional: asignación relacionada.
  */
 export async function enviarNotificacion({
-  destinatario_id,
-  mensaje,
-  tipo = "info",
-  remitente_id = null,
+  titulo,
+  descripcion,
+  roles = [],
+  id_usuario = null,
+  id_asignacion = null,
 }) {
+  if (!titulo || !descripcion) {
+    throw new Error("titulo y descripcion son obligatorios");
+  }
+  if (!Array.isArray(roles) || roles.length === 0) {
+    throw new Error("Debes indicar al menos un rol destino en 'roles'");
+  }
+
+  const filas = roles.map((rol) => ({
+    titulo,
+    descripcion,
+    rol_destino: rol,
+    id_usuario,
+    id_asignacion,
+    leido: false,
+    fecha: new Date().toISOString(),
+  }));
+
   const { data, error } = await supabase
     .from("notificaciones")
-    .insert([
-      {
-        destinatario_id,
-        mensaje,
-        tipo,
-        remitente_id,
-        leida: false,
-        created_at: new Date().toISOString(),
-      },
-    ])
+    .insert(filas)
     .select();
 
   if (error) {
