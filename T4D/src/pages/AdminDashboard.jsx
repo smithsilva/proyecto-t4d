@@ -9,6 +9,7 @@ import Notificaciones from "../components/AdminDasboard/Notificaciones";
 import RegistroUsuarios from "../components/AdminDasboard/RegistroUsuarios";
 import PerfilAdmin from "../components/AdminDasboard/PerfilUsuario";
 import HistorialPrecios from "../components/AdminDasboard/HistorialPrecios";
+import GestionCategorias from "../components/AdminDasboard/CategoriasBrindaje";
 
 function AdminDashboard({ usuario, setVista, setUsuario }) {
   const [vistaAdmin, setVistaAdmin] = useState("inventario");
@@ -40,6 +41,7 @@ function AdminDashboard({ usuario, setVista, setUsuario }) {
           {vistaAdmin === "historialprecios" && <HistorialPrecios usuario={usuario} />}
           {vistaAdmin === "notificaciones"   && <Notificaciones notificaciones={notificaciones} setNotificaciones={setNotificaciones} />}
           {vistaAdmin === "reportes"         && <Reportes />}
+          {vistaAdmin === "categorias"       && <GestionCategorias/>}
           {vistaAdmin === "GestionUsuarios"  && <GestionUsuarios />}
           {vistaAdmin === "RegistroUsuarios" && <RegistroUsuarios />}
           {vistaAdmin === "perfil"           && <PerfilAdmin usuario={usuario} setUsuario={setUsuario} />}
