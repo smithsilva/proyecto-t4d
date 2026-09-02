@@ -2,9 +2,18 @@ const jwt = require("jsonwebtoken");
 
 const verificarToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1]; // formato: "Bearer <token>"
 
-  if (!token) {
+  if (!authHeader) {
+    return res.status(401).json({ error: "Token no proporcionado" });
+  }
+
+  // Normaliza espacios múltiples entre "Bearer" y el token,
+  // y no le importa mayúsculas/minúsculas en "Bearer".
+  const partes = authHeader.trim().split(/\s+/); // separa por cualquier cantidad de espacios
+  const esquema = partes[0];
+  const token = partes[1];
+
+  if (!token || esquema.toLowerCase() !== "bearer") {
     return res.status(401).json({ error: "Token no proporcionado" });
   }
 

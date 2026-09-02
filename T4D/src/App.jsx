@@ -5,6 +5,8 @@ import AdminDashboard from "./pages/AdminDashboard";
 import ContadoraDashboard from "./pages/ContadoraDashboard";
 import GerenteDashboard from "./pages/GerenteDashboard";
 import MecanicoDashboard from "./pages/MecanicoDashboard";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import SessionTimeout from "./components/SessionTimeout";
 import "bootstrap-icons/font/bootstrap-icons.css";
 
@@ -13,6 +15,7 @@ function App() {
   const [vista, setVista] = useState("login");
   const [usuario, setUsuario] = useState(null);
   const [cargando, setCargando] = useState(true);
+  const [resetToken, setResetToken] = useState(null);
 
   // =========================================
   // NORMALIZAR ROL
@@ -42,10 +45,22 @@ function App() {
   };
 
   // =========================================
-  // RECUPERAR SESIÓN
+  // RECUPERAR SESIÓN / DETECTAR LINK DE RESET
   // =========================================
 
   useEffect(() => {
+    // Si la URL trae ?token=... (viene del correo de recuperación),
+    // saltamos directo a la pantalla de restablecer contraseña.
+    const params = new URLSearchParams(window.location.search);
+    const tokenDeReset = params.get("token");
+
+    if (tokenDeReset) {
+      setResetToken(tokenDeReset);
+      setVista("reset-password");
+      setCargando(false);
+      return;
+    }
+
     try {
       const usuarioGuardado = localStorage.getItem("usuario");
       const token = localStorage.getItem("token");
@@ -135,6 +150,12 @@ function App() {
           <MecanicoDashboard usuario={usuario} setVista={setVista} setUsuario={setUsuario} />
         </>
       );
+
+    case "olvide-password":
+      return <ForgotPassword setVista={setVista} />;
+
+    case "reset-password":
+      return <ResetPassword token={resetToken} setVista={setVista} />;
 
     case "home":
       return <Home setVista={setVista} setUsuario={setUsuario} />;
