@@ -206,6 +206,17 @@ function Login({ setVista, setUsuario }) {
               Iniciar sesión
             </button>
 
+            {/* LINK RESTABLECER CONTRASEÑA */}
+            <div className="text-center mt-3">
+              <button
+                type="button"
+                onClick={() => setVista("olvide-password")}
+                style={{ background: "none", border: "none", color: C.dorado, fontSize: "12.5px", fontWeight: 600, cursor: "pointer", textDecoration: "underline", padding: 0 }}
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
+
           </form>
         </div>
       </div>
