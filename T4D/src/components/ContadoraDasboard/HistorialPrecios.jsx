@@ -1,6 +1,14 @@
 import { useState, useMemo, useEffect } from "react";
-import { supabase } from "../../Supabase/SupabaseClient";
-import { Filter, Search, Pencil, X, Eye, Trash2, ToggleLeft } from "lucide-react";
+import { Filter, Search, Pencil, X, Eye, Trash2, ToggleLeft, PlusCircle } from "lucide-react";
+import {
+  obtenerProductosApi,
+  crearProductoApi,
+  editarProductoApi,
+  cambiarEstadoProductoApi,
+  eliminarProductoApi,
+  obtenerHistorialApi,
+  eliminarHistorialApi,
+} from "../../api/Historialpreciosapi";
 
 const DORADO          = "#d4a743";
 const DORADO_OSCURO   = "#8c6b3f";
@@ -11,13 +19,16 @@ const TEXTO_ENCABEZADO = "#e7c98a";
 const BTN_GRAD        = "linear-gradient(135deg, #c9941f, #8c6b3f)";
 
 // ─── PERMISOS POR ROL ─────────────────────────────────────────────────────────
-// admin     → ver, editar precio, eliminar registro historial, desactivar producto
-// gerente   → ver, editar precio
+// Esto solo controla qué botones se MUESTRAN. La seguridad real la aplica el
+// backend (verificarRol en historialPrecios.routes.js), así que aunque alguien
+// manipule el frontend, el servidor rechaza la petición si el rol no coincide.
+// admin     → ver, crear, editar, eliminar producto, eliminar historial, desactivar
+// gerente   → ver, crear, editar
 // contadora → solo ver
 const permisos = {
-  admin:     { editar: true,  eliminar: true,  desactivar: true  },
-  gerente:   { editar: true,  eliminar: false, desactivar: false },
-  contadora: { editar: false, eliminar: false, desactivar: false },
+  admin:     { crear: true,  editar: true,  eliminarProducto: true,  eliminarHistorial: true,  desactivar: true  },
+  gerente:   { crear: true,  editar: true,  eliminarProducto: false, eliminarHistorial: false, desactivar: false },
+  contadora: { crear: false, editar: false, eliminarProducto: false, eliminarHistorial: false, desactivar: false },
 };
 
 const fmt = (n) =>
@@ -74,24 +85,33 @@ export default function HistorialPrecios({ usuario }) {
   const [busqueda,    setBusqueda]    = useState("");
   const [fecha,       setFecha]       = useState("");
   const [cargando,    setCargando]    = useState(true);
+
   const [modalVer,    setModalVer]    = useState(null);
-  const [modalEditar, setModalEditar] = useState(false);
-  const [productoSel, setProductoSel] = useState(null);
-  const [nuevoPrecio, setNuevoPrecio] = useState("");
-  const [motivo,      setMotivo]      = useState("");
-  const [guardando,   setGuardando]   = useState(false);
+
+  // Modal crear/editar producto
+  const [modalProducto, setModalProducto] = useState(null); // null | "crear" | "editar" | "editar-select"
+  const [productoSel,   setProductoSel]   = useState(null);
+  const [nombreForm,    setNombreForm]    = useState("");
+  const [precioForm,    setPrecioForm]    = useState("");
+  const [motivo,        setMotivo]        = useState("");
+  const [guardando,     setGuardando]     = useState(false);
 
   useEffect(() => { cargarTodo(); }, []);
 
   const cargarTodo = async () => {
     setCargando(true);
-    const [{ data: hist }, { data: prods }] = await Promise.all([
-      supabase.from("historial_precios").select("*").order("id_historial", { ascending: false }),
-      supabase.from("productos").select("id_producto, nombre_producto, precio_actual, activo").order("nombre_producto"),
-    ]);
-    setHistorial(hist || []);
-    setProductos(prods || []);
-    setCargando(false);
+    try {
+      const [hist, prods] = await Promise.all([
+        obtenerHistorialApi(),
+        obtenerProductosApi(),
+      ]);
+      setHistorial(Array.isArray(hist) ? hist : []);
+      setProductos(Array.isArray(prods) ? prods : []);
+    } catch (error) {
+      alert("No se pudo cargar la información. Verifica tu sesión.");
+    } finally {
+      setCargando(false);
+    }
   };
 
   const productosMap = useMemo(() =>
@@ -123,39 +143,121 @@ export default function HistorialPrecios({ usuario }) {
     { label:"Sin Cambio",      valor:sinCambio,         sublabel:"sin variación",         color:"#6b7280",     border:"#e5e7eb"    },
   ];
 
-  // ── Guardar precio ─────────────────────────────────────────────────────────
-  const guardarPrecio = async () => {
-    if (!productoSel) return;
-    const precioAnterior = Number(productoSel.precio_actual);
-    const precioNuevo    = Number(nuevoPrecio);
-    if (!nuevoPrecio || isNaN(precioNuevo) || precioNuevo <= 0) { alert("Ingresa un precio válido."); return; }
-    if (!motivo.trim()) { alert("El motivo es obligatorio."); return; }
-    setGuardando(true);
-    const { error } = await supabase.from("productos").update({ precio_actual: precioNuevo }).eq("id_producto", productoSel.id_producto);
-    if (error) { alert("No se pudo actualizar el precio."); setGuardando(false); return; }
-    await supabase.from("historial_precios").insert([{
-      id_producto: productoSel.id_producto, precio_anterior: precioAnterior,
-      precio_nuevo: precioNuevo, motivo: motivo.trim(), fecha_cambio: new Date().toISOString(),
-    }]);
-    setGuardando(false);
-    setModalEditar(false);
+  const rolColor = { admin:"#13202e", gerente:"#1f4e79", contadora:"#3d5a3e" };
+
+  // ── Abrir modal: crear producto nuevo ──────────────────────────────────────
+  const abrirCrear = () => {
     setProductoSel(null);
+    setNombreForm("");
+    setPrecioForm("");
+    setMotivo("Creación de producto");
+    setModalProducto("crear");
+  };
+
+  // ── Abrir modal: editar producto existente ─────────────────────────────────
+  const abrirEditar = (prod) => {
+    setProductoSel(prod);
+    setNombreForm(prod.nombre_producto);
+    setPrecioForm(prod.precio_actual);
+    setMotivo("");
+    setModalProducto("editar");
+  };
+
+  const cerrarModalProducto = () => {
+    setModalProducto(null);
+    setProductoSel(null);
+    setNombreForm("");
+    setPrecioForm("");
+    setMotivo("");
+  };
+
+  // ── Guardar (crear o editar) producto — vía API ─────────────────────────────
+  const guardarProducto = async () => {
+    const nombre = nombreForm.trim();
+    const precio = Number(precioForm);
+
+    if (!nombre) { alert("El nombre del producto es obligatorio."); return; }
+    if (!precioForm || isNaN(precio) || precio <= 0) { alert("Ingresa un precio válido."); return; }
+
+    setGuardando(true);
+    try {
+      let resultado;
+      if (modalProducto === "crear") {
+        resultado = await crearProductoApi({
+          nombre_producto: nombre,
+          precio_inicial: precio,
+          motivo: motivo.trim() || "Creación de producto",
+        });
+      } else if (modalProducto === "editar" && productoSel) {
+        const cambioPrecio = Number(productoSel.precio_actual) !== precio;
+        if (cambioPrecio && !motivo.trim()) {
+          alert("El motivo es obligatorio cuando cambias el precio.");
+          setGuardando(false);
+          return;
+        }
+        resultado = await editarProductoApi(productoSel.id_producto, {
+          nombre_producto: nombre,
+          precio_nuevo: precio,
+          motivo: motivo.trim(),
+        });
+      }
+
+      if (resultado?.error) {
+        alert(resultado.error);
+        setGuardando(false);
+        return;
+      }
+    } catch (error) {
+      alert("No se pudo guardar el producto. Verifica tu conexión o tu sesión.");
+      setGuardando(false);
+      return;
+    }
+
+    setGuardando(false);
+    cerrarModalProducto();
     cargarTodo();
   };
 
-  // ── Eliminar registro ──────────────────────────────────────────────────────
-  const eliminarRegistro = async (id) => {
-    if (!window.confirm("¿Eliminar este registro del historial? Esta acción no se puede deshacer.")) return;
-    await supabase.from("historial_precios").delete().eq("id_historial", id);
-    setHistorial((prev) => prev.filter((h) => h.id_historial !== id));
+  // ── Eliminar producto — vía API ─────────────────────────────────────────────
+  const eliminarProducto = async (prod) => {
+    if (!window.confirm(`¿Eliminar definitivamente el producto "${prod.nombre_producto}"? Esta acción no se puede deshacer.`)) return;
+
+    try {
+      const resultado = await eliminarProductoApi(prod.id_producto);
+      if (resultado?.error) {
+        if (window.confirm(`${resultado.error}\n\n¿Deseas desactivarlo en su lugar?`)) {
+          await cambiarEstadoProductoApi(prod.id_producto, false);
+          cargarTodo();
+        }
+        return;
+      }
+      cargarTodo();
+    } catch (error) {
+      alert("No se pudo eliminar el producto.");
+    }
   };
 
-  // ── Activar / Desactivar producto ──────────────────────────────────────────
+  // ── Eliminar registro de historial — vía API ────────────────────────────────
+  const eliminarRegistro = async (id) => {
+    if (!window.confirm("¿Eliminar este registro del historial? Esta acción no se puede deshacer.")) return;
+    try {
+      await eliminarHistorialApi(id);
+      setHistorial((prev) => prev.filter((h) => h.id_historial !== id));
+    } catch (error) {
+      alert("No se pudo eliminar el registro.");
+    }
+  };
+
+  // ── Activar / Desactivar producto — vía API ─────────────────────────────────
   const toggleProducto = async (idProducto, activo) => {
     const accion = activo ? "desactivar" : "activar";
     if (!window.confirm(`¿Deseas ${accion} este producto en el inventario?`)) return;
-    await supabase.from("productos").update({ activo: !activo }).eq("id_producto", idProducto);
-    setProductos((prev) => prev.map((p) => p.id_producto === idProducto ? { ...p, activo: !activo } : p));
+    try {
+      await cambiarEstadoProductoApi(idProducto, !activo);
+      setProductos((prev) => prev.map((p) => p.id_producto === idProducto ? { ...p, activo: !activo } : p));
+    } catch (error) {
+      alert("No se pudo cambiar el estado del producto.");
+    }
   };
 
   return (
@@ -169,6 +271,17 @@ export default function HistorialPrecios({ usuario }) {
             Historial de Precios{" "}
             <span className="fw-normal text-muted" style={{ fontSize:"16px" }}>- Rastrea y analiza cambios de precios</span>
           </h4>
+          <div className="d-flex align-items-center gap-2 mb-2">
+            <span style={{ background: rolColor[rol] || "#333", color:DORADO_CLARO, fontSize:11, fontWeight:700, padding:"2px 10px", borderRadius:999 }}>
+              {rol.toUpperCase()}
+            </span>
+            <span style={{ color:"#9ca3af", fontSize:12 }}>
+              {puede.editar ? "Puedes crear y editar productos" : "Solo lectura"}
+              {puede.eliminarHistorial ? " · Eliminar historial" : ""}
+              {puede.eliminarProducto ? " · Eliminar productos" : ""}
+              {puede.desactivar ? " · Desactivar productos" : ""}
+            </span>
+          </div>
           <div className="d-flex align-items-center" style={{ gap:"10px" }}>
             <span style={{ height:"2px", width:"70px", background:`linear-gradient(to right, transparent, ${DORADO})`, display:"inline-block" }} />
             <span style={{ color:DORADO, fontSize:"14px" }}>★</span>
@@ -176,17 +289,30 @@ export default function HistorialPrecios({ usuario }) {
           </div>
         </div>
 
-        {puede.editar && (
-          <button className="btn d-flex align-items-center gap-2 fw-semibold"
-            onClick={() => { setProductoSel(null); setNuevoPrecio(""); setMotivo(""); setModalEditar(true); }}
-            style={{ background:BTN_GRAD, color:"#fff", borderRadius:"8px", padding:"8px 18px 8px 8px", border:"none", boxShadow:"0 3px 12px rgba(140,107,63,0.55)" }}>
-            <span className="d-flex align-items-center justify-content-center rounded-circle"
-              style={{ width:"24px", height:"24px", backgroundColor:"rgba(255,255,255,0.25)" }}>
-              <Pencil size={14} />
-            </span>
-            Editar Precio
-          </button>
-        )}
+        <div className="d-flex gap-2">
+          {puede.crear && (
+            <button className="btn d-flex align-items-center gap-2 fw-semibold"
+              onClick={abrirCrear}
+              style={{ background:"#1f4e79", color:"#fff", borderRadius:"8px", padding:"8px 18px 8px 8px", border:"none", boxShadow:"0 3px 12px rgba(31,78,121,0.45)" }}>
+              <span className="d-flex align-items-center justify-content-center rounded-circle"
+                style={{ width:"24px", height:"24px", backgroundColor:"rgba(255,255,255,0.25)" }}>
+                <PlusCircle size={14} />
+              </span>
+              Nuevo Producto
+            </button>
+          )}
+          {puede.editar && (
+            <button className="btn d-flex align-items-center gap-2 fw-semibold"
+              onClick={() => { setProductoSel(null); setModalProducto("editar-select"); setNombreForm(""); setPrecioForm(""); setMotivo(""); }}
+              style={{ background:BTN_GRAD, color:"#fff", borderRadius:"8px", padding:"8px 18px 8px 8px", border:"none", boxShadow:"0 3px 12px rgba(140,107,63,0.55)" }}>
+              <span className="d-flex align-items-center justify-content-center rounded-circle"
+                style={{ width:"24px", height:"24px", backgroundColor:"rgba(255,255,255,0.25)" }}>
+                <Pencil size={14} />
+              </span>
+              Editar Producto
+            </button>
+          )}
+        </div>
       </div>
 
       {/* STATS */}
@@ -260,7 +386,6 @@ export default function HistorialPrecios({ usuario }) {
                             <span style={{ fontWeight:600, color:"#1a1a1a" }}>{prod.nombre_producto}</span>
                             <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                               <span style={{ fontSize:11, color:"#6b7280" }}>ID: {h.id_producto} · Actual: {fmt(prod.precio_actual)}</span>
-                              {/* Badge activo/inactivo */}
                               <span style={{ fontSize:10, fontWeight:700, padding:"1px 7px", borderRadius:999,
                                 background: prod.activo ? "#e3f7e9" : "#fbe2df",
                                 color:      prod.activo ? "#1f9d55" : "#c0392b" }}>
@@ -285,20 +410,16 @@ export default function HistorialPrecios({ usuario }) {
                       <td style={{ fontSize:13, color:"#6b7280", maxWidth:200 }}>{h.motivo}</td>
                       <td>
                         <div className="d-flex justify-content-center gap-2">
-                          {/* VER — todos */}
+                          {/* VER — todos los roles, incluida la contadora */}
                           <button title="Ver detalle" onClick={() => setModalVer(h)}
                             style={{ background:"none", border:"none", cursor:"pointer", padding:4 }}>
                             <Eye size={17} color="#555" />
                           </button>
 
-                          {/* EDITAR PRECIO — admin y gerente */}
+                          {/* EDITAR PRODUCTO — admin y gerente */}
                           {puede.editar && prod && (
-                            <button title="Editar precio" onClick={() => {
-                              setProductoSel(prod);
-                              setNuevoPrecio(prod.precio_actual);
-                              setMotivo("");
-                              setModalEditar(true);
-                            }} style={{ background:"none", border:"none", cursor:"pointer", padding:4 }}>
+                            <button title="Editar producto" onClick={() => abrirEditar(prod)}
+                              style={{ background:"none", border:"none", cursor:"pointer", padding:4 }}>
                               <Pencil size={17} color={DORADO_OSCURO} />
                             </button>
                           )}
@@ -312,12 +433,21 @@ export default function HistorialPrecios({ usuario }) {
                             </button>
                           )}
 
+                          {/* ELIMINAR PRODUCTO — solo admin */}
+                          {puede.eliminarProducto && prod && (
+                            <button title="Eliminar producto"
+                              onClick={() => eliminarProducto(prod)}
+                              style={{ background:"none", border:"none", cursor:"pointer", padding:4 }}>
+                              <Trash2 size={17} color="#c0392b" />
+                            </button>
+                          )}
+
                           {/* ELIMINAR HISTORIAL — solo admin */}
-                          {puede.eliminar && (
+                          {puede.eliminarHistorial && (
                             <button title="Eliminar registro del historial"
                               onClick={() => eliminarRegistro(h.id_historial)}
                               style={{ background:"none", border:"none", cursor:"pointer", padding:4 }}>
-                              <Trash2 size={17} color="#c0392b" />
+                              <X size={17} color="#c0392b" />
                             </button>
                           )}
                         </div>
@@ -360,25 +490,22 @@ export default function HistorialPrecios({ usuario }) {
         </div>
       )}
 
-      {/* ── MODAL EDITAR PRECIO ───────────────────────────────────────────────── */}
-      {modalEditar && (
+      {/* ── MODAL SELECCIONAR PRODUCTO A EDITAR ─────────────────────────────────── */}
+      {modalProducto === "editar-select" && (
         <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-          style={{ background:"rgba(0,0,0,0.5)", zIndex:1050 }}
-          onClick={() => { setModalEditar(false); setProductoSel(null); }}>
-          <div className="bg-white p-4 rounded-4 shadow" style={{ width:440, maxHeight:"90vh", overflowY:"auto" }}
+          style={{ background:"rgba(0,0,0,0.5)", zIndex:1050 }} onClick={cerrarModalProducto}>
+          <div className="bg-white p-4 rounded-4 shadow" style={{ width:420, maxHeight:"90vh", overflowY:"auto" }}
             onClick={(e) => e.stopPropagation()}>
             <div className="d-flex justify-content-between align-items-center mb-1">
-              <h5 className="fw-bold mb-0">Editar Precio de Producto</h5>
-              <X size={20} style={{ cursor:"pointer" }} onClick={() => { setModalEditar(false); setProductoSel(null); }} />
+              <h5 className="fw-bold mb-0">¿Qué producto quieres editar?</h5>
+              <X size={20} style={{ cursor:"pointer" }} onClick={cerrarModalProducto} />
             </div>
             <div style={{ width:40, height:3, backgroundColor:DORADO_OSCURO, borderRadius:4, marginBottom:18 }} />
-
             <label style={labelStyle}>Selecciona el producto *</label>
-            <select style={inputStyle} value={productoSel?.id_producto || ""}
+            <select style={inputStyle} defaultValue=""
               onChange={(e) => {
                 const p = productos.find(p => p.id_producto === parseInt(e.target.value));
-                setProductoSel(p || null);
-                setNuevoPrecio(p?.precio_actual ?? "");
+                if (p) abrirEditar(p);
               }}>
               <option value="">— Elige un producto —</option>
               {productos.map((p) => (
@@ -387,8 +514,29 @@ export default function HistorialPrecios({ usuario }) {
                 </option>
               ))}
             </select>
+            <button className="btn btn-secondary w-100 mt-2" onClick={cerrarModalProducto}>Cancelar</button>
+          </div>
+        </div>
+      )}
 
-            {productoSel && (
+      {/* ── MODAL CREAR / EDITAR PRODUCTO ─────────────────────────────────────── */}
+      {(modalProducto === "crear" || modalProducto === "editar") && (
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+          style={{ background:"rgba(0,0,0,0.5)", zIndex:1050 }}
+          onClick={cerrarModalProducto}>
+          <div className="bg-white p-4 rounded-4 shadow" style={{ width:440, maxHeight:"90vh", overflowY:"auto" }}
+            onClick={(e) => e.stopPropagation()}>
+            <div className="d-flex justify-content-between align-items-center mb-1">
+              <h5 className="fw-bold mb-0">{modalProducto === "crear" ? "Nuevo Producto" : "Editar Producto"}</h5>
+              <X size={20} style={{ cursor:"pointer" }} onClick={cerrarModalProducto} />
+            </div>
+            <div style={{ width:40, height:3, backgroundColor:DORADO_OSCURO, borderRadius:4, marginBottom:18 }} />
+
+            <label style={labelStyle}>Nombre del producto *</label>
+            <input type="text" style={inputStyle} placeholder="Ej: Camisa manga larga"
+              value={nombreForm} onChange={(e) => setNombreForm(e.target.value)} />
+
+            {modalProducto === "editar" && productoSel && (
               <>
                 <label style={labelStyle}>Precio actual</label>
                 <input type="text" style={{ ...inputStyle, background:"#f0ece4", color:"#6b7280" }}
@@ -396,22 +544,22 @@ export default function HistorialPrecios({ usuario }) {
               </>
             )}
 
-            <label style={labelStyle}>Nuevo precio *</label>
+            <label style={labelStyle}>{modalProducto === "crear" ? "Precio inicial *" : "Nuevo precio *"}</label>
             <input type="number" min="0" style={inputStyle} placeholder="Ej: 5500"
-              value={nuevoPrecio} onChange={(e) => setNuevoPrecio(e.target.value)} />
+              value={precioForm} onChange={(e) => setPrecioForm(e.target.value)} />
 
-            <label style={labelStyle}>Motivo del cambio *</label>
+            <label style={labelStyle}>Motivo {modalProducto === "editar" ? "del cambio (obligatorio si cambia el precio)" : ""}</label>
             <textarea rows={3} style={{ ...inputStyle, resize:"vertical" }}
-              placeholder="Ej: Ajuste por inflación"
+              placeholder={modalProducto === "crear" ? "Ej: Nuevo producto en inventario" : "Ej: Ajuste por inflación"}
               value={motivo} onChange={(e) => setMotivo(e.target.value)} />
 
             <div className="d-flex gap-2 mt-2">
               <button className="btn btn-secondary flex-fill" disabled={guardando}
-                onClick={() => { setModalEditar(false); setProductoSel(null); }}>Cancelar</button>
-              <button className="btn flex-fill fw-semibold" disabled={guardando || !productoSel}
-                onClick={guardarPrecio}
+                onClick={cerrarModalProducto}>Cancelar</button>
+              <button className="btn flex-fill fw-semibold" disabled={guardando}
+                onClick={guardarProducto}
                 style={{ background:BTN_GRAD, color:"#fff", border:"none" }}>
-                {guardando ? "Guardando..." : "Guardar Cambio"}
+                {guardando ? "Guardando..." : modalProducto === "crear" ? "Crear Producto" : "Guardar Cambios"}
               </button>
             </div>
           </div>

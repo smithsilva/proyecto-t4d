@@ -7,7 +7,7 @@ const supabase = require("../config/supabase");
 const obtenerProductos = async () => {
   const { data, error } = await supabase
     .from("productos")
-    .select("*")
+    .select("*, categorias(nombre_categoria), proveedores(nombre_proveedor, nit), sucursales(nombre_sucursal, ciudad)")
     .order("id_producto", { ascending: true });
 
   if (error) {
@@ -25,10 +25,12 @@ const obtenerProductos = async () => {
 const agregarProducto = async (producto) => {
   console.log("Producto a insertar:", producto);
 
+  const payload = { activo: true, ...producto };
+
   const { data, error } = await supabase
     .from("productos")
-    .insert([producto])
-    .select();
+    .insert([payload])
+    .select("*, categorias(nombre_categoria), proveedores(nombre_proveedor, nit), sucursales(nombre_sucursal, ciudad)");
 
   console.log("Respuesta:", data);
   console.log("Error:", error);
@@ -53,7 +55,7 @@ const editarProducto = async (id, producto) => {
     .from("productos")
     .update(producto)
     .eq("id_producto", id)
-    .select();
+    .select("*, categorias(nombre_categoria), proveedores(nombre_proveedor, nit), sucursales(nombre_sucursal, ciudad)");
 
   console.log("Respuesta Supabase:", data);
   console.log("Error Supabase:", error);
@@ -99,7 +101,7 @@ const actualizarParcialProducto = async (id, datos) => {
     .from("productos")
     .update(datos)
     .eq("id_producto", id)
-    .select();
+    .select("*, categorias(nombre_categoria), proveedores(nombre_proveedor, nit), sucursales(nombre_sucursal, ciudad)");
 
   console.log("Respuesta Supabase:", data);
   console.log("Error Supabase:", error);
