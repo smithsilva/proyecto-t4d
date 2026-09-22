@@ -1,16 +1,13 @@
 const {
   obtenerProductos,
-  crearProducto,
   editarProducto,
   cambiarEstadoProducto,
-  eliminarProducto,
   obtenerHistorial,
   obtenerHistorialPorProducto,
-  eliminarRegistroHistorial,
 } = require("../services/historialprecios.service");
 
 // =====================================
-// PRODUCTOS
+// PRODUCTOS (solo lectura + actualización de precio)
 // =====================================
 
 const getProductos = async (req, res) => {
@@ -19,24 +16,6 @@ const getProductos = async (req, res) => {
     res.json(productos);
   } catch (error) {
     res.status(500).json({ error: error.message, detalle: error });
-  }
-};
-
-const postProducto = async (req, res) => {
-  try {
-    const { nombre_producto, precio_inicial, motivo } = req.body;
-
-    if (!nombre_producto || precio_inicial === undefined) {
-      return res.status(400).json({ error: "nombre_producto y precio_inicial son obligatorios" });
-    }
-    if (isNaN(Number(precio_inicial)) || Number(precio_inicial) <= 0) {
-      return res.status(400).json({ error: "precio_inicial debe ser un número mayor a 0" });
-    }
-
-    const producto = await crearProducto({ nombre_producto, precio_inicial: Number(precio_inicial), motivo });
-    res.status(201).json(producto);
-  } catch (error) {
-    res.status(error.status || 500).json({ error: error.message, detalle: error });
   }
 };
 
@@ -72,18 +51,8 @@ const patchEstadoProducto = async (req, res) => {
   }
 };
 
-const deleteProducto = async (req, res) => {
-  try {
-    const { id } = req.params;
-    await eliminarProducto(id);
-    res.json({ message: "Producto eliminado" });
-  } catch (error) {
-    res.status(error.status || 500).json({ error: error.message, detalle: error });
-  }
-};
-
 // =====================================
-// HISTORIAL
+// HISTORIAL (solo lectura)
 // =====================================
 
 const getHistorial = async (req, res) => {
@@ -98,22 +67,9 @@ const getHistorial = async (req, res) => {
   }
 };
 
-const deleteHistorial = async (req, res) => {
-  try {
-    const { id } = req.params;
-    await eliminarRegistroHistorial(id);
-    res.json({ message: "Registro de historial eliminado" });
-  } catch (error) {
-    res.status(500).json({ error: error.message, detalle: error });
-  }
-};
-
 module.exports = {
   getProductos,
-  postProducto,
   putProducto,
   patchEstadoProducto,
-  deleteProducto,
   getHistorial,
-  deleteHistorial,
 };
