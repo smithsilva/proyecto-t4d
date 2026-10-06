@@ -5,7 +5,7 @@ const URL = "http://localhost:5000/historial-precios";
 // =====================================
 // PRODUCTOS
 // =====================================
-
+//hola
 export const obtenerProductosApi = async () => {
   const response = await fetch(`${URL}/productos`, {
     headers: getHeaders(),
