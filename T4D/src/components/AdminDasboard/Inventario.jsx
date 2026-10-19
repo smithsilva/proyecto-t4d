@@ -1,6 +1,22 @@
 import { useState, useEffect } from "react";
+import axios from "axios";
 import { Eye, Package, X, Plus, Filter, Search, Trash2, Pencil } from "lucide-react";
 import { supabase } from "../../Supabase/SupabaseClient";
+
+// =====================================================
+// CONFIG DEL BACKEND
+// =====================================================
+// Pon en el .env del frontend (Vite), junto a package.json:
+//   VITE_API_URL=http://localhost:5000
+//   VITE_API_KEY=pollo
+// Despues de crearlo o cambiarlo, reinicia `npm run dev`.
+const API_URL    = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const X_API_KEY  = import.meta.env.VITE_API_KEY || "";
+// Cambia esto si guardas el token en otro lugar o con otro nombre.
+// Debe ser el token que devuelve POST /auth/login (no el de Supabase).
+const obtenerToken = () => localStorage.getItem("token");
+
+const MAX_MB = 5;
 
 function Inventario({ usuario }) {
   const [busqueda,        setBusqueda]        = useState("");
@@ -30,6 +46,12 @@ function Inventario({ usuario }) {
   });
   const [creando, setCreando] = useState(false);
 
+  // --- Imágenes (Cloudinary) ---
+  const [archivoNuevo,  setArchivoNuevo]  = useState(null);
+  const [previewNuevo,  setPreviewNuevo]  = useState(null);
+  const [archivoEdit,   setArchivoEdit]   = useState(null);
+  const [previewEdit,   setPreviewEdit]   = useState(null);
+
   const DORADO           = "#d4a743";
   const DORADO_OSCURO    = "#8c6b3f";
   const DORADO_CLARO     = "#e7c98a";
@@ -42,6 +64,15 @@ function Inventario({ usuario }) {
     obtenerCategorias();
     obtenerProveedores();
   }, []);
+
+  // Libera las URLs temporales de preview al cambiar/desmontar
+  useEffect(() => {
+    return () => { if (previewNuevo) URL.revokeObjectURL(previewNuevo); };
+  }, [previewNuevo]);
+
+  useEffect(() => {
+    return () => { if (previewEdit) URL.revokeObjectURL(previewEdit); };
+  }, [previewEdit]);
 
   const recargar = async () => {
     setCargando(true);
@@ -73,6 +104,57 @@ function Inventario({ usuario }) {
       .order("nombre_proveedor");
     if (error) { console.error("Error al cargar proveedores:", error); return; }
     setProveedores(data || []);
+  };
+
+  // =====================================================
+  // CLOUDINARY: subir imagen pasando por el backend
+  // =====================================================
+  const subirImagen = async (archivo) => {
+    const fd = new FormData();
+    fd.append("imagen", archivo);
+
+    const headers = {};
+    const token = obtenerToken();
+    if (token)     headers["Authorization"] = `Bearer ${token}`;
+    if (X_API_KEY) headers["x-api-key"]     = X_API_KEY;
+
+    // OJO: el backend monta las rutas en /productos (sin /api)
+    const { data } = await axios.post(`${API_URL}/productos/imagen`, fd, { headers });
+    return data.url;
+  };
+
+  // Valida el archivo elegido y genera el preview
+  const seleccionarArchivo = (e, setArchivo, setPreview) => {
+    const file = e.target.files?.[0] || null;
+    if (!file) { setArchivo(null); setPreview(null); return; }
+
+    if (!file.type.startsWith("image/")) {
+      alert("Solo se permiten imágenes.");
+      e.target.value = "";
+      return;
+    }
+    if (file.size > MAX_MB * 1024 * 1024) {
+      alert(`La imagen no puede superar los ${MAX_MB} MB.`);
+      e.target.value = "";
+      return;
+    }
+    setArchivo(file);
+    setPreview(URL.createObjectURL(file));
+  };
+
+  const mensajeErrorImagen = (e) =>
+    e?.response?.data?.error || "No se pudo subir la imagen.";
+
+  const cerrarCrear = () => {
+    setMostrarCrear(false);
+    setArchivoNuevo(null);
+    setPreviewNuevo(null);
+  };
+
+  const cerrarEdicion = () => {
+    setEditarProducto(null);
+    setArchivoEdit(null);
+    setPreviewEdit(null);
   };
 
   const calcularEstado = (producto) => {
@@ -150,6 +232,8 @@ function Inventario({ usuario }) {
       id_categoria:    p.id_categoria    || "",
       id_proveedor:    p.id_proveedor    || "",
     });
+    setArchivoEdit(null);
+    setPreviewEdit(null);
     setEditarProducto(p);
   };
 
@@ -157,17 +241,34 @@ function Inventario({ usuario }) {
     if (!editarProducto) return;
     setGuardando(true);
 
+    // 1. Si eligió una imagen nueva, súbela primero
+    let urlImagenNueva = null;
+    if (archivoEdit) {
+      try {
+        urlImagenNueva = await subirImagen(archivoEdit);
+      } catch (e) {
+        console.error("Error al subir imagen:", e);
+        alert(mensajeErrorImagen(e));
+        setGuardando(false);
+        return;
+      }
+    }
+
+    const cambios = {
+      nombre_producto: formEdit.nombre_producto,
+      descripcion:     formEdit.descripcion,
+      precio_actual:   formEdit.precio_actual,
+      stock_actual:    formEdit.stock_actual,
+      unidad_medida:   formEdit.unidad_medida,
+      id_categoria:    formEdit.id_categoria ? parseInt(formEdit.id_categoria) : null,
+      id_proveedor:    formEdit.id_proveedor ? parseInt(formEdit.id_proveedor) : null,
+    };
+    // Solo tocamos la columna imagen si hay una nueva (así no se borra la actual)
+    if (urlImagenNueva) cambios.imagen = urlImagenNueva;
+
     const { error } = await supabase
       .from("productos")
-      .update({
-        nombre_producto: formEdit.nombre_producto,
-        descripcion:     formEdit.descripcion,
-        precio_actual:   formEdit.precio_actual,
-        stock_actual:    formEdit.stock_actual,
-        unidad_medida:   formEdit.unidad_medida,
-        id_categoria:    formEdit.id_categoria ? parseInt(formEdit.id_categoria) : null,
-        id_proveedor:    formEdit.id_proveedor ? parseInt(formEdit.id_proveedor) : null,
-      })
+      .update(cambios)
       .eq("id_producto", editarProducto.id_producto);
 
     if (error) {
@@ -200,12 +301,17 @@ function Inventario({ usuario }) {
     setProductos((prev) =>
       prev.map((p) =>
         p.id_producto === editarProducto.id_producto
-          ? { ...p, ...formEdit, proveedores: proveedorActualizado }
+          ? {
+              ...p,
+              ...formEdit,
+              ...(urlImagenNueva ? { imagen: urlImagenNueva } : {}),
+              proveedores: proveedorActualizado,
+            }
           : p
       )
     );
     setGuardando(false);
-    setEditarProducto(null);
+    cerrarEdicion();
   };
 
   const eliminarProducto = async (p) => {
@@ -221,70 +327,104 @@ function Inventario({ usuario }) {
     setProductos((prev) => prev.filter((item) => item.id_producto !== p.id_producto));
   };
 
- const crearProducto = async () => {
-  if (!formNuevo.nombre_producto.trim()) { alert("El nombre del producto es obligatorio."); return; }
-  setCreando(true);
+  const crearProducto = async () => {
+    if (!formNuevo.nombre_producto.trim()) { alert("El nombre del producto es obligatorio."); return; }
+    setCreando(true);
 
-  const payload = {
-    nombre_producto: formNuevo.nombre_producto,
-    descripcion:     formNuevo.descripcion  || null,
-    precio_actual:   formNuevo.precio_actual || null,
-    stock_actual:    formNuevo.stock_actual  || null,
-    unidad_medida:   formNuevo.unidad_medida || null,
-    codigo_barras:   formNuevo.codigo_barras || null,
-    id_categoria:    formNuevo.id_categoria  ? parseInt(formNuevo.id_categoria) : null,
-    id_proveedor:    formNuevo.id_proveedor  ? parseInt(formNuevo.id_proveedor) : null,
-    id_usuario:      usuario?.id_usuario || null,
+    // 1. Subir la imagen (si eligió una)
+    let urlImagen = null;
+    if (archivoNuevo) {
+      try {
+        urlImagen = await subirImagen(archivoNuevo);
+      } catch (e) {
+        console.error("Error al subir imagen:", e);
+        alert(mensajeErrorImagen(e));
+        setCreando(false);
+        return;
+      }
+    }
+
+    const payload = {
+      nombre_producto: formNuevo.nombre_producto,
+      descripcion:     formNuevo.descripcion  || null,
+      precio_actual:   formNuevo.precio_actual || null,
+      stock_actual:    formNuevo.stock_actual  || null,
+      unidad_medida:   formNuevo.unidad_medida || null,
+      codigo_barras:   formNuevo.codigo_barras || null,
+      id_categoria:    formNuevo.id_categoria  ? parseInt(formNuevo.id_categoria) : null,
+      id_proveedor:    formNuevo.id_proveedor  ? parseInt(formNuevo.id_proveedor) : null,
+      id_usuario:      usuario?.id_usuario || null,
+      imagen:          urlImagen,
+    };
+
+    const { data, error } = await supabase
+      .from("productos")
+      .insert([payload])
+      .select(`*, usuarios(id_usuario, username, rol)`);
+
+    setCreando(false);
+
+    if (error) { console.error("Error al crear producto:", error); alert("No se pudo crear el producto."); return; }
+
+    if (data && data.length > 0) {
+      const productoCreado = data[0];
+
+      // ← movimiento de entrada inicial
+      if (formNuevo.stock_actual && parseInt(formNuevo.stock_actual) > 0) {
+        await supabase.from("movimientos_inventario").insert([{
+          id_producto:      productoCreado.id_producto,
+          id_usuario:       usuario?.id_usuario || null,
+          tipo_movimiento:  "entrada",
+          cantidad:         parseInt(formNuevo.stock_actual),
+          observacion:      "Stock inicial al crear producto",
+          fecha_movimiento: new Date().toISOString(),
+        }]);
+      }
+
+      // ← registro en historial de precios si tiene precio
+      if (formNuevo.precio_actual && parseFloat(formNuevo.precio_actual) > 0) {
+        await supabase.from("historial_precios").insert([{
+          id_producto:      productoCreado.id_producto,
+          precio_anterior:  0,
+          precio_nuevo:     parseFloat(formNuevo.precio_actual),
+          motivo:           "Precio inicial al crear producto",
+          fecha_cambio:     new Date().toISOString(),
+        }]);
+      }
+
+      // Agregamos el proveedor para que se vea en la tabla sin recargar
+      const proveedorCreado = proveedores.find(
+        (pv) => pv.id_proveedor === productoCreado.id_proveedor
+      ) || null;
+
+      setProductos((prev) => [{ ...productoCreado, proveedores: proveedorCreado }, ...prev]);
+    } else {
+      recargar();
+    }
+
+    setFormNuevo({ nombre_producto: "", descripcion: "", precio_actual: "", stock_actual: "", unidad_medida: "", codigo_barras: "", id_categoria: "", id_proveedor: "" });
+    cerrarCrear();
   };
-
-  const { data, error } = await supabase
-    .from("productos")
-    .insert([payload])
-    .select(`*, usuarios(id_usuario, username, rol)`);
-
-  setCreando(false);
-
-  if (error) { console.error("Error al crear producto:", error); alert("No se pudo crear el producto."); return; }
-
-  if (data && data.length > 0) {
-    const productoCreado = data[0];
-
-    // ← movimiento de entrada inicial
-    if (formNuevo.stock_actual && parseInt(formNuevo.stock_actual) > 0) {
-      await supabase.from("movimientos_inventario").insert([{
-        id_producto:      productoCreado.id_producto,
-        id_usuario:       usuario?.id_usuario || null,
-        tipo_movimiento:  "entrada",
-        cantidad:         parseInt(formNuevo.stock_actual),
-        observacion:      "Stock inicial al crear producto",
-        fecha_movimiento: new Date().toISOString(),
-      }]);
-    }
-
-    // ← registro en historial de precios si tiene precio
-    if (formNuevo.precio_actual && parseFloat(formNuevo.precio_actual) > 0) {
-      await supabase.from("historial_precios").insert([{
-        id_producto:      productoCreado.id_producto,
-        precio_anterior:  0,
-        precio_nuevo:     parseFloat(formNuevo.precio_actual),
-        motivo:           "Precio inicial al crear producto",
-        fecha_cambio:     new Date().toISOString(),
-      }]);
-    }
-
-    setProductos((prev) => [productoCreado, ...prev]);
-  } else {
-    recargar();
-  }
-
-  setFormNuevo({ nombre_producto: "", descripcion: "", precio_actual: "", stock_actual: "", unidad_medida: "", codigo_barras: "", id_categoria: "", id_proveedor: "" });
-  setMostrarCrear(false);
-};
 
   const labelFiltro = { fontSize: "12px", fontWeight: 600, color: DORADO_OSCURO, marginBottom: "4px", display: "block" };
   const selectStyle = { width: "100%", padding: "9px 12px", marginBottom: 12, borderRadius: 8, border: "1.5px solid #e5e7eb", fontSize: 13, outline: "none", background: "#fafafa", color: "#111827" };
   const inputStyle  = { ...selectStyle };
   const labelStyle  = { fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 4 };
+
+  // Bloque reutilizable: preview + input de archivo
+  const campoImagen = ({ previewNueva, imagenActual, onChange }) => (
+    <>
+      <label style={labelStyle}>Imagen</label>
+      {(previewNueva || imagenActual) && (
+        <img
+          src={previewNueva || imagenActual}
+          alt="Vista previa"
+          style={{ width: "100%", maxHeight: 160, objectFit: "cover", borderRadius: 10, marginBottom: 8, border: "1px solid #e5e7eb" }}
+        />
+      )}
+      <input type="file" accept="image/*" style={inputStyle} onChange={onChange} />
+    </>
+  );
 
   return (
     <div className="p-4" style={{ margin: 0, backgroundColor: FONDO, minHeight: "100vh", width: "100%" }}>
@@ -495,14 +635,20 @@ function Inventario({ usuario }) {
       {/* MODAL EDITAR PRODUCTO */}
       {editarProducto && (
         <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-          style={{ background: "rgba(0,0,0,0.5)", zIndex: 1050 }} onClick={() => setEditarProducto(null)}>
+          style={{ background: "rgba(0,0,0,0.5)", zIndex: 1050 }} onClick={cerrarEdicion}>
           <div className="bg-white p-4 rounded-4 shadow" style={{ width: "420px", maxHeight: "90vh", overflowY: "auto" }}
             onClick={(e) => e.stopPropagation()}>
             <div className="d-flex justify-content-between align-items-center mb-1">
               <h5 className="fw-bold mb-0">Editar Producto</h5>
-              <X size={20} style={{ cursor: "pointer" }} onClick={() => setEditarProducto(null)} />
+              <X size={20} style={{ cursor: "pointer" }} onClick={cerrarEdicion} />
             </div>
             <div style={{ width: 40, height: 3, backgroundColor: DORADO_OSCURO, borderRadius: 4, marginBottom: 18 }} />
+
+            {campoImagen({
+              previewNueva: previewEdit,
+              imagenActual: editarProducto.imagen,
+              onChange: (e) => seleccionarArchivo(e, setArchivoEdit, setPreviewEdit),
+            })}
 
             <label style={labelStyle}>Nombre</label>
             <input type="text" style={inputStyle} value={formEdit.nombre_producto || ""}
@@ -545,7 +691,7 @@ function Inventario({ usuario }) {
               onChange={(e) => setFormEdit({ ...formEdit, unidad_medida: e.target.value })} />
 
             <div className="d-flex gap-2 mt-2">
-              <button onClick={() => setEditarProducto(null)} className="btn btn-secondary flex-fill" disabled={guardando}>
+              <button onClick={cerrarEdicion} className="btn btn-secondary flex-fill" disabled={guardando}>
                 Cancelar
               </button>
               <button onClick={guardarEdicion} disabled={guardando} className="btn flex-fill fw-semibold"
@@ -560,14 +706,20 @@ function Inventario({ usuario }) {
       {/* MODAL CREAR PRODUCTO */}
       {mostrarCrear && (
         <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-          style={{ background: "rgba(0,0,0,0.5)", zIndex: 1050 }} onClick={() => setMostrarCrear(false)}>
+          style={{ background: "rgba(0,0,0,0.5)", zIndex: 1050 }} onClick={cerrarCrear}>
           <div className="bg-white p-4 rounded-4 shadow" style={{ width: "420px", maxHeight: "90vh", overflowY: "auto" }}
             onClick={(e) => e.stopPropagation()}>
             <div className="d-flex justify-content-between align-items-center mb-1">
               <h5 className="fw-bold mb-0">Agregar Producto</h5>
-              <X size={20} style={{ cursor: "pointer" }} onClick={() => setMostrarCrear(false)} />
+              <X size={20} style={{ cursor: "pointer" }} onClick={cerrarCrear} />
             </div>
             <div style={{ width: 40, height: 3, backgroundColor: DORADO_OSCURO, borderRadius: 4, marginBottom: 18 }} />
+
+            {campoImagen({
+              previewNueva: previewNuevo,
+              imagenActual: null,
+              onChange: (e) => seleccionarArchivo(e, setArchivoNuevo, setPreviewNuevo),
+            })}
 
             <label style={labelStyle}>Nombre *</label>
             <input type="text" style={inputStyle} value={formNuevo.nombre_producto}
@@ -614,7 +766,7 @@ function Inventario({ usuario }) {
               onChange={(e) => setFormNuevo({ ...formNuevo, unidad_medida: e.target.value })} />
 
             <div className="d-flex gap-2 mt-2">
-              <button onClick={() => setMostrarCrear(false)} className="btn btn-secondary flex-fill" disabled={creando}>
+              <button onClick={cerrarCrear} className="btn btn-secondary flex-fill" disabled={creando}>
                 Cancelar
               </button>
               <button onClick={crearProducto} disabled={creando} className="btn flex-fill fw-semibold"
