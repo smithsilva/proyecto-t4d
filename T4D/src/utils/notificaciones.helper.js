@@ -1,4 +1,4 @@
-import { supabase } from "../../src/Supabase/SupabaseClient";
+import { supabase } from "../../src/supabase/supabaseClient";
 
 /**
  * Envía una notificación a uno o varios roles insertándola en la tabla

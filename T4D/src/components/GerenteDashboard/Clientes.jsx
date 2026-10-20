@@ -1,4 +1,4 @@
-import { supabase } from "../../Supabase/SupabaseClient";
+import { supabase } from "../../supabase/supabaseClient";
 import { useState, useEffect } from "react";
 import {
   UserRound, UserCheck, CalendarDays, MapPin,
