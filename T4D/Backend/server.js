@@ -1,6 +1,6 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -12,9 +12,9 @@ app.use(express.json());
 app.use((req, res, next) => {
   const apiKey = req.headers["x-api-key"];
 
-  if (!apiKey || apiKey !== "pollo") {
+  if (!apiKey || apiKey !== process.env.X_API_KEY) {
     return res.status(401).json({
-      error: "API key inválida o ausente"
+      error: "API key inválida o ausente",
     });
   }
 
@@ -23,49 +23,25 @@ app.use((req, res, next) => {
 
 const verificarToken = require("./src/middlewares/auth.middleware");
 
-// ── RUTA DE LOGIN ──
+// ── LOGIN (sin verificarToken) ──
 app.use("/auth", require("./src/routes/auth.routes"));
 
 // ── RUTAS PROTEGIDAS ──
-app.use("/productos", verificarToken, require("./src/routes/productos.routes"));
-
-app.use("/usuarios", verificarToken, require("./src/routes/usuarios.routes"));
-
-app.use("/reportes", verificarToken, require("./src/routes/reportes.routes"));
-
-app.use("/asignaciones", verificarToken, require("./src/routes/asignaciones.routes"));
-
-app.use("/proveedores", verificarToken, require("./src/routes/proveedores.routes"));
-
-app.use("/sucursales", verificarToken, require("./src/routes/sucursales.routes"));
-
-app.use("/roles", verificarToken, require("./src/routes/roles.routes"));
-
-app.use("/movimientos", verificarToken, require("./src/routes/movimientos.routes"));
-
-// ── CATEGORÍAS ──
-app.use("/categorias", verificarToken, require("./src/routes/categorias.routes"));
-
-// ── HISTORIAL DE PRECIOS ──
-app.use(
-  "/historial-precios",
-  verificarToken,
-  require("./src/routes/historialprecios.routes")
-);
-
-// ── NOTIFICACIONES ──
-app.use(
-  "/notificaciones",
-  verificarToken,
-  require("./src/routes/notificaciones.routes")
-);
+app.use("/productos",         verificarToken, require("./src/routes/productos.routes"));
+app.use("/usuarios",          verificarToken, require("./src/routes/usuarios.routes"));
+app.use("/reportes",          verificarToken, require("./src/routes/reportes.routes"));
+app.use("/asignaciones",      verificarToken, require("./src/routes/asignaciones.routes"));
+app.use("/proveedores",       verificarToken, require("./src/routes/proveedores.routes"));
+app.use("/sucursales",        verificarToken, require("./src/routes/sucursales.routes"));
+app.use("/roles",             verificarToken, require("./src/routes/roles.routes"));
+app.use("/movimientos",       verificarToken, require("./src/routes/movimientos.routes"));
+app.use("/categorias",        verificarToken, require("./src/routes/categorias.routes"));
+app.use("/historial-precios", verificarToken, require("./src/routes/historialprecios.routes"));
+app.use("/notificaciones",    verificarToken, require("./src/routes/notificaciones.routes"));
 
 // ── RUTA PRINCIPAL ──
 app.get("/", (req, res) => {
-  res.json({
-    status: "ok",
-    message: "Servidor T4D corriendo 🚀"
-  });
+  res.json({ status: "ok", message: "Servidor T4D corriendo 🚀" });
 });
 
 // ── INICIAR SERVIDOR ──

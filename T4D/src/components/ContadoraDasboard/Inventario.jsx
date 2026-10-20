@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Eye, Package, X, Plus, Filter, Search } from "lucide-react";
-import { supabase } from "../../supabase/supabaseClient";
+import { supabase } from "../../Supabase/SupabaseClient";
 
 function Inventario() {
   const [busqueda,        setBusqueda]        = useState("");
