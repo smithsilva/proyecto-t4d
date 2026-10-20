@@ -12,11 +12,38 @@ import { supabase } from "../../Supabase/SupabaseClient";
 // Despues de crearlo o cambiarlo, reinicia `npm run dev`.
 const API_URL    = import.meta.env.VITE_API_URL || "http://localhost:5000";
 const X_API_KEY  = import.meta.env.VITE_API_KEY || "";
-// Cambia esto si guardas el token en otro lugar o con otro nombre.
-// Debe ser el token que devuelve POST /auth/login (no el de Supabase).
-const obtenerToken = () => localStorage.getItem("token");
+console.log("ENV:", import.meta.env);   // <-- aquí, temporal
+
+// Ponlo en false cuando ya funcione la subida de imágenes.
+const DEBUG_UPLOAD = true;
+
+// CAMBIO: busca el token del backend (el de POST /auth/login) en varias
+// claves posibles de localStorage/sessionStorage y dentro del objeto "usuario".
+// No toca las claves de Supabase (sb-...-auth-token).
+const CLAVES_TOKEN = ["token", "authToken", "jwt", "access_token", "accessToken"];
+
+const obtenerToken = () => {
+  for (const clave of CLAVES_TOKEN) {
+    const valor = localStorage.getItem(clave) || sessionStorage.getItem(clave);
+    if (valor && valor !== "null" && valor !== "undefined") {
+      return valor.replace(/^"|"$/g, ""); // quita comillas si se guardó con JSON.stringify
+    }
+  }
+  try {
+    const u = JSON.parse(localStorage.getItem("usuario") || "null");
+    if (u?.token) return u.token;
+  } catch {
+    /* ignorar */
+  }
+  return null;
+};
 
 const MAX_MB = 5;
+
+// CAMBIO: se indica explicitamente que FK usar entre productos y usuarios.
+// Asi PostgREST no devuelve PGRST201 aunque haya mas de una relacion o
+// el cache del esquema este desactualizado.
+const SELECT_PRODUCTO = `*, usuarios!productos_id_usuario_fkey(id_usuario, username, rol)`;
 
 function Inventario({ usuario }) {
   const [busqueda,        setBusqueda]        = useState("");
@@ -74,18 +101,46 @@ function Inventario({ usuario }) {
     return () => { if (previewEdit) URL.revokeObjectURL(previewEdit); };
   }, [previewEdit]);
 
+  // CAMBIO: muestra code/message/details/hint directamente en consola
+  const logError = (titulo, error) => {
+    console.error(titulo, error?.code, error?.message, error?.details, error?.hint);
+  };
+
+  // CAMBIO: obtiene el id del usuario logueado. Primero usa la prop;
+  // si falta, lo busca en localStorage y, como ultimo recurso, por correo en la BD.
+  const obtenerIdUsuario = async () => {
+    if (usuario?.id_usuario) return usuario.id_usuario;
+
+    try {
+      const guardado = JSON.parse(localStorage.getItem("usuario") || "null");
+      if (guardado?.id_usuario) return guardado.id_usuario;
+
+      const correo = usuario?.correo || guardado?.correo || guardado?.email;
+      if (!correo) return null;
+
+      const { data } = await supabase
+        .from("usuarios")
+        .select("id_usuario")
+        .eq("email", correo)
+        .single();
+      return data?.id_usuario || null;
+    } catch {
+      return null;
+    }
+  };
+
   const recargar = async () => {
     setCargando(true);
     const [{ data: prods, error }, { data: provs }] = await Promise.all([
       supabase
         .from("productos")
-        .select(`*, usuarios(id_usuario, username, rol)`)
+        .select(SELECT_PRODUCTO)
         .order("created_at", { ascending: false }),
       supabase
         .from("proveedores")
         .select("id_proveedor, nombre_proveedor, nit"),
     ]);
-    if (error) { console.error("Error al cargar productos:", error); setCargando(false); return; }
+    if (error) { logError("Error al cargar productos:", error); setCargando(false); return; }
     const provsMap = Object.fromEntries((provs || []).map((p) => [p.id_proveedor, p]));
     setProductos((prods || []).map((p) => ({ ...p, proveedores: provsMap[p.id_proveedor] || null })));
     setCargando(false);
@@ -93,7 +148,7 @@ function Inventario({ usuario }) {
 
   const obtenerCategorias = async () => {
     const { data, error } = await supabase.from("categorias").select("*");
-    if (error) { console.error("Error al cargar categorías:", error); return; }
+    if (error) { logError("Error al cargar categorías:", error); return; }
     setCategorias(data || []);
   };
 
@@ -102,7 +157,7 @@ function Inventario({ usuario }) {
       .from("proveedores")
       .select("id_proveedor, nombre_proveedor, nit")
       .order("nombre_proveedor");
-    if (error) { console.error("Error al cargar proveedores:", error); return; }
+    if (error) { logError("Error al cargar proveedores:", error); return; }
     setProveedores(data || []);
   };
 
@@ -119,8 +174,26 @@ function Inventario({ usuario }) {
     if (X_API_KEY) headers["x-api-key"]     = X_API_KEY;
 
     // OJO: el backend monta las rutas en /productos (sin /api)
-    const { data } = await axios.post(`${API_URL}/productos/imagen`, fd, { headers });
-    return data.url;
+    const url = `${API_URL}/productos/imagen`;
+
+    if (DEBUG_UPLOAD) {
+      console.log("[subirImagen] URL:", url);
+      console.log("[subirImagen] Token presente:", !!token, token ? `(${token.slice(0, 12)}...)` : "");
+      console.log("[subirImagen] x-api-key presente:", !!X_API_KEY);
+      console.log("[subirImagen] Claves en localStorage:", Object.keys(localStorage));
+    }
+
+    try {
+      const { data } = await axios.post(url, fd, { headers });
+      if (DEBUG_UPLOAD) console.log("[subirImagen] Respuesta OK:", data);
+      return data.url;
+    } catch (e) {
+      if (DEBUG_UPLOAD) {
+        console.error("[subirImagen] Status:", e?.response?.status);
+        console.error("[subirImagen] Respuesta del backend:", e?.response?.data);
+      }
+      throw e;
+    }
   };
 
   // Valida el archivo elegido y genera el preview
@@ -142,8 +215,14 @@ function Inventario({ usuario }) {
     setPreview(URL.createObjectURL(file));
   };
 
-  const mensajeErrorImagen = (e) =>
-    e?.response?.data?.error || "No se pudo subir la imagen.";
+  // CAMBIO: el alert ahora incluye el código HTTP y el mensaje exacto del backend
+  const mensajeErrorImagen = (e) => {
+    const status = e?.response?.status;
+    const msg    = e?.response?.data?.error || e?.message || "Error desconocido";
+    return status
+      ? `No se pudo subir la imagen (${status}): ${msg}`
+      : `No se pudo subir la imagen: ${msg}`;
+  };
 
   const cerrarCrear = () => {
     setMostrarCrear(false);
@@ -272,8 +351,8 @@ function Inventario({ usuario }) {
       .eq("id_producto", editarProducto.id_producto);
 
     if (error) {
-      console.error("Error al actualizar producto:", error);
-      alert("No se pudo guardar el producto.");
+      logError("Error al actualizar producto:", error);
+      alert(`No se pudo guardar el producto.\n${error.code}: ${error.message}`);
       setGuardando(false);
       return;
     }
@@ -284,9 +363,10 @@ function Inventario({ usuario }) {
     const diferencia    = stockNuevo - stockAnterior;
 
     if (diferencia !== 0) {
+      const idUsuario = await obtenerIdUsuario();
       await supabase.from("movimientos_inventario").insert([{
         id_producto:      editarProducto.id_producto,
-        id_usuario:       usuario?.id_usuario || null,
+        id_usuario:       idUsuario,
         tipo_movimiento:  diferencia > 0 ? "entrada" : "salida",
         cantidad:         Math.abs(diferencia),
         observacion:      "Ajuste de stock desde edición de producto",
@@ -323,7 +403,11 @@ function Inventario({ usuario }) {
       .from("productos")
       .delete()
       .eq("id_producto", p.id_producto);
-    if (error) { console.error("Error al eliminar producto:", error); alert("No se pudo eliminar el producto."); return; }
+    if (error) {
+      logError("Error al eliminar producto:", error);
+      alert(`No se pudo eliminar el producto.\n${error.code}: ${error.message}`);
+      return;
+    }
     setProductos((prev) => prev.filter((item) => item.id_producto !== p.id_producto));
   };
 
@@ -344,6 +428,12 @@ function Inventario({ usuario }) {
       }
     }
 
+    // 2. Resolver el usuario que crea el producto
+    const idUsuario = await obtenerIdUsuario();
+    if (!idUsuario) {
+      console.warn("No se pudo determinar id_usuario: el producto se guardará sin usuario.");
+    }
+
     const payload = {
       nombre_producto: formNuevo.nombre_producto,
       descripcion:     formNuevo.descripcion  || null,
@@ -353,18 +443,22 @@ function Inventario({ usuario }) {
       codigo_barras:   formNuevo.codigo_barras || null,
       id_categoria:    formNuevo.id_categoria  ? parseInt(formNuevo.id_categoria) : null,
       id_proveedor:    formNuevo.id_proveedor  ? parseInt(formNuevo.id_proveedor) : null,
-      id_usuario:      usuario?.id_usuario || null,
+      id_usuario:      idUsuario,
       imagen:          urlImagen,
     };
 
     const { data, error } = await supabase
       .from("productos")
       .insert([payload])
-      .select(`*, usuarios(id_usuario, username, rol)`);
+      .select(SELECT_PRODUCTO);
 
     setCreando(false);
 
-    if (error) { console.error("Error al crear producto:", error); alert("No se pudo crear el producto."); return; }
+    if (error) {
+      logError("Error al crear producto:", error);
+      alert(`No se pudo crear el producto.\n${error.code}: ${error.message}`);
+      return;
+    }
 
     if (data && data.length > 0) {
       const productoCreado = data[0];
@@ -373,7 +467,7 @@ function Inventario({ usuario }) {
       if (formNuevo.stock_actual && parseInt(formNuevo.stock_actual) > 0) {
         await supabase.from("movimientos_inventario").insert([{
           id_producto:      productoCreado.id_producto,
-          id_usuario:       usuario?.id_usuario || null,
+          id_usuario:       idUsuario,
           tipo_movimiento:  "entrada",
           cantidad:         parseInt(formNuevo.stock_actual),
           observacion:      "Stock inicial al crear producto",
