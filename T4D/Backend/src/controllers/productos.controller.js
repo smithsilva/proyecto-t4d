@@ -4,6 +4,9 @@ const {
   editarProducto,
   eliminarProducto,
   actualizarParcialProducto,
+  subirImagenCloudinary,
+  eliminarImagenCloudinary,
+  obtenerImagenProducto,
 } = require("../services/productos.service");
 
 const { crearMovimientoService } = require("../services/movimientosService");
@@ -44,6 +47,16 @@ const registrarMovimientoSiCambioStock = async ({
     cantidad: Math.abs(diferencia),
     observacion,
   });
+};
+
+// =====================================
+// Helper: si cambió la imagen, borra la anterior de Cloudinary
+// =====================================
+const limpiarImagenAnteriorSiCambio = async (imagenAnterior, imagenNueva) => {
+  if (imagenNueva === undefined) return; // no vino el campo
+  if (imagenAnterior && imagenAnterior !== imagenNueva) {
+    await eliminarImagenCloudinary(imagenAnterior);
+  }
 };
 
 // =====================================
@@ -117,7 +130,33 @@ const postProducto = async (req, res) => {
 };
 
 // =====================================
+// POST /imagen — sube una imagen a Cloudinary y devuelve la URL
+// =====================================
+
+const subirImagen = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No se envió ninguna imagen" });
+    }
+
+    const resultado = await subirImagenCloudinary(req.file.buffer);
+
+    res.status(201).json({
+      url: resultado.secure_url,
+      public_id: resultado.public_id,
+    });
+  } catch (error) {
+    console.error("ERROR SUBIR IMAGEN:", error);
+
+    res.status(500).json({
+      error: error.message,
+    });
+  }
+};
+
+// =====================================
 // PUT — edición completa. Si viene stock_actual, registra el movimiento.
+// Si viene una imagen nueva, borra la anterior de Cloudinary.
 // =====================================
 
 const putProducto = async (req, res) => {
@@ -133,6 +172,12 @@ const putProducto = async (req, res) => {
       stockAnterior = await obtenerStockActual(id);
     }
 
+    let imagenAnterior = null;
+    const vieneImagen = req.body.imagen !== undefined;
+    if (vieneImagen) {
+      imagenAnterior = await obtenerImagenProducto(id);
+    }
+
     const producto = await editarProducto(id, req.body);
 
     if (vieneStock) {
@@ -143,6 +188,10 @@ const putProducto = async (req, res) => {
         id_usuario: req.usuario?.id_usuario,
         observacion: "Ajuste de stock desde edición de producto",
       });
+    }
+
+    if (vieneImagen) {
+      await limpiarImagenAnteriorSiCambio(imagenAnterior, req.body.imagen);
     }
 
     res.json(producto);
@@ -158,6 +207,7 @@ const putProducto = async (req, res) => {
 
 // =====================================
 // PATCH — edición parcial. Si viene stock_actual, registra el movimiento.
+// Si viene una imagen nueva, borra la anterior de Cloudinary.
 // =====================================
 
 const patchProducto = async (req, res) => {
@@ -173,6 +223,12 @@ const patchProducto = async (req, res) => {
       stockAnterior = await obtenerStockActual(id);
     }
 
+    let imagenAnterior = null;
+    const vieneImagen = req.body.imagen !== undefined;
+    if (vieneImagen) {
+      imagenAnterior = await obtenerImagenProducto(id);
+    }
+
     const producto = await actualizarParcialProducto(id, req.body);
 
     if (vieneStock) {
@@ -183,6 +239,10 @@ const patchProducto = async (req, res) => {
         id_usuario: req.usuario?.id_usuario,
         observacion: "Ajuste de stock (PATCH)",
       });
+    }
+
+    if (vieneImagen) {
+      await limpiarImagenAnteriorSiCambio(imagenAnterior, req.body.imagen);
     }
 
     res.json(producto);
@@ -243,17 +303,33 @@ const patchStock = async (req, res) => {
 };
 
 // =====================================
-// DELETE
+// DELETE — elimina el producto (o lo desactiva si tiene movimientos/asignaciones)
 // =====================================
 
 const deleteProducto = async (req, res) => {
   try {
     const { id } = req.params;
 
-    await eliminarProducto(id);
+    // Guardamos la URL antes de borrar el registro
+    let imagen = null;
+    try {
+      imagen = await obtenerImagenProducto(id);
+    } catch (e) {
+      console.error("No se pudo leer la imagen antes de borrar:", e);
+    }
+
+    const { desactivado } = await eliminarProducto(id);
+
+    // Solo limpiamos Cloudinary si el producto se borró de verdad
+    if (imagen && !desactivado) {
+      await eliminarImagenCloudinary(imagen);
+    }
 
     res.json({
-      message: "Producto eliminado",
+      message: desactivado
+        ? "El producto tiene movimientos o asignaciones asociadas, fue desactivado"
+        : "Producto eliminado",
+      desactivado,
     });
   } catch (error) {
     console.error("ERROR DELETE PRODUCTO:", error);
@@ -268,6 +344,7 @@ const deleteProducto = async (req, res) => {
 module.exports = {
   getProductos,
   postProducto,
+  subirImagen,
   putProducto,
   patchProducto,
   patchStock,

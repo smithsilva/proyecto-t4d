@@ -110,6 +110,8 @@ const editarProducto = async (id, { nombre_producto, precio_nuevo, motivo }) => 
 
     if (errorHistorial) {
       console.error("ERROR SUPABASE INSERTAR HISTORIAL:", errorHistorial);
+      // rollback: si no quedó el registro en el historial, devolvemos el precio anterior
+      await supabase.from("productos").update({ precio_actual: precioAnterior }).eq("id_producto", id);
       throw errorHistorial;
     }
   }

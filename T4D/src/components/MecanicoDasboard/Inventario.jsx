@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Eye, Package, X, Plus, Filter, Search } from "lucide-react";
-import { supabase } from "../../supabase/supabaseClient";
+import { supabase } from "../../supabase/SupabaseClient";
 
 function Inventario({ usuario }) {
   const [busqueda,        setBusqueda]        = useState("");
@@ -46,6 +46,7 @@ function Inventario({ usuario }) {
       supabase
         .from("productos")
         .select(`*, usuarios(id_usuario, username, rol)`)
+        .eq("activo", true)
         .order("created_at", { ascending: false }),
       supabase
         .from("proveedores")
@@ -143,6 +144,7 @@ function Inventario({ usuario }) {
 
     const payload = {
       nombre_producto: formNuevo.nombre_producto,
+      activo:          true,
       descripcion:     formNuevo.descripcion  || null,
       precio_actual:   formNuevo.precio_actual || null,
       stock_actual:    formNuevo.stock_actual  || null,
@@ -165,9 +167,11 @@ function Inventario({ usuario }) {
     if (data && data.length > 0) {
       const productoCreado = data[0];
 
+      const avisos = [];
+
       // ← movimiento de entrada inicial
       if (formNuevo.stock_actual && parseInt(formNuevo.stock_actual) > 0) {
-        await supabase.from("movimientos_inventario").insert([{
+        const { error: errorMov } = await supabase.from("movimientos_inventario").insert([{
           id_producto:      productoCreado.id_producto,
           id_usuario:       usuario?.id_usuario || null,
           tipo_movimiento:  "entrada",
@@ -175,6 +179,7 @@ function Inventario({ usuario }) {
           observacion:      "Stock inicial al crear producto",
           fecha_movimiento: new Date().toISOString(),
         }]);
+        if (errorMov) { console.error("Error al registrar movimiento inicial:", errorMov); avisos.push("el movimiento de stock inicial"); }
       }
 
       // ← historial de precios inicial
@@ -186,7 +191,20 @@ function Inventario({ usuario }) {
           motivo:          "Precio inicial al crear producto",
           fecha_cambio:    new Date().toISOString(),
         }]);
-        if (errorHist) console.error("Error al guardar historial de precios:", errorHist);
+        if (errorHist) { console.error("Error al guardar historial de precios:", errorHist); avisos.push("el precio inicial en el Historial de Precios"); }
+      }
+
+      // ← comprobar que el producto realmente quedó guardado en la base de datos
+      const { data: confirmado } = await supabase
+        .from("productos")
+        .select("id_producto")
+        .eq("id_producto", productoCreado.id_producto)
+        .maybeSingle();
+
+      if (!confirmado) {
+        alert("No se pudo confirmar que el producto quedó guardado. Recarga la página y revisa el inventario.");
+      } else if (avisos.length > 0) {
+        alert(`El producto se creó, pero no se pudo registrar ${avisos.join(" ni ")}. Avisa al administrador.`);
       }
 
       setProductos((prev) => [productoCreado, ...prev]);

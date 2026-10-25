@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Eye, Package, X, Plus, Filter, Search } from "lucide-react";
-import { supabase } from "../../supabase/supabaseClient";
+import { supabase } from "../../supabase/SupabaseClient";
 
 function Inventario() {
   const [busqueda,        setBusqueda]        = useState("");
@@ -47,6 +47,7 @@ function Inventario() {
     supabase
       .from("productos")
       .select(`*, usuarios(id_usuario, username, rol)`)
+      .eq("activo", true)
       .order("created_at", { ascending: false }),
     supabase
       .from("proveedores")
@@ -163,6 +164,7 @@ function Inventario() {
     setCreando(true);
     const payload = {
       nombre_producto: formNuevo.nombre_producto,
+      activo:          true,
       descripcion:     formNuevo.descripcion     || null,
       precio_actual:   formNuevo.precio_actual   || null,
       stock_actual:    formNuevo.stock_actual     || null,

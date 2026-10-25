@@ -3,7 +3,7 @@ import Swal from "sweetalert2";
 import {
   Search, Clock3, Wrench, Shield, CheckCircle, Eye, Check, X, Plus, Trash2, Filter,
 } from "lucide-react";
-import { supabase } from "../../supabase/supabaseClient";
+import { supabase } from "../../supabase/SupabaseClient";
 
 function MisMantenimientos({ usuario }) {
 

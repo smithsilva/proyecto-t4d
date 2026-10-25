@@ -1,22 +1,23 @@
 import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
-import { supabase } from "../../supabase/supabaseClient";
+import { supabase } from "../../supabase/SupabaseClient";
 
 const NAVY         = "#0d1b2a";
 const NAVY_OSCURO  = "#091420";
 const DORADO       = "#c9a25a";
 const DORADO_SUAVE = "#b89b6a";
 
-function TopbarContadora({ setVistaContadora, usuario, setUsuario, setVista }) {
+function TopbarMecanico({ setVistaMecanico, usuario, setUsuario, setVista }) {
   const [mostrarMenu,    setMostrarMenu]    = useState(false);
   const [openNotif,      setOpenNotif]      = useState(false);
+  const [verTodas,       setVerTodas]       = useState(false);
   const [notificaciones, setNotificaciones] = useState([]);
 
   const cargarNotificaciones = async () => {
     const { data, error } = await supabase
       .from("notificaciones")
       .select("*")
-      .eq("rol_destino", "Contadora")
+      .eq("rol_destino", "Mecanico")
       .order("fecha", { ascending: false });
     if (!error) setNotificaciones(data || []);
   };
@@ -47,7 +48,9 @@ function TopbarContadora({ setVistaContadora, usuario, setUsuario, setVista }) {
   };
 
   const noLeidas = notificaciones.filter((n) => !n.leido).length;
-  const fmtFecha = (f) => f ? new Date(f).toLocaleDateString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+  const fmtFecha = (f) => f
+    ? new Date(f).toLocaleDateString("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
+    : "";
 
   return (
     <header
@@ -69,7 +72,7 @@ function TopbarContadora({ setVistaContadora, usuario, setUsuario, setVista }) {
             Bienvenido
           </div>
           <div style={{ color: "#ffffff", fontSize: "16px", fontWeight: 700, letterSpacing: "0.5px", lineHeight: 1.3 }}>
-            Panel de Contadora
+            Panel de Mecanico
           </div>
         </div>
       </div>
@@ -93,15 +96,16 @@ function TopbarContadora({ setVistaContadora, usuario, setUsuario, setVista }) {
           </button>
 
           {openNotif && (
-            <div style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", width: "340px", zIndex: 1000, background: NAVY_OSCURO, border: `1px solid ${DORADO}`, borderRadius: "12px", padding: "18px", color: "#fff", maxHeight: "440px", overflowY: "auto", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
+            <div style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", width: "360px", zIndex: 1000, background: NAVY_OSCURO, border: `1px solid ${DORADO}`, borderRadius: "12px", padding: "18px", color: "#fff", maxHeight: "480px", overflowY: "auto", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <strong style={{ fontSize: 15 }}>Notificaciones</strong>
                 {noLeidas > 0 && <span style={{ fontSize: 12, color: DORADO }}>{noLeidas} sin leer</span>}
               </div>
+
               {notificaciones.length === 0 ? (
                 <div style={{ textAlign: "center", color: "#aaa", fontSize: 14, padding: "20px 0" }}>No hay notificaciones</div>
               ) : (
-                notificaciones.slice(0, 5).map((n) => (
+                (verTodas ? notificaciones : notificaciones.slice(0, 6)).map((n) => (
                   <div key={n.id_notificacion} style={{ background: NAVY, padding: "12px", borderRadius: "10px", marginBottom: 10, border: `1px solid ${n.leido ? "#1c2a3a" : DORADO}`, opacity: n.leido ? 0.6 : 1 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
                       <strong style={{ color: DORADO_SUAVE, fontSize: 14 }}>{n.titulo}</strong>
@@ -109,18 +113,25 @@ function TopbarContadora({ setVistaContadora, usuario, setUsuario, setVista }) {
                     </div>
                     <p style={{ fontSize: 13, margin: "4px 0", color: "#ccc" }}>{n.descripcion}</p>
                     <small style={{ color: "#7b8a99", fontSize: 12 }}>{fmtFecha(n.fecha)}</small>
+
                     {!n.leido && (
-                      <button onClick={() => marcarLeida(n.id_notificacion)} style={{ marginTop: 8, width: "100%", background: NAVY_OSCURO, border: `1px solid ${DORADO}`, padding: "7px", borderRadius: "8px", fontSize: 12, cursor: "pointer", color: DORADO_SUAVE }}>
+                      <button
+                        onClick={() => marcarLeida(n.id_notificacion)}
+                        style={{ marginTop: 8, width: "100%", background: NAVY_OSCURO, border: `1px solid ${DORADO}`, padding: "7px", borderRadius: "8px", fontSize: 12, cursor: "pointer", color: DORADO_SUAVE }}
+                      >
                         Marcar como leída
                       </button>
                     )}
                   </div>
                 ))
               )}
-              <button onClick={() => { setVistaContadora("notificaciones"); setOpenNotif(false); }}
-                style={{ width: "100%", background: DORADO, color: "#1a1a1a", fontWeight: 600, border: "none", padding: "11px", borderRadius: "10px", marginTop: "6px", cursor: "pointer", fontSize: 14 }}>
-                Ver todas
-              </button>
+
+              {notificaciones.length > 6 && (
+                <button onClick={() => setVerTodas(!verTodas)}
+                  style={{ width: "100%", background: DORADO, color: "#1a1a1a", fontWeight: 600, border: "none", padding: "11px", borderRadius: "10px", marginTop: "6px", cursor: "pointer", fontSize: 14 }}>
+                  {verTodas ? "Ver menos" : "Ver todas"}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -142,16 +153,14 @@ function TopbarContadora({ setVistaContadora, usuario, setUsuario, setVista }) {
                 </svg>
               )}
             </div>
-
             <div style={{ lineHeight: 1.25 }}>
               <div style={{ color: "#fff", fontWeight: 700, fontSize: "14px", whiteSpace: "nowrap" }}>
                 {usuario?.nombre || "Usuario"}
               </div>
               <div style={{ color: DORADO_SUAVE, fontSize: "12px", textTransform: "capitalize" }}>
-                {usuario?.rol || "Contadora"}
+                {usuario?.rol || "Mecanico"}
               </div>
             </div>
-
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={DORADO_SUAVE} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="6 9 12 15 18 9"/>
             </svg>
@@ -164,7 +173,7 @@ function TopbarContadora({ setVistaContadora, usuario, setUsuario, setVista }) {
                 <div style={{ color: DORADO_SUAVE, fontSize: "13px", textTransform: "capitalize" }}>{usuario?.rol}</div>
               </div>
               <hr style={{ borderColor: "#1c2a3a", margin: "10px 0" }} />
-              <button onClick={() => { setVistaContadora("perfil"); setMostrarMenu(false); }}
+              <button onClick={() => { setVistaMecanico("perfil"); setMostrarMenu(false); }}
                 style={{ width: "100%", background: NAVY, color: "#fff", border: "1px solid #1c2a3a", padding: "10px", borderRadius: "10px", cursor: "pointer", fontSize: "14px", marginBottom: "8px" }}>
                 Mi Perfil
               </button>
@@ -180,4 +189,4 @@ function TopbarContadora({ setVistaContadora, usuario, setUsuario, setVista }) {
   );
 }
 
-export default TopbarContadora;
+export default TopbarMecanico;
