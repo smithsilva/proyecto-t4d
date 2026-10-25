@@ -3,7 +3,7 @@ import {
   Eye, CreditCard, CheckCircle, XCircle,
   Banknote, Building2, X, Filter, Search, Link,
 } from "lucide-react";
-import { supabase } from "../../supabase/supabaseClient";
+import { supabase } from "../../Supabase/SupabaseClient";
 
 const DORADO          = "#d4a743";
 const DORADO_OSCURO   = "#8c6b3f";

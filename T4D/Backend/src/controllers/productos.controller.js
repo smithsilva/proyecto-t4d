@@ -303,7 +303,7 @@ const patchStock = async (req, res) => {
 };
 
 // =====================================
-// DELETE — elimina el producto y su imagen en Cloudinary
+// DELETE — elimina el producto (o lo desactiva si tiene movimientos/asignaciones)
 // =====================================
 
 const deleteProducto = async (req, res) => {
@@ -318,15 +318,18 @@ const deleteProducto = async (req, res) => {
       console.error("No se pudo leer la imagen antes de borrar:", e);
     }
 
-    await eliminarProducto(id);
+    const { desactivado } = await eliminarProducto(id);
 
-    // Solo si el producto se borró bien, limpiamos Cloudinary
-    if (imagen) {
+    // Solo limpiamos Cloudinary si el producto se borró de verdad
+    if (imagen && !desactivado) {
       await eliminarImagenCloudinary(imagen);
     }
 
     res.json({
-      message: "Producto eliminado",
+      message: desactivado
+        ? "El producto tiene movimientos o asignaciones asociadas, fue desactivado"
+        : "Producto eliminado",
+      desactivado,
     });
   } catch (error) {
     console.error("ERROR DELETE PRODUCTO:", error);

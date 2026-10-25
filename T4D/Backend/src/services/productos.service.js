@@ -12,6 +12,7 @@ const obtenerProductos = async () => {
   const { data, error } = await supabase
     .from("productos")
     .select(SELECT_PRODUCTO)
+    .eq("activo", true)
     .order("id_producto", { ascending: true });
 
   if (error) {
@@ -83,13 +84,20 @@ const eliminarProducto = async (id) => {
     .delete()
     .eq("id_producto", id);
 
-  console.log("Error:", error);
+  if (!error) return { desactivado: false };
 
-  if (error) {
-    throw error;
+  // 23503 = tiene movimientos / asignaciones asociadas -> borrado lógico
+  if (error.code === "23503") {
+    const { error: errorUpdate } = await supabase
+      .from("productos")
+      .update({ activo: false })
+      .eq("id_producto", id);
+
+    if (errorUpdate) throw errorUpdate;
+    return { desactivado: true };
   }
 
-  return true;
+  throw error;
 };
 
 // =====================================
