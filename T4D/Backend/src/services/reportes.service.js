@@ -57,6 +57,7 @@ exports.getStockBajo = async () => {
   const { data, error } = await supabase
     .from('productos')
     .select('id_producto, nombre_producto, stock_actual')
+    .eq('activo', true)
     .lte('stock_actual', 5)
     .order('stock_actual', { ascending: true });
   if (error) throw new Error(error.message);
@@ -85,7 +86,8 @@ exports.getMovimientosInventario = async () => {
 exports.getValorizacionInventario = async () => {
   const { data, error } = await supabase
     .from('productos')
-    .select('id_producto, nombre_producto, stock_actual, precio_actual');
+    .select('id_producto, nombre_producto, stock_actual, precio_actual')
+    .eq('activo', true);
   if (error) throw new Error(error.message);
 
   return data

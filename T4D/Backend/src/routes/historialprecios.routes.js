@@ -9,7 +9,7 @@ const {
   getHistorial,
 } = require("../controllers/historialprecios.controller");
 
-// Roles: 1 = admin, 2 = gerente, 3 = contadora (ajustar si tu tabla "roles" usa otros IDs)
+// Roles: 1 = admin, 2 = contadora, 3 = gerente, 4 = mecánico (igual que en Login.jsx)
 //
 // La creación y eliminación de productos vive exclusivamente en el módulo
 // de Inventario (/productos). Este módulo solo puede VER y ACTUALIZAR
@@ -18,7 +18,7 @@ const {
 
 // ── PRODUCTOS (solo lectura + actualización de precio) ──
 router.get("/productos", getProductos);                                        // Todos los autenticados
-router.put("/productos/:id", verificarRol([1, 2]), putProducto);               // Admin y gerente: actualizar precio
+router.put("/productos/:id", verificarRol([1]), putProducto);                  // Solo admin: actualizar precio
 router.patch("/productos/:id/estado", verificarRol([1]), patchEstadoProducto); // Solo admin: activar/desactivar
 
 // ── HISTORIAL (solo lectura) ──

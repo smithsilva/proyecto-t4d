@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { supabase } from "../../supabase/supabaseClient";
+import { supabase } from "../../supabase/SupabaseClient";
 import { Filter, Search, Pencil, X, Eye, Trash2, ToggleLeft } from "lucide-react";
 
 const DORADO          = "#d4a743";
@@ -12,11 +12,11 @@ const BTN_GRAD        = "linear-gradient(135deg, #c9941f, #8c6b3f)";
 
 // ─── PERMISOS POR ROL ─────────────────────────────────────────────────────────
 // admin     → ver, editar precio, eliminar registro historial, desactivar producto
-// gerente   → ver, editar precio
+// gerente   → solo ver
 // contadora → solo ver
 const permisos = {
   admin:     { editar: true,  eliminar: true,  desactivar: true  },
-  gerente:   { editar: true,  eliminar: false, desactivar: false },
+  gerente:   { editar: false, eliminar: false, desactivar: false },
   contadora: { editar: false, eliminar: false, desactivar: false },
 };
 
@@ -136,10 +136,17 @@ export default function HistorialPrecios({ usuario }) {
     setGuardando(true);
     const { error } = await supabase.from("productos").update({ precio_actual: precioNuevo }).eq("id_producto", productoSel.id_producto);
     if (error) { alert("No se pudo actualizar el precio."); setGuardando(false); return; }
-    await supabase.from("historial_precios").insert([{
+    const { error: errorHist } = await supabase.from("historial_precios").insert([{
       id_producto: productoSel.id_producto, precio_anterior: precioAnterior,
       precio_nuevo: precioNuevo, motivo: motivo.trim(), fecha_cambio: new Date().toISOString(),
     }]);
+    if (errorHist) {
+      // Si no quedó el registro en el historial, devolvemos el precio anterior
+      await supabase.from("productos").update({ precio_actual: precioAnterior }).eq("id_producto", productoSel.id_producto);
+      alert("No se pudo registrar el cambio en el historial, por eso el precio no fue modificado.");
+      setGuardando(false);
+      return;
+    }
     setGuardando(false);
     setModalEditar(false);
     setProductoSel(null);

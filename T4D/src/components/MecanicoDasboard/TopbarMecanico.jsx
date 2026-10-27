@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
-import { supabase } from "../../supabase/supabaseClient";
+import { supabase } from "../../supabase/SupabaseClient";
 
 const NAVY         = "#0d1b2a";
 const NAVY_OSCURO  = "#091420";
@@ -10,6 +10,7 @@ const DORADO_SUAVE = "#b89b6a";
 function TopbarMecanico({ setVistaMecanico, usuario, setUsuario, setVista }) {
   const [mostrarMenu,    setMostrarMenu]    = useState(false);
   const [openNotif,      setOpenNotif]      = useState(false);
+  const [verTodas,       setVerTodas]       = useState(false);
   const [notificaciones, setNotificaciones] = useState([]);
 
   const cargarNotificaciones = async () => {
@@ -104,7 +105,7 @@ function TopbarMecanico({ setVistaMecanico, usuario, setUsuario, setVista }) {
               {notificaciones.length === 0 ? (
                 <div style={{ textAlign: "center", color: "#aaa", fontSize: 14, padding: "20px 0" }}>No hay notificaciones</div>
               ) : (
-                notificaciones.slice(0, 6).map((n) => (
+                (verTodas ? notificaciones : notificaciones.slice(0, 6)).map((n) => (
                   <div key={n.id_notificacion} style={{ background: NAVY, padding: "12px", borderRadius: "10px", marginBottom: 10, border: `1px solid ${n.leido ? "#1c2a3a" : DORADO}`, opacity: n.leido ? 0.6 : 1 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
                       <strong style={{ color: DORADO_SUAVE, fontSize: 14 }}>{n.titulo}</strong>
@@ -125,12 +126,12 @@ function TopbarMecanico({ setVistaMecanico, usuario, setUsuario, setVista }) {
                 ))
               )}
 
-              <button
-                onClick={() => { setOpenNotif(false); if (typeof setVistaMecanico === "function") setVistaMecanico("notificaciones"); }}
-                style={{ width: "100%", background: DORADO, color: "#1a1a1a", fontWeight: 600, border: "none", padding: "11px", borderRadius: "10px", marginTop: "6px", cursor: "pointer", fontSize: 14 }}
-              >
-                Ver todas
-              </button>
+              {notificaciones.length > 6 && (
+                <button onClick={() => setVerTodas(!verTodas)}
+                  style={{ width: "100%", background: DORADO, color: "#1a1a1a", fontWeight: 600, border: "none", padding: "11px", borderRadius: "10px", marginTop: "6px", cursor: "pointer", fontSize: 14 }}>
+                  {verTodas ? "Ver menos" : "Ver todas"}
+                </button>
+              )}
             </div>
           )}
         </div>

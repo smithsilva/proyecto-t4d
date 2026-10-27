@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { supabase } from '../../supabase/supabaseClient';
+import { supabase } from '../../supabase/SupabaseClient';
 
 // ─── Iconos SVG inline (Tabler style) ────────────────────────────────────────
 const IconSearch = () => (

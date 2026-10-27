@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Swal from "sweetalert2";
 import { User, Mail, Lock, Shield, UserPlus } from "lucide-react";
-import { supabase } from "../../supabase/supabaseClient";
+import { supabase } from "../../supabase/SupabaseClient";
 
 // =========================================
 // PALETA (igual a Inventario.jsx)

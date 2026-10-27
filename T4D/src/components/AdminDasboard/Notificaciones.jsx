@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Bell, Inbox, Send, X, Filter } from "lucide-react";
-import { supabase } from "../../supabase/supabaseClient"; // ajusta la ruta
+import { supabase } from "../../supabase/SupabaseClient"; // ajusta la ruta
 import { enviarNotificacion } from "../../utils/notificaciones.helper";
 
 // =========================================

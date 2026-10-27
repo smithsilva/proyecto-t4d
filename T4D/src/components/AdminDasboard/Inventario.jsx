@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { Eye, Package, X, Plus, Filter, Search, Trash2, Pencil } from "lucide-react";
-import { supabase } from "../../supabase/supabaseClient";
+import { supabase } from "../../supabase/SupabaseClient";
 
 // =====================================================
 // CONFIG DEL BACKEND
@@ -12,7 +12,6 @@ import { supabase } from "../../supabase/supabaseClient";
 // Despues de crearlo o cambiarlo, reinicia `npm run dev`.
 const API_URL    = import.meta.env.VITE_API_URL || "http://localhost:5000";
 const X_API_KEY  = import.meta.env.VITE_API_KEY || "";
-console.log("ENV:", import.meta.env);   // <-- aquí, temporal
 
 // Ponlo en false cuando ya funcione la subida de imágenes.
 const DEBUG_UPLOAD = true;
@@ -135,6 +134,7 @@ function Inventario({ usuario }) {
       supabase
         .from("productos")
         .select(SELECT_PRODUCTO)
+        .eq("activo", true)
         .order("created_at", { ascending: false }),
       supabase
         .from("proveedores")
@@ -336,7 +336,6 @@ function Inventario({ usuario }) {
     const cambios = {
       nombre_producto: formEdit.nombre_producto,
       descripcion:     formEdit.descripcion,
-      precio_actual:   formEdit.precio_actual,
       stock_actual:    formEdit.stock_actual,
       unidad_medida:   formEdit.unidad_medida,
       id_categoria:    formEdit.id_categoria ? parseInt(formEdit.id_categoria) : null,
@@ -396,18 +395,36 @@ function Inventario({ usuario }) {
 
   const eliminarProducto = async (p) => {
     const confirmar = window.confirm(
-      `¿Seguro que deseas eliminar "${p.nombre_producto}"? Esta acción no se puede deshacer.`
+      `¿Seguro que deseas eliminar "${p.nombre_producto}"?\n\nSi tiene movimientos o asignaciones asociadas, se desactivará en lugar de borrarse.`
     );
     if (!confirmar) return;
+
     const { error } = await supabase
       .from("productos")
       .delete()
       .eq("id_producto", p.id_producto);
+
     if (error) {
-      logError("Error al eliminar producto:", error);
-      alert(`No se pudo eliminar el producto.\n${error.code}: ${error.message}`);
-      return;
+      // 23503 = tiene movimientos / asignaciones / historial asociados -> borrado lógico
+      if (error.code === "23503") {
+        const { error: errorUpdate } = await supabase
+          .from("productos")
+          .update({ activo: false })
+          .eq("id_producto", p.id_producto);
+
+        if (errorUpdate) {
+          logError("Error al desactivar producto:", errorUpdate);
+          alert(`No se pudo desactivar el producto.\n${errorUpdate.code}: ${errorUpdate.message}`);
+          return;
+        }
+        alert("El producto tiene movimientos o asignaciones asociadas, por eso fue desactivado en lugar de eliminado.");
+      } else {
+        logError("Error al eliminar producto:", error);
+        alert(`No se pudo eliminar el producto.\n${error.code}: ${error.message}`);
+        return;
+      }
     }
+
     setProductos((prev) => prev.filter((item) => item.id_producto !== p.id_producto));
   };
 
@@ -436,6 +453,7 @@ function Inventario({ usuario }) {
 
     const payload = {
       nombre_producto: formNuevo.nombre_producto,
+      activo:          true,
       descripcion:     formNuevo.descripcion  || null,
       precio_actual:   formNuevo.precio_actual || null,
       stock_actual:    formNuevo.stock_actual  || null,
@@ -463,9 +481,11 @@ function Inventario({ usuario }) {
     if (data && data.length > 0) {
       const productoCreado = data[0];
 
+      const avisos = [];
+
       // ← movimiento de entrada inicial
       if (formNuevo.stock_actual && parseInt(formNuevo.stock_actual) > 0) {
-        await supabase.from("movimientos_inventario").insert([{
+        const { error: errorMov } = await supabase.from("movimientos_inventario").insert([{
           id_producto:      productoCreado.id_producto,
           id_usuario:       idUsuario,
           tipo_movimiento:  "entrada",
@@ -473,17 +493,32 @@ function Inventario({ usuario }) {
           observacion:      "Stock inicial al crear producto",
           fecha_movimiento: new Date().toISOString(),
         }]);
+        if (errorMov) { logError("Error al registrar movimiento inicial:", errorMov); avisos.push("el movimiento de stock inicial"); }
       }
 
       // ← registro en historial de precios si tiene precio
       if (formNuevo.precio_actual && parseFloat(formNuevo.precio_actual) > 0) {
-        await supabase.from("historial_precios").insert([{
+        const { error: errorHist } = await supabase.from("historial_precios").insert([{
           id_producto:      productoCreado.id_producto,
           precio_anterior:  0,
           precio_nuevo:     parseFloat(formNuevo.precio_actual),
           motivo:           "Precio inicial al crear producto",
           fecha_cambio:     new Date().toISOString(),
         }]);
+        if (errorHist) { logError("Error al registrar precio inicial:", errorHist); avisos.push("el precio inicial en el Historial de Precios"); }
+      }
+
+      // ← comprobar que el producto realmente quedó guardado en la base de datos
+      const { data: confirmado } = await supabase
+        .from("productos")
+        .select("id_producto")
+        .eq("id_producto", productoCreado.id_producto)
+        .maybeSingle();
+
+      if (!confirmado) {
+        alert("No se pudo confirmar que el producto quedó guardado. Recarga la página y revisa el inventario.");
+      } else if (avisos.length > 0) {
+        alert(`El producto se creó, pero no se pudo registrar ${avisos.join(" ni ")}. Avisa al administrador.`);
       }
 
       // Agregamos el proveedor para que se vea en la tabla sin recargar
@@ -773,8 +808,11 @@ function Inventario({ usuario }) {
             </select>
 
             <label style={labelStyle}>Precio</label>
-            <input type="number" style={inputStyle} value={formEdit.precio_actual || ""}
-              onChange={(e) => setFormEdit({ ...formEdit, precio_actual: e.target.value })} />
+            <input type="text" style={{ ...inputStyle, background: "#f0ece4", color: "#6b7280", marginBottom: 4 }}
+              value={formEdit.precio_actual ? `$${formEdit.precio_actual}` : "—"} readOnly />
+            <p style={{ fontSize: 11, color: "#6b7280", marginBottom: 12 }}>
+              El precio se cambia desde Historial de Precios.
+            </p>
 
             <label style={labelStyle}>Stock actual</label>
             <input type="number" style={inputStyle} value={formEdit.stock_actual || ""}
