@@ -1,7 +1,8 @@
+import { BACKEND_URL } from "../apiConfig";
 import axios from "axios";
 import { getHeaders } from "./authHeader";
 
-const API_URL = "http://localhost:5000/roles";
+const API_URL = `${BACKEND_URL}/roles`;
 
 export const obtenerRoles = async () => {
   try {

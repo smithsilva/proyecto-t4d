@@ -1,3 +1,4 @@
+import { BACKEND_URL } from "../../apiConfig";
 import { useState } from "react";
 import Swal from "sweetalert2";
 import { User, Mail, Lock, Shield, UserPlus } from "lucide-react";
@@ -148,7 +149,7 @@ function RegistroUsuarios() {
 
       // PASO 4 — ENVIAR CORREO (No bloquea el registro si el servidor de correos falla)
       try {
-        await fetch("http://localhost:5000/enviar-correo", {
+        await fetch(`${BACKEND_URL}/enviar-correo`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -216,7 +217,7 @@ function RegistroUsuarios() {
         return Swal.fire("Error", "Usuario no encontrado en la base de datos", "error");
       }
 
-      await fetch("http://localhost:5000/enviar-correo", {
+      await fetch(`${BACKEND_URL}/enviar-correo`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
