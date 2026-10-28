@@ -1,7 +1,8 @@
+import { BACKEND_URL } from "../apiConfig";
 import { getHeaders } from "./authHeader";
 
 export const obtenerMovimientosApi = async () => {
-  const response = await fetch("http://localhost:5000/movimientos", {
+  const response = await fetch(`${BACKEND_URL}/movimientos`, {
     headers: getHeaders(),
   });
 

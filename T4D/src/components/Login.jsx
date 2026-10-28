@@ -1,3 +1,4 @@
+import { BACKEND_URL, BACKEND_KEY } from "../apiConfig";
 import { useState } from "react";
 import Swal from "sweetalert2";
 import imagen3 from "../assets/imagen10.png";
@@ -17,8 +18,8 @@ const C = {
   labelTxt:    "#9ab0c8",
 };
 
-const API_URL = "http://localhost:5000";
-const API_KEY = "pollo"; // idealmente mover a variable de entorno del frontend (VITE_API_KEY, etc.)
+const API_URL = `${BACKEND_URL}`;
+const API_KEY = BACKEND_KEY;
 
 function Login({ setVista, setUsuario }) {
   const [correo,   setCorreo]   = useState("");

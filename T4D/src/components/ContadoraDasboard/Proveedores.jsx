@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { supabase } from "../../Supabase/SupabaseClient";
+import { supabase } from "../../supabase/SupabaseClient";
 import { Search, Plus, Eye, Pencil, Trash2, Phone, Mail, MapPin, Building2, X, Save, Filter } from "lucide-react";
 
 // ─── PALETA (igual a Inventario) ─────────────────────────────────────────────

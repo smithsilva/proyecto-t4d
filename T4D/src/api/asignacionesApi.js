@@ -1,6 +1,7 @@
+import { BACKEND_URL } from "../apiConfig";
 import { getHeaders } from "./authHeader";
 
-const URL = "http://localhost:5000/asignaciones";
+const URL = `${BACKEND_URL}/asignaciones`;
 
 export const obtenerAsignaciones = async () => {
   const response = await fetch(URL, {

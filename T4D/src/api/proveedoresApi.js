@@ -1,6 +1,7 @@
+import { BACKEND_URL } from "../apiConfig";
 import { getHeaders } from "./authHeader";
 
-const URL = "http://localhost:5000/proveedores";
+const URL = `${BACKEND_URL}/proveedores`;
 
 export const obtenerProveedores = async () => {
   const response = await fetch(URL, {

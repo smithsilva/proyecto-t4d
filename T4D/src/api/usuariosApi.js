@@ -1,7 +1,8 @@
+import { BACKEND_URL } from "../apiConfig";
 import axios from "axios";
 import { getHeaders } from "./authHeader";
 
-const API_URL = "http://localhost:5000/usuarios";
+const API_URL = `${BACKEND_URL}/usuarios`;
 
 export const obtenerUsuarios = async () => {
   try {

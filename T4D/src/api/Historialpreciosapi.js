@@ -1,6 +1,7 @@
+import { BACKEND_URL } from "../apiConfig";
 import { getHeaders } from "./authHeader";
 
-const URL = "http://localhost:5000/historial-precios";
+const URL = `${BACKEND_URL}/historial-precios`;
 
 // =====================================
 // PRODUCTOS

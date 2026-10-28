@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { Eye, Package, X, Plus, Filter, Search, Trash2, Pencil } from "lucide-react";
-import { supabase } from "../../Supabase/SupabaseClient";
+import { supabase } from "../../supabase/SupabaseClient";
 
 // =====================================================
 // CONFIG DEL BACKEND

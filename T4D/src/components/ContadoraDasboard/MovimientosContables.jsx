@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Search, Plus, Eye, Pencil, Trash2, Download, TrendingUp, TrendingDown, FileText, DollarSign, Calendar, Filter } from "lucide-react";
 import * as XLSX from "xlsx";
-import { supabase } from "../../Supabase/SupabaseClient";
+import { supabase } from "../../supabase/SupabaseClient";
 
 const DORADO        = "#d4a743";
 const DORADO_OSCURO = "#8c6b3f";

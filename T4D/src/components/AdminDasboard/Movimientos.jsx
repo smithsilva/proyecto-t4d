@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from '../../Supabase/SupabaseClient';
+import { supabase } from '../../supabase/SupabaseClient';
 import { Filter, Search, X } from "lucide-react";
 
 // ─── Paleta ───────────────────────────────────────────────────────

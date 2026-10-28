@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { supabase } from "../../Supabase/SupabaseClient";
+import { supabase } from "../../supabase/SupabaseClient";
 import { Filter, Search, X, Plus } from "lucide-react";
 
 const DORADO        = "#d4a743";

@@ -1,6 +1,7 @@
+import { BACKEND_URL } from "../apiConfig";
 import { getHeaders } from "./authHeader";
 
-const BASE_URL = "http://localhost:5000/auth";
+const BASE_URL = `${BACKEND_URL}/auth`;
 
 // ── SOLICITAR RECUPERACIÓN (envía el enlace por correo) ──
 export const solicitarRecuperacion = async (email) => {
