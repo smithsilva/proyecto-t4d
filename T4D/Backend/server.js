@@ -8,11 +8,17 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// ── MIDDLEWARE API KEY ──
+// ── RUTA PRINCIPAL (Puesta antes del middleware para poder probarla sin API Key en el navegador) ──
+app.get("/", (req, res) => {
+  res.json({ status: "ok", message: "Servidor T4D corriendo 🚀" });
+});
+
+// ── MIDDLEWARE API KEY (Opcional: puedes comentarlo si tus pruebas del SENA no lo exigen) ──
 app.use((req, res, next) => {
   const apiKey = req.headers["x-api-key"];
 
-  if (!apiKey || apiKey !== process.env.X_API_KEY) {
+  // Si quieres omitirlo temporalmente para pruebas, puedes comentar esta validación:
+  if (process.env.X_API_KEY && (!apiKey || apiKey !== process.env.X_API_KEY)) {
     return res.status(401).json({
       error: "API key inválida o ausente",
     });
@@ -23,7 +29,7 @@ app.use((req, res, next) => {
 
 const verificarToken = require("./src/middlewares/auth.middleware");
 
-// ── LOGIN (sin verificarToken) ──
+// ── LOGIN ──
 app.use("/auth", require("./src/routes/auth.routes"));
 
 // ── RUTAS PROTEGIDAS ──
@@ -39,13 +45,8 @@ app.use("/categorias",        verificarToken, require("./src/routes/categorias.r
 app.use("/historial-precios", verificarToken, require("./src/routes/historialprecios.routes"));
 app.use("/notificaciones",    verificarToken, require("./src/routes/notificaciones.routes"));
 
-// ── RUTA PRINCIPAL ──
-app.get("/", (req, res) => {
-  res.json({ status: "ok", message: "Servidor T4D corriendo 🚀" });
-});
-
-// ── INICIAR SERVIDOR ──
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+// ── INICIAR SERVIDOR (Escuchando en 0.0.0.0 para aceptar tráfico externo de AWS) ──
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Servidor corriendo en el puerto ${PORT}`);
   console.log("FRONTEND_URL cargada:", process.env.FRONTEND_URL);
 });
