@@ -1,20 +1,12 @@
-const supabase = require("../config/supabase");
+const pool = require("../config/db");
 
 // ======================================
 // OBTENER ROLES
 // ======================================
 const obtenerRoles = async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from("roles")
-      .select("*")
-      .order("id_rol", { ascending: true });
-
-    if (error) {
-      return res.status(500).json({ error: error.message });
-    }
-
-    res.json(data);
+    const { rows } = await pool.query("SELECT * FROM roles ORDER BY id_rol ASC");
+    res.json(rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

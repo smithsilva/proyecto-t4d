@@ -1,94 +1,35 @@
-const supabase =
-  require("../config/supabase");
+const pool = require("../config/db");
+const { insertar, actualizar } = require("../utils/sql");
 
-const obtenerSucursalesService =
-  async () => {
-    const { data, error } =
-      await supabase
-        .from("sucursales")
-        .select("*")
-        .order("id_sucursal", {
-          ascending: true,
-        });
+const obtenerSucursalesService = async () => {
+  const { rows } = await pool.query("SELECT * FROM sucursales ORDER BY id_sucursal ASC");
+  return rows;
+};
 
-    if (error) throw error;
+const obtenerSucursalPorIdService = async (id) => {
+  const { rows } = await pool.query("SELECT * FROM sucursales WHERE id_sucursal = $1", [id]);
+  if (rows.length === 0) {
+    throw new Error("Sucursal no encontrada");
+  }
+  return rows[0];
+};
 
-    return data;
-  };
+const crearSucursalService = async (sucursal) => {
+  return insertar("sucursales", sucursal);
+};
 
-const obtenerSucursalPorIdService =
-  async (id) => {
-    const { data, error } =
-      await supabase
-        .from("sucursales")
-        .select("*")
-        .eq("id_sucursal", id)
-        .single();
+const actualizarSucursalService = async (id, sucursal) => {
+  return actualizar("sucursales", "id_sucursal", id, sucursal);
+};
 
-    if (error) throw error;
+const actualizarParcialSucursalService = async (id, datos) => {
+  return actualizar("sucursales", "id_sucursal", id, datos);
+};
 
-    return data;
-  };
-
-const crearSucursalService =
-  async (sucursal) => {
-    const { data, error } =
-      await supabase
-        .from("sucursales")
-        .insert([sucursal])
-        .select();
-
-    if (error) throw error;
-
-    return data;
-  };
-
-const actualizarSucursalService =
-  async (
-    id,
-    sucursal
-  ) => {
-    const { data, error } =
-      await supabase
-        .from("sucursales")
-        .update(sucursal)
-        .eq("id_sucursal", id)
-        .select();
-
-    if (error) throw error;
-
-    return data;
-  };
-
-const actualizarParcialSucursalService =
-  async (
-    id,
-    datos
-  ) => {
-    const { data, error } =
-      await supabase
-        .from("sucursales")
-        .update(datos)
-        .eq("id_sucursal", id)
-        .select();
-
-    if (error) throw error;
-
-    return data;
-  };
-
-const eliminarSucursalService =
-  async (id) => {
-    const { error } =
-      await supabase
-        .from("sucursales")
-        .delete()
-        .eq("id_sucursal", id);
-
-    if (error) throw error;
-
-    return true;
-  };
+const eliminarSucursalService = async (id) => {
+  await pool.query("DELETE FROM sucursales WHERE id_sucursal = $1", [id]);
+  return true;
+};
 
 module.exports = {
   obtenerSucursalesService,

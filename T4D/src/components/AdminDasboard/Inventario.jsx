@@ -1,3 +1,4 @@
+import { BACKEND_URL, BACKEND_KEY } from "../../apiConfig";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { Eye, Package, X, Plus, Filter, Search, Trash2, Pencil } from "lucide-react";
@@ -10,8 +11,8 @@ import { supabase } from "../../supabase/SupabaseClient";
 //   VITE_API_URL=http://localhost:5000
 //   VITE_API_KEY=pollo
 // Despues de crearlo o cambiarlo, reinicia `npm run dev`.
-const API_URL    = import.meta.env.VITE_API_URL || "http://localhost:5000";
-const X_API_KEY  = import.meta.env.VITE_API_KEY || "";
+const API_URL    = BACKEND_URL;
+const X_API_KEY  = BACKEND_KEY;
 
 // Ponlo en false cuando ya funcione la subida de imágenes.
 const DEBUG_UPLOAD = true;

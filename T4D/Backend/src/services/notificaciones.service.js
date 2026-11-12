@@ -1,4 +1,5 @@
-const supabase = require("../config/supabase");
+const pool = require("../config/db");
+const { insertar, actualizar } = require("../utils/sql");
 
 // Mapeo id_rol (numérico, viene del token JWT) -> nombre de rol tal como se
 // guarda en la columna rol_destino de la tabla notificaciones. Debe
@@ -24,18 +25,11 @@ const obtenerNotificacionesPorRol = async (idRol) => {
     throw err;
   }
 
-  const { data, error } = await supabase
-    .from("notificaciones")
-    .select("*")
-    .eq("rol_destino", rolNombre)
-    .order("fecha", { ascending: false });
-
-  if (error) {
-    console.error("ERROR SUPABASE GET NOTIFICACIONES:", error);
-    throw error;
-  }
-
-  return data;
+  const { rows } = await pool.query(
+    "SELECT * FROM notificaciones WHERE rol_destino = $1 ORDER BY fecha DESC",
+    [rolNombre]
+  );
+  return rows;
 };
 
 // =====================================
@@ -43,24 +37,19 @@ const obtenerNotificacionesPorRol = async (idRol) => {
 // =====================================
 
 const marcarNotificacionLeida = async (id) => {
-  const { data, error } = await supabase
-    .from("notificaciones")
-    .update({ leido: true })
-    .eq("id_notificacion", id)
-    .select()
-    .single();
+  const [notificacion] = await actualizar("notificaciones", "id_notificacion", id, {
+    leido: true,
+  });
 
-  if (error) {
-    console.error("ERROR SUPABASE MARCAR LEIDA:", error);
-    throw error;
+  if (!notificacion) {
+    throw new Error("Notificación no encontrada");
   }
 
-  return data;
+  return notificacion;
 };
 
 // =====================================
-// CREACIÓN (uso interno: llamada desde otros services cuando ocurre
-// un evento como cambio de precio, stock bajo o movimiento)
+// CREACIÓN (uso interno)
 // =====================================
 
 const crearNotificacion = async ({
@@ -70,33 +59,25 @@ const crearNotificacion = async ({
   id_usuario = null,
   id_asignacion = null,
 }) => {
-  const { data, error } = await supabase
-    .from("notificaciones")
-    .insert([
-      {
-        titulo,
-        descripcion,
-        rol_destino,
-        id_usuario,
-        id_asignacion,
-        leido: false,
-        fecha: new Date().toISOString(),
-      },
-    ])
-    .select()
-    .single();
-
-  if (error) {
-    // No relanzamos como error fatal: una notificación fallida no debería
-    // tumbar la operación principal (crear producto, registrar movimiento, etc.)
-    console.error("ERROR SUPABASE CREAR NOTIFICACION:", error);
+  try {
+    const [data] = await insertar("notificaciones", {
+      titulo,
+      descripcion,
+      rol_destino,
+      id_usuario,
+      id_asignacion,
+      leido: false,
+      fecha: new Date().toISOString(),
+    });
+    return data;
+  } catch (error) {
+    // No relanzamos: una notificación fallida no debería tumbar la operación principal
+    console.error("ERROR CREAR NOTIFICACION:", error.message);
+    return undefined;
   }
-
-  return data;
 };
 
-// Envía la misma notificación a varios roles a la vez (broadcast),
-// equivalente a enviarNotificacion({...roles: [...]}) en el frontend web.
+// Envía la misma notificación a varios roles a la vez (broadcast)
 const crearNotificacionBroadcast = async ({ titulo, descripcion, roles }) => {
   const filas = roles.map((rol) => ({
     titulo,
@@ -106,17 +87,7 @@ const crearNotificacionBroadcast = async ({ titulo, descripcion, roles }) => {
     fecha: new Date().toISOString(),
   }));
 
-  const { data, error } = await supabase
-    .from("notificaciones")
-    .insert(filas)
-    .select();
-
-  if (error) {
-    console.error("ERROR SUPABASE BROADCAST NOTIFICACIONES:", error);
-    throw error;
-  }
-
-  return data;
+  return insertar("notificaciones", filas);
 };
 
 module.exports = {

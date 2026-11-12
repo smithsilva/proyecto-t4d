@@ -1,31 +1,22 @@
-const supabase = require("../config/supabase");
+const pool = require("../config/db");
 
 const obtenerAsignaciones = async () => {
-  const { data: asignaciones, error } = await supabase
-    .from("asignaciones_tareas")
-    .select("*")
-    .order("fecha_asignacion", { ascending: false });
-
-  if (error) {
-    console.error("Error asignaciones:", error);
-    throw error;
-  }
-
-  const ids = [...new Set(asignaciones.map((a) => a.id_mecanico))];
-
-  const { data: usuarios, error: errorUsuarios } = await supabase
-    .from("usuarios")
-    .select("id_usuario, username")
-    .in("id_usuario", ids);
-
-  if (errorUsuarios) {
-    console.error("Error usuarios:", errorUsuarios);
-    throw errorUsuarios;
-  }
-
-  const usuariosMap = Object.fromEntries(
-    usuarios.map((u) => [u.id_usuario, u])
+  const { rows: asignaciones } = await pool.query(
+    "SELECT * FROM asignaciones_tareas ORDER BY fecha_asignacion DESC"
   );
+
+  const ids = [...new Set(asignaciones.map((a) => a.id_mecanico))].filter(
+    (id) => id !== null && id !== undefined
+  );
+
+  const { rows: usuarios } = ids.length
+    ? await pool.query(
+        "SELECT id_usuario, username FROM usuarios WHERE id_usuario = ANY($1)",
+        [ids]
+      )
+    : { rows: [] };
+
+  const usuariosMap = Object.fromEntries(usuarios.map((u) => [u.id_usuario, u]));
 
   return asignaciones.map((a) => ({
     ...a,

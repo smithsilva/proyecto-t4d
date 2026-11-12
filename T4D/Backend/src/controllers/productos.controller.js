@@ -10,20 +10,19 @@ const {
 } = require("../services/productos.service");
 
 const { crearMovimientoService } = require("../services/movimientosService");
-const supabase = require("../config/supabase");
+const pool = require("../config/db");
 
 // =====================================
 // Helper: trae solo el stock_actual de un producto
 // =====================================
 const obtenerStockActual = async (id) => {
-  const { data, error } = await supabase
-    .from("productos")
-    .select("stock_actual")
-    .eq("id_producto", id)
-    .single();
+  const { rows } = await pool.query(
+    "SELECT stock_actual FROM productos WHERE id_producto = $1",
+    [id]
+  );
 
-  if (error) throw error;
-  return data.stock_actual;
+  if (rows.length === 0) throw new Error("Producto no encontrado");
+  return rows[0].stock_actual;
 };
 
 // =====================================
@@ -85,7 +84,7 @@ const postProducto = async (req, res) => {
   try {
     const producto = await agregarProducto(req.body);
 
-    // agregarProducto() devuelve un array por el .select() de Supabase
+    // agregarProducto() devuelve un array de filas
     const nuevo = Array.isArray(producto) ? producto[0] : producto;
 
     if (nuevo?.id_producto) {
@@ -104,15 +103,18 @@ const postProducto = async (req, res) => {
       // falla, no se revierte la creación del producto, solo se loguea,
       // porque el producto en sí ya quedó creado correctamente.
       try {
-        await supabase.from("historial_precios").insert([
-          {
-            id_producto: nuevo.id_producto,
-            precio_anterior: 0,
-            precio_nuevo: nuevo.precio_actual ?? 0,
-            motivo: "Creación de producto",
-            fecha_cambio: new Date().toISOString(),
-          },
-        ]);
+        await pool.query(
+          `INSERT INTO historial_precios
+             (id_producto, precio_anterior, precio_nuevo, motivo, fecha_cambio)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [
+            nuevo.id_producto,
+            0,
+            nuevo.precio_actual ?? 0,
+            "Creación de producto",
+            new Date().toISOString(),
+          ]
+        );
       } catch (errorHistorial) {
         console.error("ERROR HISTORIAL INICIAL:", errorHistorial);
       }

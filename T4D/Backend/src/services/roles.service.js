@@ -1,59 +1,40 @@
-const db = require('../config/db');
+const pool = require("../config/db");
 
-// Obtener todos los roles
 const obtenerRoles = async () => {
-    const [rows] = await db.query('SELECT * FROM roles');
-    return rows;
+  const { rows } = await pool.query("SELECT * FROM roles ORDER BY id_rol ASC");
+  return rows;
 };
 
-// Obtener rol por ID
 const obtenerRolPorId = async (id) => {
-    const [rows] = await db.query(
-        'SELECT * FROM roles WHERE id = ?',
-        [id]
-    );
-
-    return rows[0];
+  const { rows } = await pool.query("SELECT * FROM roles WHERE id_rol = $1", [id]);
+  return rows[0];
 };
 
-// Crear rol
-const crearRol = async (rol) => {
-    const { nombre } = rol;
-
-    const [result] = await db.query(
-        'INSERT INTO roles (nombre) VALUES (?)',
-        [nombre]
-    );
-
-    return result;
+const crearRol = async ({ nombre_rol, descripcion, nivel_acceso }) => {
+  const { rows } = await pool.query(
+    "INSERT INTO roles (nombre_rol, descripcion, nivel_acceso) VALUES ($1, $2, $3) RETURNING *",
+    [nombre_rol, descripcion, nivel_acceso]
+  );
+  return rows[0];
 };
 
-// Actualizar rol
-const actualizarRol = async (id, rol) => {
-    const { nombre } = rol;
-
-    const [result] = await db.query(
-        'UPDATE roles SET nombre = ? WHERE id = ?',
-        [nombre, id]
-    );
-
-    return result;
+const actualizarRol = async (id, { nombre_rol, descripcion, nivel_acceso }) => {
+  const { rows } = await pool.query(
+    "UPDATE roles SET nombre_rol = $1, descripcion = $2, nivel_acceso = $3 WHERE id_rol = $4 RETURNING *",
+    [nombre_rol, descripcion, nivel_acceso, id]
+  );
+  return rows[0];
 };
 
-// Eliminar rol
 const eliminarRol = async (id) => {
-    const [result] = await db.query(
-        'DELETE FROM roles WHERE id = ?',
-        [id]
-    );
-
-    return result;
+  await pool.query("DELETE FROM roles WHERE id_rol = $1", [id]);
+  return true;
 };
 
 module.exports = {
-    obtenerRoles,
-    obtenerRolPorId,
-    crearRol,
-    actualizarRol,
-    eliminarRol
+  obtenerRoles,
+  obtenerRolPorId,
+  crearRol,
+  actualizarRol,
+  eliminarRol,
 };

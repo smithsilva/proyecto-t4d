@@ -1,26 +1,40 @@
-const supabase = require("../config/supabase");
+const pool = require("../config/db");
 const cloudinary = require("../config/cloudinary");
+const { insertar, actualizar } = require("../utils/sql");
 
-const SELECT_PRODUCTO =
-  "*, categorias(nombre_categoria), proveedores(nombre_proveedor, nit), sucursales(nombre_sucursal, ciudad)";
+// Producto con sus relaciones anidadas (igual que el select de Supabase)
+const SELECT_PRODUCTO = `
+  SELECT p.*,
+    CASE WHEN c.id_categoria IS NULL THEN NULL ELSE json_build_object(
+      'nombre_categoria', c.nombre_categoria
+    ) END AS categorias,
+    CASE WHEN pr.id_proveedor IS NULL THEN NULL ELSE json_build_object(
+      'nombre_proveedor', pr.nombre_proveedor,
+      'nit', pr.nit
+    ) END AS proveedores,
+    CASE WHEN s.id_sucursal IS NULL THEN NULL ELSE json_build_object(
+      'nombre_sucursal', s.nombre_sucursal,
+      'ciudad', s.ciudad
+    ) END AS sucursales
+  FROM productos p
+  LEFT JOIN categorias c ON c.id_categoria = p.id_categoria
+  LEFT JOIN proveedores pr ON pr.id_proveedor = p.id_proveedor
+  LEFT JOIN sucursales s ON s.id_sucursal = p.id_sucursal`;
+
+const obtenerProductoCompleto = async (id) => {
+  const { rows } = await pool.query(`${SELECT_PRODUCTO} WHERE p.id_producto = $1`, [id]);
+  return rows;
+};
 
 // =====================================
 // OBTENER PRODUCTOS
 // =====================================
 
 const obtenerProductos = async () => {
-  const { data, error } = await supabase
-    .from("productos")
-    .select(SELECT_PRODUCTO)
-    .eq("activo", true)
-    .order("id_producto", { ascending: true });
-
-  if (error) {
-    console.error("ERROR SUPABASE GET:", error);
-    throw error;
-  }
-
-  return data;
+  const { rows } = await pool.query(
+    `${SELECT_PRODUCTO} WHERE p.activo = true ORDER BY p.id_producto ASC`
+  );
+  return rows;
 };
 
 // =====================================
@@ -30,21 +44,8 @@ const obtenerProductos = async () => {
 const agregarProducto = async (producto) => {
   console.log("Producto a insertar:", producto);
 
-  const payload = { activo: true, ...producto };
-
-  const { data, error } = await supabase
-    .from("productos")
-    .insert([payload])
-    .select(SELECT_PRODUCTO);
-
-  console.log("Respuesta:", data);
-  console.log("Error:", error);
-
-  if (error) {
-    throw error;
-  }
-
-  return data;
+  const [creado] = await insertar("productos", { activo: true, ...producto });
+  return obtenerProductoCompleto(creado.id_producto);
 };
 
 // =====================================
@@ -56,20 +57,8 @@ const editarProducto = async (id, producto) => {
   console.log("ID:", id);
   console.log("Datos:", producto);
 
-  const { data, error } = await supabase
-    .from("productos")
-    .update(producto)
-    .eq("id_producto", id)
-    .select(SELECT_PRODUCTO);
-
-  console.log("Respuesta Supabase:", data);
-  console.log("Error Supabase:", error);
-
-  if (error) {
-    throw error;
-  }
-
-  return data;
+  await actualizar("productos", "id_producto", id, producto);
+  return obtenerProductoCompleto(id);
 };
 
 // =====================================
@@ -79,25 +68,17 @@ const editarProducto = async (id, producto) => {
 const eliminarProducto = async (id) => {
   console.log("Eliminando producto:", id);
 
-  const { error } = await supabase
-    .from("productos")
-    .delete()
-    .eq("id_producto", id);
-
-  if (!error) return { desactivado: false };
-
-  // 23503 = tiene movimientos / asignaciones asociadas -> borrado lógico
-  if (error.code === "23503") {
-    const { error: errorUpdate } = await supabase
-      .from("productos")
-      .update({ activo: false })
-      .eq("id_producto", id);
-
-    if (errorUpdate) throw errorUpdate;
-    return { desactivado: true };
+  try {
+    await pool.query("DELETE FROM productos WHERE id_producto = $1", [id]);
+    return { desactivado: false };
+  } catch (error) {
+    // 23503 = tiene movimientos / asignaciones asociadas -> borrado lógico
+    if (error.code === "23503") {
+      await pool.query("UPDATE productos SET activo = false WHERE id_producto = $1", [id]);
+      return { desactivado: true };
+    }
+    throw error;
   }
-
-  throw error;
 };
 
 // =====================================
@@ -109,20 +90,8 @@ const actualizarParcialProducto = async (id, datos) => {
   console.log("ID:", id);
   console.log("Datos:", datos);
 
-  const { data, error } = await supabase
-    .from("productos")
-    .update(datos)
-    .eq("id_producto", id)
-    .select(SELECT_PRODUCTO);
-
-  console.log("Respuesta Supabase:", data);
-  console.log("Error Supabase:", error);
-
-  if (error) {
-    throw error;
-  }
-
-  return data;
+  await actualizar("productos", "id_producto", id, datos);
+  return obtenerProductoCompleto(id);
 };
 
 // =====================================
@@ -175,14 +144,12 @@ const eliminarImagenCloudinary = async (url) => {
 // =====================================
 
 const obtenerImagenProducto = async (id) => {
-  const { data, error } = await supabase
-    .from("productos")
-    .select("imagen")
-    .eq("id_producto", id)
-    .single();
-
-  if (error) throw error;
-  return data?.imagen || null;
+  const { rows } = await pool.query(
+    "SELECT imagen FROM productos WHERE id_producto = $1",
+    [id]
+  );
+  if (rows.length === 0) throw new Error("Producto no encontrado");
+  return rows[0].imagen || null;
 };
 
 module.exports = {

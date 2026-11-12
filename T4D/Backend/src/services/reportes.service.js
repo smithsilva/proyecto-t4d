@@ -1,12 +1,9 @@
-const supabase = require('../config/supabase');
+const pool = require('../config/db');
 
 // ─── MANTENIMIENTO ────────────────────────────────────────────────────────
 
 exports.getResumenVentas = async () => {
-  const { data, error } = await supabase
-    .from('mantenimiento')
-    .select('total');
-  if (error) throw new Error(error.message);
+  const { rows: data } = await pool.query('SELECT total FROM mantenimiento');
 
   const totales = data.map(v => parseFloat(v.total) || 0);
   const suma = totales.reduce((a, b) => a + b, 0);
@@ -20,14 +17,15 @@ exports.getResumenVentas = async () => {
 };
 
 exports.getVentasPorSucursal = async () => {
-  const { data, error } = await supabase
-    .from('mantenimiento')
-    .select('total, sucursales(nombre_sucursal)'); // ← nombre_sucursal correcto
-  if (error) throw new Error(error.message);
+  const { rows: data } = await pool.query(`
+    SELECT m.total, s.nombre_sucursal
+    FROM mantenimiento m
+    LEFT JOIN sucursales s ON s.id_sucursal = m.id_sucursal
+  `);
 
   const mapa = {};
   data.forEach(v => {
-    const nombre = v.sucursales?.nombre_sucursal || 'Sin sucursal';
+    const nombre = v.nombre_sucursal || 'Sin sucursal';
     if (!mapa[nombre]) mapa[nombre] = { sucursal: nombre, total_servicios: 0, ingresos: 0 };
     mapa[nombre].total_servicios += 1;
     mapa[nombre].ingresos += parseFloat(v.total) || 0;
@@ -36,14 +34,15 @@ exports.getVentasPorSucursal = async () => {
 };
 
 exports.getVentasPorMetodoPago = async () => {
-  const { data, error } = await supabase
-    .from('mantenimiento')
-    .select('total, metodos_pago(nombre_metodo)'); // ← nombre_metodo correcto
-  if (error) throw new Error(error.message);
+  const { rows: data } = await pool.query(`
+    SELECT m.total, mp.nombre_metodo
+    FROM mantenimiento m
+    LEFT JOIN metodos_pago mp ON mp.id_metodo_pago = m.id_metodo_pago
+  `);
 
   const mapa = {};
   data.forEach(v => {
-    const metodo = v.metodos_pago?.nombre_metodo || 'Sin método';
+    const metodo = v.nombre_metodo || 'Sin método';
     if (!mapa[metodo]) mapa[metodo] = { metodo_pago: metodo, cantidad: 0, total: 0 };
     mapa[metodo].cantidad += 1;
     mapa[metodo].total += parseFloat(v.total) || 0;
@@ -54,41 +53,43 @@ exports.getVentasPorMetodoPago = async () => {
 // ─── INVENTARIO ────────────────────────────────────────────────────────────
 
 exports.getStockBajo = async () => {
-  const { data, error } = await supabase
-    .from('productos')
-    .select('id_producto, nombre_producto, stock_actual')
-    .eq('activo', true)
-    .lte('stock_actual', 5)
-    .order('stock_actual', { ascending: true });
-  if (error) throw new Error(error.message);
-  return data;
+  const { rows } = await pool.query(`
+    SELECT id_producto, nombre_producto, stock_actual
+    FROM productos
+    WHERE activo = true AND stock_actual <= 5
+    ORDER BY stock_actual ASC
+  `);
+  return rows;
 };
 
 exports.getMovimientosInventario = async () => {
-  const { data, error } = await supabase
-    .from('movimientos_inventario')
-    .select('id_movimiento, tipo_movimiento, cantidad, fecha_movimiento, observacion, productos(nombre_producto), usuarios(username)')
-    .order('fecha_movimiento', { ascending: false })
-    .limit(100);
-  if (error) throw new Error(error.message);
+  const { rows: data } = await pool.query(`
+    SELECT m.id_movimiento, m.tipo_movimiento, m.cantidad, m.fecha_movimiento, m.observacion,
+           p.nombre_producto, u.username
+    FROM movimientos_inventario m
+    LEFT JOIN productos p ON p.id_producto = m.id_producto
+    LEFT JOIN usuarios u ON u.id_usuario = m.id_usuario
+    ORDER BY m.fecha_movimiento DESC
+    LIMIT 100
+  `);
 
   return data.map(m => ({
     id: m.id_movimiento,
-    producto: m.productos?.nombre_producto || '—',
+    producto: m.nombre_producto || '—',
     tipo: m.tipo_movimiento,
     cantidad: m.cantidad,
     fecha: m.fecha_movimiento,
-    usuario: m.usuarios?.username || '—',
+    usuario: m.username || '—',
     observacion: m.observacion || '—',
   }));
 };
 
 exports.getValorizacionInventario = async () => {
-  const { data, error } = await supabase
-    .from('productos')
-    .select('id_producto, nombre_producto, stock_actual, precio_actual')
-    .eq('activo', true);
-  if (error) throw new Error(error.message);
+  const { rows: data } = await pool.query(`
+    SELECT id_producto, nombre_producto, stock_actual, precio_actual
+    FROM productos
+    WHERE activo = true
+  `);
 
   return data
     .map(p => ({
@@ -104,15 +105,16 @@ exports.getValorizacionInventario = async () => {
 // ─── CLIENTES ──────────────────────────────────────────────────────────────
 
 exports.getTopClientes = async () => {
-  const { data, error } = await supabase
-    .from('mantenimiento')
-    .select('total, clientes(id_cliente, nombre_completo)');
-  if (error) throw new Error(error.message);
+  const { rows: data } = await pool.query(`
+    SELECT m.total, c.id_cliente, c.nombre_completo
+    FROM mantenimiento m
+    LEFT JOIN clientes c ON c.id_cliente = m.id_cliente
+  `);
 
   const mapa = {};
   data.forEach(v => {
-    const id = v.clientes?.id_cliente;
-    const nombre = v.clientes?.nombre_completo || 'Sin cliente';
+    const id = v.id_cliente;
+    const nombre = v.nombre_completo || 'Sin cliente';
     if (!id) return;
     if (!mapa[id]) mapa[id] = { id, nombre, total_servicios: 0, total_gastado: 0 };
     mapa[id].total_servicios += 1;
@@ -126,15 +128,16 @@ exports.getTopClientes = async () => {
 // ─── EMPLEADOS ─────────────────────────────────────────────────────────────
 
 exports.getRendimientoEmpleados = async () => {
-  const { data, error } = await supabase
-    .from('mantenimiento')
-    .select('total, empleados!id_empleado_cajero(cedula, nombre_completo)');
-  if (error) throw new Error(error.message);
+  const { rows: data } = await pool.query(`
+    SELECT m.total, e.cedula, e.nombre_completo
+    FROM mantenimiento m
+    LEFT JOIN empleados e ON e.cedula = m.id_empleado_cajero
+  `);
 
   const mapa = {};
   data.forEach(v => {
-    const cedula = v.empleados?.cedula;
-    const nombre = v.empleados?.nombre_completo || 'Sin empleado';
+    const cedula = v.cedula;
+    const nombre = v.nombre_completo || 'Sin empleado';
     if (!cedula) return;
     if (!mapa[cedula]) mapa[cedula] = { cedula, nombre, servicios_realizados: 0, total_generado: 0 };
     mapa[cedula].servicios_realizados += 1;
@@ -151,19 +154,23 @@ exports.getRendimientoEmpleados = async () => {
 // ─── FINANCIERO ────────────────────────────────────────────────────────────
 
 exports.getBalancePeriodo = async () => {
-  const { data, error } = await supabase
-    .from('movimientos_contables')
-    .select('valor, tipo_movimiento, fecha_movimiento')
-    .order('fecha_movimiento', { ascending: false });
-  if (error) throw new Error(error.message);
+  const { rows: data } = await pool.query(`
+    SELECT valor, tipo_movimiento, fecha_movimiento
+    FROM movimientos_contables
+    ORDER BY fecha_movimiento DESC
+  `);
 
   const mapa = {};
   data.forEach(v => {
     if (!v.fecha_movimiento) return;
-    const periodo = v.fecha_movimiento.slice(0, 7);
+    // fecha_movimiento puede venir como Date (timestamp) o como texto (date)
+    const fechaTxt = v.fecha_movimiento instanceof Date
+      ? v.fecha_movimiento.toISOString()
+      : String(v.fecha_movimiento);
+    const periodo = fechaTxt.slice(0, 7);
     if (!mapa[periodo]) mapa[periodo] = { periodo, ingresos: 0, egresos: 0, cantidad_movimientos: 0 };
     mapa[periodo].cantidad_movimientos += 1;
-    // ← Corregido: tu tabla usa 'Ingreso' y 'Egreso' con mayúscula
+    // Tu tabla usa 'Ingreso' y 'Egreso' con mayúscula
     if (v.tipo_movimiento === 'Ingreso') {
       mapa[periodo].ingresos += parseFloat(v.valor) || 0;
     } else if (v.tipo_movimiento === 'Egreso') {
@@ -178,19 +185,20 @@ exports.getBalancePeriodo = async () => {
 // ─── PRODUCTOS MÁS USADOS ─────────────────────────────────────────────────
 
 exports.getMasVendidos = async () => {
-  const { data, error } = await supabase
-    .from('detalle_asignacion')   // ← cambiado
-    .select('cantidad, productos(id_producto, nombre_producto, precio_actual)');
-  if (error) throw new Error(error.message);
+  const { rows: data } = await pool.query(`
+    SELECT d.cantidad, p.id_producto, p.nombre_producto, p.precio_actual
+    FROM detalle_asignacion d
+    LEFT JOIN productos p ON p.id_producto = d.id_producto
+  `);
 
   const mapa = {};
   data.forEach(d => {
-    const id = d.productos?.id_producto;
-    const nombre = d.productos?.nombre_producto || 'Sin nombre';
+    const id = d.id_producto;
+    const nombre = d.nombre_producto || 'Sin nombre';
     if (!id) return;
     if (!mapa[id]) mapa[id] = { id, nombre, unidades_usadas: 0, ingresos_generados: 0 };
     mapa[id].unidades_usadas += d.cantidad || 0;
-    mapa[id].ingresos_generados += (d.cantidad || 0) * (parseFloat(d.productos?.precio_actual) || 0);
+    mapa[id].ingresos_generados += (d.cantidad || 0) * (parseFloat(d.precio_actual) || 0);
   });
   return Object.values(mapa)
     .sort((a, b) => b.unidades_usadas - a.unidades_usadas)

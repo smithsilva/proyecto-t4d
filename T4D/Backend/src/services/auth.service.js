@@ -1,32 +1,32 @@
 const jwt = require("jsonwebtoken");
-const supabase = require("../config/supabase");
-const transporter = require("../config/nodemailer");
+const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
+const pool = require("../config/db");
+const transporter = require("../config/nodemailer");
+
+const quitarSensibles = (usuario) => {
+  const { codigo, password_hash, reset_code, reset_code_expires, ...resto } = usuario;
+  return resto;
+};
 
 const login = async (email, password, codigo) => {
   console.log("========== LOGIN ==========");
   console.log("Email:", email);
 
-  // 1. Validar contraseña con Supabase Auth (no con la tabla "usuarios")
-  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  const { rows } = await pool.query(
+    "SELECT * FROM usuarios WHERE LOWER(email) = LOWER($1) LIMIT 1",
+    [email]
+  );
+  const usuarioBD = rows[0];
 
-  if (authError) {
-    console.log("Error de autenticación Supabase:", authError.message);
+  // Mismo mensaje para "no existe" y "clave incorrecta"
+  if (!usuarioBD || !usuarioBD.password_hash) {
     throw new Error("Correo o contraseña incorrectos");
   }
 
-  // 2. Traer datos adicionales de la tabla "usuarios"
-  const { data: usuarioBD, error } = await supabase
-    .from("usuarios")
-    .select("*")
-    .eq("email", email)
-    .single();
-
-  if (error || !usuarioBD) {
-    throw new Error("Usuario no encontrado");
+  const claveOk = await bcrypt.compare(password, usuarioBD.password_hash);
+  if (!claveOk) {
+    throw new Error("Correo o contraseña incorrectos");
   }
 
   if (!usuarioBD.activo) {
@@ -47,43 +47,40 @@ const login = async (email, password, codigo) => {
     { expiresIn: "1h" }
   );
 
-  const { codigo: _cod, ...usuarioSinSensibles } = usuarioBD;
-
-  return { usuario: usuarioSinSensibles, token };
+  return { usuario: quitarSensibles(usuarioBD), token };
 };
 
-function generarToken() {
-  return crypto.randomBytes(32).toString("hex");
-}
+const generarToken = () => crypto.randomBytes(32).toString("hex");
 
 // ── SOLICITAR RESTABLECIMIENTO (envía link) ──
 const forgotPassword = async (email) => {
-  console.log("Buscando usuario con email:", email);
+  const respuesta = {
+    mensaje: "Si el correo existe, se ha enviado un enlace de recuperación",
+  };
 
-  const { data: usuarioBD, error } = await supabase
-    .from("usuarios")
-    .select("id_usuario, email, username")
-    .eq("email", email)
-    .single();
+  const { rows } = await pool.query(
+    "SELECT id_usuario, email, username FROM usuarios WHERE LOWER(email) = LOWER($1) LIMIT 1",
+    [email]
+  );
+  const usuarioBD = rows[0];
 
-  console.log("Resultado búsqueda:", usuarioBD, error);
-
-  if (error || !usuarioBD) {
+  if (!usuarioBD) {
     console.log("No se encontró el usuario, no se envía correo");
-    return { mensaje: "Si el correo existe, se ha enviado un enlace de recuperación" };
+    return respuesta;
   }
 
   const token = generarToken();
   const expira = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
-    const { error: errorUpdate } = await supabase
-    .from("usuarios")
-    .update({ reset_code: token, reset_code_expires: expira })
-    .eq("id_usuario", usuarioBD.id_usuario);
-
-  console.log("Error al actualizar reset_code:", errorUpdate);
-
-  if (errorUpdate) throw new Error("No se pudo generar el enlace");
+  try {
+    await pool.query(
+      "UPDATE usuarios SET reset_code = $1, reset_code_expires = $2 WHERE id_usuario = $3",
+      [token, expira, usuarioBD.id_usuario]
+    );
+  } catch (err) {
+    console.error("Error al actualizar reset_code:", err.message);
+    throw new Error("No se pudo generar el enlace");
+  }
 
   const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
   console.log("Link de recuperación generado:", resetLink);
@@ -109,51 +106,31 @@ const forgotPassword = async (email) => {
   });
 
   console.log("Correo enviado a:", usuarioBD.email);
-
-  return { mensaje: "Si el correo existe, se ha enviado un enlace de recuperación" };
+  return respuesta;
 };
 
 // ── RESTABLECER CONTRASEÑA (con token) ──
 const resetPassword = async (token, nuevaPassword) => {
-  const { data: usuarioBD, error } = await supabase
-    .from("usuarios")
-    .select("id_usuario, email, reset_code, reset_code_expires")
-    .eq("reset_code", token)
-    .single();
+  const { rows } = await pool.query(
+    "SELECT id_usuario, reset_code_expires FROM usuarios WHERE reset_code = $1 LIMIT 1",
+    [token]
+  );
+  const usuarioBD = rows[0];
 
-  if (error || !usuarioBD) {
+  if (!usuarioBD) {
     throw new Error("Enlace inválido o expirado");
   }
 
-  const ahora = new Date();
-  const expira = new Date(usuarioBD.reset_code_expires);
-
-  if (ahora > expira) {
+  if (new Date() > new Date(usuarioBD.reset_code_expires)) {
     throw new Error("Enlace inválido o expirado");
   }
 
-  // Buscar el usuario en Supabase Auth por email (Admin API)
-  const { data: listaUsuarios, error: errorLista } = await supabase.auth.admin.listUsers();
-  if (errorLista) throw new Error("Error al buscar el usuario en Auth");
+  const hash = await bcrypt.hash(nuevaPassword, 10);
 
-  const authUser = listaUsuarios.users.find(
-    (u) => u.email?.toLowerCase() === usuarioBD.email.toLowerCase()
+  await pool.query(
+    "UPDATE usuarios SET password_hash = $1, reset_code = NULL, reset_code_expires = NULL WHERE id_usuario = $2",
+    [hash, usuarioBD.id_usuario]
   );
-
-  if (!authUser) throw new Error("Usuario no encontrado en el sistema de autenticación");
-
-  const { error: errorUpdatePass } = await supabase.auth.admin.updateUserById(
-    authUser.id,
-    { password: nuevaPassword }
-  );
-
-  if (errorUpdatePass) throw new Error("No se pudo actualizar la contraseña");
-
-  // Limpiar el token usado
-  await supabase
-    .from("usuarios")
-    .update({ reset_code: null, reset_code_expires: null })
-    .eq("id_usuario", usuarioBD.id_usuario);
 
   return { mensaje: "Contraseña actualizada correctamente" };
 };
