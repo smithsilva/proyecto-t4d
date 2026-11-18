@@ -36,7 +36,7 @@ function SidebarContadora({ setVistaContadora, vistaContadora }) {
     { key: "metodospago",         icon: "bi-credit-card",      label: "Métodos de Pago"      },
     { key: "historialprecios",    icon: "bi-graph-up",         label: "Historial Precios"    },
     { key: "proveedores",         icon: "bi-people",           label: "Proveedores"          },
-    { key: "empleados",           icon: "bi-person",           label: "Empleados"            },
+    { key: "empleados",           icon: "bi-person-badge",           label: "Empleados"            },
     { key: "sucursales",          icon: "bi-building",         label: "Sucursales"           },
     { key: "reportes",            icon: "bi-bar-chart",        label: "Reportes"             },
   ];

@@ -36,6 +36,7 @@ function SidebarAdmin({ setVistaAdmin, vistaAdmin }) {
     { key: "movimientos",     icon: "bi-arrow-left-right", label: "Movimientos"  },
    { key: "categorias", icon: "bi-shield-fill", label: "Categorías" },
     { key: "historialprecios", icon: "bi-clock-history", label: "Historial de Precios" },
+    { key: "empleados", icon: "bi-person-badge", label: "Empleados" },
     { key: "notificaciones",  icon: "bi-bell",             label: "Notificaciones" },
     { key: "reportes",        icon: "bi-bar-chart",        label: "Reportes"     },
     { key: "GestionUsuarios", icon: "bi-people",           label: "Usuarios"     },
