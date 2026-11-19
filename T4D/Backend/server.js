@@ -54,6 +54,7 @@ app.use("/movimientos",       verificarToken, require("./src/routes/movimientos.
 app.use("/categorias",        verificarToken, require("./src/routes/categorias.routes"));
 app.use("/historial-precios", verificarToken, require("./src/routes/historialprecios.routes"));
 app.use("/notificaciones",    verificarToken, require("./src/routes/notificaciones.routes"));
+app.use("/empleados",         verificarToken, require("./src/routes/empleados.routes"));
 
 // ── INICIAR SERVIDOR ──
 app.listen(PORT, "0.0.0.0", () => {

@@ -17,6 +17,7 @@ const usuariosRoutes        = require("./routes/usuarios.routes");
 const reportesRoutes        = require("./routes/reportes.routes");
 const historialPreciosRoutes = require("./routes/historialprecios.routes");
 const notificacionesRoutes  = require("./routes/notificaciones.routes");
+const empleadosRoutes        = require("./routes/empleados.routes");
 
 const app = express();
 
@@ -39,5 +40,6 @@ app.use("/usuarios",          verificarToken, usuariosRoutes);
 app.use("/reportes",          verificarToken, reportesRoutes);
 app.use("/historial-precios", verificarToken, historialPreciosRoutes);
 app.use("/notificaciones",    verificarToken, notificacionesRoutes);
+app.use("/empleados",          verificarToken, empleadosRoutes);
 
 module.exports = app;
